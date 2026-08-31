@@ -1,0 +1,46 @@
+{
+  "feature_name": "001-agentic-ai-core-p0",
+  "timestamp": "2026-08-29T00:00:00Z",
+  "project_description": "Polyglot Turborepo multi-agent AI application: Next.js 16.3 frontend (AI SDK 7 / @ai-sdk/react 4 / useChat) → FastAPI Python 3.13 backend (Pydantic AI v2, LlamaIndex, VercelAIAdapter, HITL) with type-safe API contract pipeline, 4-layer test strategy, Logfire/OTEL observability, and staged monorepo build via Turborepo 2.10.11. Assembled in a new repository (vaz-agentic-ai-next) by importing the existing vaz-ai-next monorepo as its base, then adding apps/agent-api.",
+  "language": "ja",
+  "status": "tasks-generated",
+  "requirement_count": 53,
+  "constitution": {
+    "path": "specs/memory/constitution.md",
+    "version": "1.2.0"
+  },
+  "source_spec": "specs/001-agentic-ai-core-p0/spec-agenticai-core.md",
+  "source_spec_version": "1.6",
+  "next_delivery_unit": "P0",
+  "repository": {
+    "name": "vaz-agentic-ai-next",
+    "origin": "git@github.ibm.com:Kazuyuki-Fukuda1/vaz-agentic-ai-next.git",
+    "pub": "git@github.com:Fukuchan77/vaz-agentic-ai-next.git",
+    "note": "This repository is NOT vaz-ai-next. vaz-ai-next is an upstream repository whose contents are imported by T-0."
+  },
+  "upstream_sources": {
+    "base_monorepo": {
+      "repo": "git@github.com:Fukuchan77/vaz-ai-next.git",
+      "pinned_commit": "cf72583",
+      "full_sha": "cf725831dcb6095c6e164ae3f29f8224f436a5c9",
+      "drift_from_main": "2 commits / 2 files (main = bbf1156b29db5865f6811470b98a7b002ba83ef6)"
+    },
+    "agent_api_port_base": {
+      "repo": "git@github.com:Fukuchan77/fastapi-pydantic-ai-agent.git",
+      "pinned_commit": "d4d5f8d",
+      "full_sha": "d4d5f8ddf43453949031c5de90047952280930c4"
+    }
+  },
+  "phases": {
+    "init": "complete",
+    "spec": "requirements-generated",
+    "design": "plan-generated",
+    "tasks": "tasks-generated",
+    "impl": "pending"
+  },
+  "approvals": {
+    "requirements": { "generated": true, "approved": true },
+    "design": { "generated": true, "approved": true },
+    "tasks": { "generated": true, "approved": true }
+  }
+}
