@@ -106,24 +106,25 @@ Python 側 advisory も解消済み。`uv lock --upgrade` 後は `pyproject.toml
 Python 側の `pip-audit --ignore-vuln`(`mise.toml` の `py:audit`)も同じ表で追跡する —
 置き場所が違うだけで、「一時的な監査除外に再評価期限を付ける」という扱いは共通。
 
-| エントリ | 種別 | 撤去条件 | 状態(2026-09-11 再検証) |
+| エントリ | 種別 | 撤去条件 | 状態(2026-09-19 再検証) |
 | --- | --- | --- | --- |
-| `js-yaml@>=4.0.0 <4.3.2` → `^4.3.2` | override | `openapi-typescript` → `@redocly/openapi-core`(dev-only)の quadratic-CPU DoS 3件: merge-key(GHSA-52cp-r559-cp3m、patched 4.3.0)、`!!omap`(GHSA-5p4m-2wfm-xmqj / CVE-2026-59870、patched 4.3.1)、`maxTotalMergeKeys` が空 merge source に対して CPU を制限しない(GHSA-2883-xcg3-v3hh、patched 4.3.2)。射程は 2 度拡大しているが理由は同一で、**この override が pin した patch 版がそのまま実解決版になるため、次の advisory が旧射程の外側に落ちる**(`<4.3.0` は 4.3.0 を、`<4.3.1` は 4.3.1 を取りこぼした)。`openapi-typescript` が pin する `@redocly/openapi-core` の `js-yaml` 範囲が `>=4.3.2` へ上がった時点で自然解消(現行の @redocly リリース系列は既に `^5.2.2` を要求しており、openapi-typescript の追随待ち) | 維持中(2026-09-11 再検証: `pnpm why js-yaml` で `@redocly/openapi-core@1.34.18` の pin が `4.3.0` のままであることを確認。override を外せば 4.3.0 に戻るため撤去不可) |
 | `PYSEC-2026-3740` (nltk) | pip-audit `--ignore-vuln` | `llama-index-core` → `nltk`(推移的)の pathsec sandbox bypass(GHSA-8mgp-746c-j5xp / CVE-2026-81726): `TransitionParser.train/parse`・`AveragedPerceptron.save/load`・`PerceptronTagger.save_to_json`・`save_maxent_params` が pathsec-aware helper ではなく組み込み `open()` を使うため、allowed root の外を読み書きできる。**修正版が存在しない**(上流が "Not yet patched" と明記、PyPI 最新 3.10.3 が該当版) = 対応 4 段階の #4。nltk の修正版が公開されたら `uv lock --upgrade-package nltk` で取り込み、このエントリを撤去する | 維持中(2026-09-11 追加。サイドカーは nltk / pathsec を一切 import せず、llama-index-core 側の nltk 利用も punkt tokenizer のみ。脆弱な 4 API は venv のどこからも参照なし。**再評価期限: 2026-12-11**) |
+| `js-yaml@>=4.0.0 <4.3.2` → `^4.3.2` | override | **撤去済み(2026-09-19)** — `openapi-typescript` → `@redocly/openapi-core`(dev-only)の quadratic-CPU DoS 3件: merge-key(GHSA-52cp-r559-cp3m、patched 4.3.0)、`!!omap`(GHSA-5p4m-2wfm-xmqj / CVE-2026-59870、patched 4.3.1)、`maxTotalMergeKeys` が空 merge source に対して CPU を制限しない(GHSA-2883-xcg3-v3hh、patched 4.3.2)。射程は 2 度拡大したが理由は同一で、**この override が pin した patch 版がそのまま実解決版になるため、次の advisory が旧射程の外側に落ちる**(`<4.3.0` は 4.3.0 を、`<4.3.1` は 4.3.1 を取りこぼした)。宣言していた撤去条件(「`openapi-typescript` が pin する `@redocly/openapi-core` の `js-yaml` 範囲が `>=4.3.2` へ上がった時点」)が成立 | 撤去済み(2026-09-19 — `openapi-typescript` 7.13.0 が解決する `@redocly/openapi-core` が 1.34.18 → **1.34.20** に上がり、その `js-yaml` 依存が exact pin `4.3.2` になった。override を外して再解決しても js-yaml は 4.3.2 のままで 4.3.0 に戻らず、`pnpm audit --audit-level=moderate` も clean) |
 | `postcss@<8.5.18` | override | **撤去済み(2026-08-08)** — `next` 16.3.0 が `postcss` 8.5.23 を直接 pin し、宣言していた撤去条件(「next の pin が `>=8.5.18` に達したら」)が成立。override 無しで 8.5.23/8.5.25 に解決することを確認 | 撤去済み |
 | `sharp@<0.35.0` | override | **撤去済み(2026-08-08)** — `next` 16.3.0 stable の依存範囲が `^0.35.3` になり撤去条件成立。override 無しで 0.35.3 に解決 | 撤去済み |
 | `nanoid@<3.3.17` | override | **撤去済み(2026-08-08)** — GHSA-2v37-7h3g-55p8 対応で一時追加(lock の 3.3.16 が patch 前で、推移的依存をコマンドで更新する手段がなかったため)。上記 postcss バンプで subtree が再解決され 3.3.17 に到達、「将来の再解決で自然解消」という撤去条件どおり不要化 | 撤去済み(2026-08-08) |
 | `brace-expansion@>=2.0.0 <2.1.2` → `^5.0.8` | override | **撤去済み(2026-08-08)** — `minimatch` の依存側が 2.1.4 に解決され、advisory(GHSA-mh99-v99m-4gvg)が報告されなくなった | 撤去済み |
 | `nanoid@<3.3.18` → `^3.3.18` | override | **撤去済み(2026-08-22)** — 2026-08-16 に再追加(GHSA-2v37-7h3g-55p8 の `patched_versions` が `>=3.3.18` へ拡大し、lockfile が 3.3.17 に固定されていたため)。宣言していた撤去条件の後段「override を外した fresh resolve で `pnpm audit` が clean のまま」が成立。`postcss@8.5.23`/`8.5.25` の依存範囲は `^3.3.16` のままだが、fresh resolve は範囲内の最新である 3.3.18 を選ぶため override 無しで clean | 撤去済み(2026-08-22) |
 
-撤去は「override を外す → `pnpm install` で再解決 → `pnpm audit --audit-level=moderate` が clean のままであることを確認」という手順で 1 件ずつ検証した(2026-08-08 / 2026-08-22 とも同手順)。
+撤去は「override を外す → `pnpm install` で再解決 → `pnpm audit --audit-level=moderate` が clean のままであることを確認」という手順で 1 件ずつ検証した(2026-08-08 / 2026-08-22 / 2026-09-19 とも同手順)。
 
 撤去手順: 対象パッケージの `pnpm why <package>` で依存範囲を確認 → override を削除 →
 `pnpm install` → `mise run check` green を確認 → コミット。
 
 ### `ignoreGhsas` の書式例
 
-`pnpm-workspace.yaml` は現状 `auditConfig.ignoreGhsas` を**空で導入していない**(修正版のない
+2026-09-19 時点で `pnpm-workspace.yaml` の `overrides` は**ゼロ件**(上表のとおり全件撤去済み)であり、
+`pnpm-workspace.yaml` は `auditConfig.ignoreGhsas` も**空で導入していない**(修正版のない
 advisory が今のところ存在しないため)。必要になった時点で以下の書式で追加する:
 
 ```yaml
