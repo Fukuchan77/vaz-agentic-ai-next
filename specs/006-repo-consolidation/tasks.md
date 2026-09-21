@@ -271,20 +271,33 @@ _Boundary:_ `docs/adr/0004-stop-reason-vocabulary.md`（新規）, 参照検証�
 _Depends:_ 8.1 は Task 2 / 8.3 は Task 6 / 8.4 は Task 6
 _Requirements:_ 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.3, 9.4, NFR-4
 
-- [ ] **8.1 参照検証（R9.1）** — Task 2 直後に実行。`cross-repo-adoption-review` への 7 参照が
-      すべて実在パスへ解決することを機械検証する。**走査参照数 > 0 の非空アサート**を含む（NFR-4）。
-- [ ] **8.2**（R9.2）`pydantic-ai-agentic-patterns/specs/review/vaz-ai-next/` は**リネームしない**。
-      `specs/review/INDEX.md` に 1 行の注記を追加する。
-- [ ] **8.3 ADR-0004（R8.3）** — Task 6 完了時点、すなわち TS 4 値
-      （`packages/schemas/src/run-metrics.ts:16` = `natural`/`step-cap`/`budget-exceeded`/`error`）と
-      Python 5 値（`completed`/`max_iterations`/`budget_exceeded`/`denied`/`disallowed_tool`）が
-      1 リポジトリに同居した時点で起票する。正本レビュー X-5 の写像表を出発点とし、
-      **強制統一はしない**（TS 4 値は `JobEvent` SSE 契約と `audit_log` に既出 — R8.4）。
-- [ ]* **8.4**（R8.1/8.2）Agent Skills（`SKILL.md`）/ A2A の採用判断。採用する場合は
-      ADR-0001（MCP）と同じ型（採用トリガ条件つき）で ADR 化する。
-- [ ]* **8.5**（R8.5）`I-H10`（停止理由の語彙化・トークン予算）を `services/api` の閉じた
-      `StopReason` 語彙 ＋ 副作用前トークン予算から教材側へ移植する。
-- [ ] **8.6**（R9.3）`beeai-agentic-ai-sandbox` への取り込みが本 spec の境界外であることを
-      `pdca/act.md` へ申し送る。
-- [ ] **8.7**（R9.4）旧リポジトリのアーカイブ判断は Task 6 の着地後に行う。
-      **Phase 2 未完了時点でのアーカイブは禁止**。
+- [x] **8.1 参照検証（R9.1）** — `tests/repo/cross-repo-reference-resolution.spec.ts`（CI 常時実行、
+      ハブ自身の 2 参照 ＋ `services/api` に取り込まれた 3 参照の計 5 件を非空アサート付きで検証）
+      と `scripts/verify-cross-repo-references.sh`（兄弟リポジトリを横並びに checkout した環境向け、
+      CI 非配線の手動ツール。`pydantic-ai-sandbox` の残り 2 件を含む）の 2 段構成で実装した。
+      本セッションで後者を実行し **7 / 7 全件解決を確認**（`pdca/do.md` に実行結果を記録）。
+- [x] **8.2**（R9.2）`pydantic-ai-agentic-patterns/specs/review/vaz-ai-next/` は**リネームしなかった**。
+      `specs/review/INDEX.md` に 1 行の注記を追加し、同リポジトリへ直接 push した（追記のみ規約に
+      従い本文は不変）。
+- [x] **8.3 ADR-0004（R8.3）** — `docs/adr/0004-stop-reason-vocabulary.md` を起票した。
+      正本レビュー X-5 の写像表を引用し、**強制統一はしない**という裁定と 3 つの根拠
+      （TS 4 値は SSE/監査ログの後方互換制約下にある、2 語彙は同じ抽象を指していない、
+      非対称性は設計差の帰結であり欠陥ではない）を記録した（R8.4）。
+      `docs/guide/loop-engineering.md` を ADR への直接リンクへ更新し、
+      `services/api/app/agents/guardrails.py` を「(a) このハブでの実装」へ移設した
+      （Task 6 で兄弟リポジトリからハブ内実装になったため）。
+- [x] **8.4**（R8.1/8.2、任意）— **不採用のまま**。統合計画 §5.2 が「4 repo すべてで 0 件」と
+      記録した真のギャップだが、Requirement は「採用する場合」の条件付きであり、本 spec は
+      採用を選択しなかった。`pdca/act.md` に申し送りを記録。
+- [x] **8.5**（R8.5、任意）— **未実施のまま**。`docs/guide/agentic-engineering.md`（Task 7）に
+      移植機会として記録済み。実施する場合は `pydantic-ai-agentic-patterns` 側の別セッションで
+      起票することを `pdca/act.md` に申し送った。
+- [x] **8.6**（R9.3）`beeai-agentic-ai-sandbox` への取り込みが本 spec の境界外であることを
+      `pdca/act.md` へ申し送った。
+- [x] **8.7**（R9.4）旧リポジトリのアーカイブ判断。Task 6・Task 7 が着地したため判断可能な
+      前提は揃ったが、**3 repo とも現時点でアーカイブしない**と判断した（`pdca/act.md` に理由を
+      記録: `fastapi-pydantic-ai-agent` は gitleaks/pre-commit/pre-push 未配線の既知ギャップが
+      解消するまで、`pydantic-ai-sandbox`/`pydantic-ai-agentic-patterns` は独立維持がそもそも
+      Task 7 の決定の前提）。
+
+**Task 8 完了。全 8 Task 完了により本 spec のすべての Requirement に対応した。**
