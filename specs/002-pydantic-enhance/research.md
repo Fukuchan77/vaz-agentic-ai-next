@@ -4,6 +4,10 @@
 対象コミット `93ceccd`(ブランチ `002-pydantic-enhance`)。要件は承認済み。
 `gap-analysis.md` が特定した調査項目 1〜6 をここで解消する。
 
+**パスの読み方**: 本書のコード位置は調査時点（コミット `93ceccd`）の座標。Drizzle
+スキーマはその後 `@vaz/db`（`packages/db/src/schema.ts`）へ移っており、本文の
+`packages/rag/src/db/schema.ts` は当時の記録として原文のまま残している。
+
 ## Discovery type
 
 **混成** — Phase A / E(TS 本線)は既存システムの **Extension(light discovery)**、
@@ -104,7 +108,7 @@ Python サイドカーと言語境界を full、TS 拡張点を light で扱う�
 
 ### 6. locator の永続化と pgvector byte 互換(Req 4.3)
 
-- **Findings**: [chunk テーブル](../../packages/rag/src/db/schema.ts#L52-L70) は
+- **Findings**: chunk テーブル(`packages/rag/src/db/schema.ts:52-70`) は
   `id/documentId/ordinal/content` のみ。`locator` を **nullable 列**として追加 → 既存
   テキスト ingest は値未書き込み(NULL)で byte 互換。drizzle-zod の
   `chunkInsertSchema`/`chunkSelectSchema` は table 定義から単一ソース生成されるため、
