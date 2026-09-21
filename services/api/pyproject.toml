@@ -56,6 +56,26 @@ dependencies = [
     # set). Capped below the next major, which is shelved in turn until its own
     # pass -- see the redis entry in `.github/dependabot.yml`.
     "redis>=8.1.0,<9.0",
+    # Cap moved <6.0 -> <7.0 on 2026-09-21 (PR #37, 5.7.0 -> 6.1.0) after the
+    # verification pass this package's cap was waiting on. Its only exercise is
+    # chromadb's `SentenceTransformerEmbeddingFunction` (app/stores/vector_store/
+    # chroma.py, model `all-MiniLM-L6-v2`), reached only by the `chroma`-marked
+    # lane, which downloads the model from Hugging Face -- so the cap had stayed
+    # in place for want of an environment that could run it, not for a known
+    # incompatibility. Run for real from such an environment, the command being
+    # `RUN_CHROMA_INTEGRATION_TESTS=1 EXPECT_LIVE_TESTS=6 uv run pytest` over
+    # `tests/integration/test_chroma_query_with_scores.py`: it passed 6/6 against
+    # a *fresh* `HF_HOME` (87 MB fetched over the wire, so a warm cache could not
+    # have carried the run), and `mise run api:check` came back 1557 passed / 22
+    # skipped at 96% coverage with ruff + ty clean and pip-audit finding nothing.
+    #
+    # 6.0's breaking changes do not reach this consumer: the multimodal
+    # dict-input key-ordering change and the video-frame wrapper requirement both
+    # apply to multimodal inputs, and this lane embeds plain text only.
+    #
+    # That same pass is what surfaced the `chromadb.types` filterwarnings entry
+    # below -- the lane failed 6/6 on 5.7.0 *and* 6.1.0 before it, which is how
+    # that blocker was established as pre-existing rather than caused by the bump.
     "sentence-transformers>=5.7.0,<7.0",
     "slowapi>=0.1.10,<1.0",
     # Pinned below 1.0 because slowapi 0.1.10 is not compatible with starlette 1.x:
@@ -200,6 +220,27 @@ filterwarnings = [
     # this entry the moment that cap can be lifted -- it is scoped to the single
     # emitting module, so a deprecation raised anywhere else still hard-fails.
     "ignore::DeprecationWarning:starlette.testclient",
+    # Emitter: `chromadb.types` (0.6.3). pydantic 2.11 deprecated reading
+    # `model_fields` off an *instance*, and chromadb's `types.py` still does
+    # exactly that in `get_model_fields()` (called from `Collection.__getitem__`).
+    # The warning is `PydanticDeprecatedSince211`, a `DeprecationWarning`
+    # subclass, and pydantic raises it with `stacklevel=2`, so it is attributed
+    # to `chromadb.types` rather than to pydantic -- this entry names the module
+    # the filter actually matches.
+    #
+    # Scope: only lanes that touch a real Chroma collection hit it. Every default
+    # lane patches `SentenceTransformerEmbeddingFunction` and never reaches
+    # `sysdb.create_collection`, which is why the entry was not needed until the
+    # `chroma`-marked lane was run for real (added 2026-09-21 during the
+    # sentence-transformers 6.1.0 verification pass, where it failed all 6 cases
+    # on BOTH 5.7.0 and 6.1.0 -- a pre-existing blocker, not a bump regression).
+    #
+    # Not fixable by upgrading: chromadb 1.x is the shelved major (three
+    # advisories with `fixed_in: []` at every version -- see `.github/dependabot.yml`),
+    # and `chromadb<1.0` is the hard stop. Remove this entry when that cap lifts;
+    # it is scoped to the single emitting module, so a deprecation raised anywhere
+    # else still hard-fails.
+    "ignore::DeprecationWarning:chromadb.types",
 ]
 
 # ============================================================================
