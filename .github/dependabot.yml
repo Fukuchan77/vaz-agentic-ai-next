@@ -18,6 +18,24 @@ updates:
     # minutes; raise both together or neither.
     cooldown:
       default-days: 1
+    # `ai` and every `@ai-sdk/*` package share one internal dependency,
+    # `@ai-sdk/provider-utils` -- pinned to a single resolved version across
+    # the workspace by pnpm's single-lockfile resolution. Left ungrouped,
+    # Dependabot opens one PR per package (#30-#33, #39 all landed the same
+    # week), each bumping only its own importer's `@ai-sdk/provider-utils`
+    # entry -- so pnpm installs two versions side by side until every PR in
+    # the set merges. `@vaz/evals`'s standalone typecheck (no per-package
+    # tsconfig; see AGENTS.md) surfaces that split immediately as a real
+    # type error (`Two different types with this name exist, but they are
+    # unrelated`), which is why #31 and #33 had `lint: failure` while #30
+    # and #32 happened to land green first. One group PR resolves
+    # `@ai-sdk/provider-utils` once, consistently, the way `pnpm install`
+    # would if a human bumped all five by hand in one change.
+    groups:
+      ai-sdk:
+        patterns:
+          - "ai"
+          - "@ai-sdk/*"
     # The 3 majors AGENTS.md/CLAUDE.md record as deliberately held back — each
     # is a decision (see the "Three majors are deliberately held back" bullet
     # there), not a stale range Dependabot should try to close.
