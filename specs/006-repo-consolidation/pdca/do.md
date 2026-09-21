@@ -321,3 +321,52 @@ vaz-ai-next/docs/context-budget.md
 | lint:model-ids | ✅ |
 
 **Task 4 完了。**
+
+---
+
+## Task 5: ガイド背骨 `docs/guide/`
+
+### 実行日時
+2026-09-21（Task 4 完了直後）
+
+### 構成
+
+`docs/guide/README.md` を索引とし、8 手法（PE/CE/LE/HE/AE/AO/MCP/EV）に 1 ページずつ
+（計 9 ファイル）。各ページは 1〜3 文の導入 + (a) ハブ内実装 (b) 兄弟 repo 教材
+(c) 正本レビューの X-n、の 3 リンク群のみで構成し、本文は複製していない（R5.2）。
+
+索引には書籍原稿 14 章（`pydantic-ai-agentic-patterns/docs/part{1..5}/ch{01..14}.md`）と
+8 手法の対応表も含めた。リンクは GitHub blob URL（別リポジトリのため相対パスが使えない）。
+実体移設は行っていない（R5.3、Phase 3 の裁定に従う）。
+
+`docs/agentic-engineering-review.md` には既存の「状態注記」形式（2026-07-26 分）に倣い、
+2026-09-21 分の 1 段落を追記（`docs/guide/` へのリンクのみ、本文は不変）。
+`CLAUDE.md` / `AGENTS.md` をペアで更新し、`docs/guide/` への参照を追加。
+
+### 執筆時の訂正
+
+`harness-engineering.md` の初稿で「このハブの `AGENTS.md` に X-10 の SSE 罠 1.・2. が
+記載済み」と書いたが、これは**旧 `vaz-agentic-ai-next`（現 `specs/inherited/`）の
+`AGENTS.md` についての記述**であり、このハブ自身の `AGENTS.md` には該当する記載が
+無いことを `grep` で確認して訂正した（誤った事実主張を防いだ一例）。
+
+### R5.4 — コード・CI 非変更の確認
+
+```
+git diff --name-only  → docs/agentic-engineering-review.md, CLAUDE.md, AGENTS.md,
+                         docs/guide/**（新規）, specs/006-repo-consolidation/** のみ
+```
+
+`apps/`, `packages/`, `services/`, `.github/workflows/` への変更は一切無し。
+
+### NFR-2 検証結果
+
+| ゲート | 結果 |
+|---|---|
+| lint | ✅ 158 files（docs/guide の md はスコープ外。ファイル数は Task 4 と同じ） |
+| typecheck | ✅ 全 9 workspace projects |
+| test:run | ✅ 648 passed / 1 skipped / 0 failed |
+| audit | ✅ No known vulnerabilities |
+| lint:model-ids | ✅ |
+
+**Task 5 完了。** NFR-1 のとおり、Task 6（`services/api`）の未決定を待たずに独立着地した。
