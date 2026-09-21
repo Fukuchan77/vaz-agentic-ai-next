@@ -106,6 +106,8 @@ _Requirements:_ 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, NFR-5
       代わりに同一の `next dev` コマンドを直接起動し、稼働中のページを直接 fetch して検証: `<title>`
       と `<h1>` はいずれも `vaz-agentic-ai-next`（更新後の 2 E2E spec のアサート文字列と完全一致）。
 
+**Task 2 完了。**
+
 ## 3. 正本 `cross-repo-adoption-review.md` の設置
 
 _Boundary:_ `docs/cross-repo-adoption-review.md`（新規）, `specs/006-repo-consolidation/pdca/do.md`
