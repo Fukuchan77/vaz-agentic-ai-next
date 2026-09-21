@@ -112,16 +112,22 @@ _Boundary:_ `docs/cross-repo-adoption-review.md`（新規）, `specs/006-repo-co
 _Depends:_ Task 2（rename 後に置くことで 7 参照が編集ゼロで解決する — spec.md 前提誤り 2）
 _Requirements:_ 3.1, 3.2, 3.3, 3.4, 3.5, NFR-3
 
-- [ ] `archive/vaz-agentic-ai-next` から `docs/cross-repo-adoption-review.md` を
-      **verbatim（493 行・本文改変なし）**で配置する。出所 SHA を `pdca/do.md` に記録する。
-- [ ] 本文末尾に `## §6 追記（2026-09-21）— 同一性の崩壊と再実測` を追加する（R3.2）:
-  - [ ] **同一性の崩壊**: §1 の `vaz-ai-next` 列（実装・CI・依存の実測値）と
-        `vaz-agentic-ai-next` 列（憲章・P0 spec・REQ-7.5/7.6）が 1 本に畳まれた旨を写像表で記す。
-  - [ ] **再実測で stale となった行**（R3.3）: `Actions SHA 固定 0/22 → 28/28`、
-        `workflow permissions: 0/6 → 6/6`。X-1 は着地済み。**本文セルは書き換えない**。
-  - [ ] **スコープ**: 本セッションに attach されたのは 4 repo ＋ ハブであり、
-        `beeai-agentic-ai-sandbox` は未検証（R9.3 へ申し送り）。
-- [ ] `docs/README.md` 相当の索引がある場合、正本への 1 行を追加する。
+- [x] `archive/vaz-agentic-ai-next` から `docs/cross-repo-adoption-review.md` を
+      **verbatim（493 行・本文改変なし）**で配置した。出所 SHA
+      `282d7064d90ba754e12f3a9a7acd912e272a3b83` を `pdca/do.md` に記録した。
+- [x] 本文末尾に `## §6 追記（2026-09-21）— 同一性の崩壊と再実測` を追加した（R3.2）:
+  - [x] **同一性の崩壊**: §1 の `vaz-ai-next` 列（実装・CI・依存の実測値）と
+        `vaz-agentic-ai-next` 列（憲章・P0 spec・REQ-7.5/7.6）が 1 本に畳まれた旨を写像表で記した。
+  - [x] **再実測で stale となった行**（R3.3）: `Actions SHA 固定 0/22 → 28/28`、
+        `workflow permissions: 0/6 → 6/6`。X-1 は着地済み。本文セルは書き換えていない。
+  - [x] **スコープ**: 本セッションに attach されたのは 4 repo ＋ ハブであり、
+        `beeai-agentic-ai-sandbox` は未検証（R9.3 へ申し送り）と明記した。
+- [x] `docs/README.md` 相当の索引は不在（該当なし）。
+- [x] **R9.1 先取り実行**: 3 repo・7 ファイルが `cross-repo-adoption-review` を参照しており、
+      すべて文字列 `vaz-agentic-ai-next/docs/cross-repo-adoption-review.md` を指す。リネーム後の
+      ハブに同名で正本が実在するため **7 / 7 が編集ゼロで解決**（非空アサート済み・NFR-4）。
+
+**Task 3 完了。**
 
 ## 4. 憲章・継承 spec の受け入れと ADR-0003
 
@@ -131,23 +137,32 @@ _Boundary:_ `specs/memory/constitution.md`（新規）,
 _Depends:_ Task 3
 _Requirements:_ 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, NFR-3
 
-- [ ] `specs/memory/constitution.md`（296 行・11 原則・v1.2.0）を verbatim 配置する（R4.1）。
+- [x] `specs/memory/constitution.md`（296 行・11 原則・v1.2.0）を verbatim 配置した（R4.1）。
       継承 spec の `spec.json.constitution.path` と同一パスのため参照が自動解決する。
-- [ ] 継承 spec 一式を **`specs/inherited/001-agentic-ai-core-p0/`** へ配置する（R4.2）。
-      ハブの `001-vaz-ai-update` との採番衝突を避けるため、`specs/` 直下には置かない。
-- [ ] `docs/adr/0003-consolidation-direction.md` を起草する:
-  - [ ] **決定**: `vaz-ai-next` をリネームして昇格。ルート `pyproject.toml` / `turbo.json` は作らない。
+- [x] 継承 spec を **`specs/inherited/001-agentic-ai-core-p0/`** へ配置した（R4.2）。
+      **実在 7 ファイル**（tasks.md 起草時の「8 ファイル」見積もりは誤りだった — 実体を優先）。
+      ハブの `001-vaz-ai-update` との採番衝突を回避。
+- [x] `docs/adr/0003-consolidation-direction.md` を起草した:
+  - [x] **決定**: `vaz-ai-next` をリネームして昇格。ルート `pyproject.toml` / `turbo.json` は作らない。
         Python レーンは `services/api`（`apps/agent-api` ではない — R4.6）。
-  - [ ] **supersede 対象を明示列挙**（R4.4）: 継承 spec の `T-0` / `T-1.2` / `T-1.3` / `T-2`。
+  - [x] **supersede 対象を明示列挙**（R4.4）: 継承 spec の `T-0` / `T-1.2` / `T-1.3` / `T-2`。
         **53 要件は supersede しない**（R4.3）。
-  - [ ] **両文書が独立に同じ結論へ到達した事実を記録**（R4.5）: 継承 spec の ADR-P0-05 候補 (a)
+  - [x] **両文書が独立に同じ結論へ到達した事実を記録**（R4.5）: 継承 spec の ADR-P0-05 候補 (a)
         （uv workspace メンバーに含めない・独自 lock・mise 直接実行）と統合計画 §4.2 は同方向。
         本 spec はその極限形。
-  - [ ] **Turborepo を採らない根拠**: Python 対応は 2.10.13 で `FutureFlags` 下の experimental
+  - [x] **Turborepo を採らない根拠**: Python 対応は 2.10.13 で `FutureFlags` 下の experimental
         （統合計画 §5.1）。継承 spec §12 R14 も「uv workspace メンバー選定は Turborepo 採否と
         同一の決定」と述べる。
-- [ ] `CLAUDE.md` / `AGENTS.md` を**ペアで**更新し、憲章・継承 spec・ADR-0003 への参照を追加する。
-      本文の重複は避け、参照のみとする。
+- [x] `CLAUDE.md` / `AGENTS.md` を**ペアで**更新し、憲章・継承 spec・ADR-0003 への参照を追加した。
+      本文の重複は避け、参照のみとした。
+- [x] **副作用対応**: `specs/inherited/001-agentic-ai-core-p0/spec.json` が biome の
+      `indentStyle: "tab"` と衝突（継承元が 2-space）。`biome check --write` で 1 ファイルのみ
+      再フォーマットし、`JSON.parse` 結果の意味的完全一致を確認した（空白のみの変更）。
+- [x] **検証（NFR-2）**: lint（158 files）/ typecheck（9 workspace projects）/
+      test:run（648 passed, 1 skipped, 0 failed）/ audit（no known vulnerabilities）/
+      lint:model-ids すべて green。
+
+**Task 4 完了。**
 
 ## 5. ガイド背骨 `docs/guide/`（Phase 1・コード移動ゼロ）(P)
 
