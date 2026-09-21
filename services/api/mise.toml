@@ -1,0 +1,158 @@
+[tools]
+uv = "latest"
+# Pinned, not merely floored by `requires-python = ">=3.13"`.
+#
+# Python 3.14 deprecates `asyncio.iscoroutinefunction`, and both `starlette`
+# 0.52.x (`starlette/routing.py`) and `slowapi` 0.1.10 (`slowapi/extension.py`)
+# still call it. This project holds starlette below 1.0 deliberately - slowapi
+# 0.1.10 is incompatible with starlette 1.x and silently disables the global
+# rate limit there (see pyproject.toml) - so those call sites cannot be moved
+# off the deprecated API by upgrading. Combined with the intentionally bare
+# `filterwarnings = ["error::DeprecationWarning"]`, every one of those calls
+# becomes a hard test failure on 3.14.
+#
+# Left unpinned, CI resolved a newer interpreter than local development had and
+# 63 tests failed with 12 errors for that reason alone (PR CI run 31880991303),
+# while the identical commit passed locally on 3.13. Pin the toolchain so CI,
+# local development, and `uv.lock` all agree. Revisit when starlette and slowapi
+# migrate to `inspect.iscoroutinefunction`.
+python = "3.13"
+
+[tasks.dev]
+description = "Start FastAPI development server with hot reload"
+run = "uv run uvicorn app.main:app --reload --port 8000"
+
+[tasks.test]
+description = "Run all tests with coverage"
+run = "uv run pytest tests/ -v --cov=app --cov-report=term-missing"
+
+[tasks."test:unit"]
+description = "Run unit tests only (fast, no LLM calls)"
+run = "uv run pytest tests/unit/ -v"
+
+[tasks."test:integration"]
+description = "Run integration tests (real stores, FunctionModel LLM)"
+run = "uv run pytest tests/integration/ -v"
+
+[tasks."test:e2e"]
+description = "Run E2E tests (full HTTP stack)"
+run = "uv run pytest tests/e2e/ -v"
+
+[tasks."test:benchmark"]
+description = "Run performance benchmark tests (latency, throughput, cache hit rate)"
+run = "uv run pytest tests/benchmarks/ -v -s"
+
+[tasks."test:local"]
+description = "Run local tests (requires running Ollama instance)"
+run = "uv run pytest tests/local/ -v -m ollama"
+
+[tasks."test:redis"]
+description = "Run the Redis session store live lane (requires a reachable Redis server)"
+run = "uv run pytest -m redis -v"
+
+[tasks."test:ci"]
+description = "PR CI test stage: unit+integration+e2e with coverage gate (TestModel/FunctionModel only, no live LLM/Ollama)"
+run = "uv run pytest tests/unit/ tests/integration/ tests/e2e/ -v --cov=app --cov-report=term-missing"
+
+[tasks.audit]
+description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
+# Ignored IDs fall into three groups.
+#
+# Group 1 - all on `starlette`, held below 1.0 (pyproject.toml) because
+# `slowapi` 0.1.10 is incompatible with starlette 1.x (see tasks.md Task 20.3).
+# Assessed in .sdd/specs/001-agent-architecture-enhancements/tasks.md Task 20.3:
+#   PYSEC-2026-161 - reachable (Host header into redirect Location), but
+#     mitigated at the app layer by TrustedHostMiddleware (app/main.py, Task
+#     20.1) regardless of the starlette version installed.
+#   PYSEC-2026-248 - unreachable: no `HTTPEndpoint` usage in this codebase.
+#   PYSEC-2026-249 - unreachable: no `request.form()` call; `python-multipart`
+#     isn't even installed (plain `fastapi`, not `fastapi[standard]`).
+#   PYSEC-2026-2280 - unreachable: no `HTTPEndpoint` usage.
+#   PYSEC-2026-2281 - unreachable: no `StaticFiles` usage; Windows-only UNC
+#     path issue besides.
+# Re-run `uv run pip-audit` (without --ignore-vuln) after any starlette bump
+# to confirm these still apply before renewing the ignore list.
+#
+# Group 2 - all on `chromadb` 0.6.3 (held below 1.0, pyproject.toml, as a
+# shelved major pending a client-compatibility pass - see
+# docs/dependency-runbook.md). Unlike the starlette group, these have no fix
+# release to upgrade into: PyPI/OSV list `fixed_in: []` for all three, and the
+# affected range ("0.4.17 or later" / "0.5.0 or later") covers even the
+# latest chromadb (still 1.5.9, re-checked 2026-09-19) - so lifting the `<1.0` cap would
+# not close them either.
+#   CVE-2026-45830 (GHSA-2wm9-hf6c-p5cr, PYSEC-2026-3813) - a lack of
+#     authorization validation lets any authenticated user read/write/update/
+#     delete another tenant's collection.
+#   CVE-2026-45831 (GHSA-xph7-9rjv-w5fr, PYSEC-2026-3815) -
+#     `SimpleRBACAuthorizationProvider` checks whether a permission is held but
+#     never which tenant/database/collection it applies to.
+#   CVE-2026-45833 (GHSA-36p7-vc44-83pf, PYSEC-2026-3814) - an authenticated
+#     attacker with UPDATE_COLLECTION can achieve remote code execution via a
+#     malicious model repo plus `trust_remote_code=true` on the collections API.
+# The PYSEC IDs were assigned after this group was written, and as of the
+# 2026-09-19 refresh raw `pip-audit` prints *those* as the primary IDs rather
+# than the CVEs listed in `--ignore-vuln` below. The entries still match,
+# because pip-audit resolves `--ignore-vuln` against a vulnerability's aliases
+# as well as its primary ID (verified: raw output reports 14 findings, the
+# ignore list suppresses all 14). Do not "fix" the apparent mismatch by
+# swapping the CVE ids out - keeping the CVE form is what makes this group
+# readable next to the GHSA links.
+# All three require ChromaDB's server (multi-tenant HTTP API, RBAC,
+# `trust_remote_code`). This codebase never runs a Chroma server: `app/stores/
+# vector_store/chroma.py` only ever constructs `chromadb.PersistentClient` or
+# `chromadb.Client()` (the embedded, in-process client) - no `HttpClient`, no
+# tenants, no RBAC config. Unreachable today.
+# These are NOT dormant like the starlette entries above: the moment
+# `ChromaVectorStore` (or any new code) switches to `chromadb.HttpClient` or
+# this app starts talking to a standalone Chroma server process - see the
+# example in docs/production_deployment.md - all three become reachable and
+# this ignore list must be revisited before that ships. Re-run `uv run
+# pip-audit` (without --ignore-vuln) after any chromadb bump to check whether
+# upstream has since shipped a fix.
+#
+# Group 3 - `nltk` 3.10.3, a transitive of `llama-index-core` (nothing in
+# `app/`, `evals/`, or `tests/` imports nltk directly). First seen in the
+# 2026-09-05 dependency refresh.
+#   PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp / CVE-2026-81726) - model-artifact
+#     import/export helpers call built-in `open()` on caller-controlled paths
+#     instead of the pathsec-aware helpers, so they read and write outside the
+#     allowed roots when NLTK path-security enforcement is on.
+# Like Group 2 this has no fix release: `fixed_in: []`, and 3.10.3 is the
+# latest nltk on PyPI (re-checked 2026-09-19), so no bump closes it. Unreachable
+# here on two independent counts: (1) the advisory's own preconditions require
+# the application to enable `pathsec.ENFORCE` AND let untrusted input choose a
+# model import/export path - this codebase does neither; (2) none of the
+# affected components (`TransitionParser`, `AveragedPerceptron`,
+# `PerceptronTagger.save_to_json`, `save_maxent_params`) is reachable - the
+# only llama-index-core module that touches nltk is
+# `indices/keyword_table/utils.py` (stopword lookup), and this codebase never
+# builds a keyword-table index; the RAG path is `app/workflows/corrective_rag.py`
+# over the `VectorStore` protocol. Re-run `uv run pip-audit` (without
+# --ignore-vuln) after any llama-index-core bump to check for an nltk fix
+# release, and revisit this entry if any code starts calling nltk's model
+# serialization APIs.
+run = "uv run pip-audit --ignore-vuln PYSEC-2026-161 --ignore-vuln PYSEC-2026-248 --ignore-vuln PYSEC-2026-249 --ignore-vuln PYSEC-2026-2280 --ignore-vuln PYSEC-2026-2281 --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833 --ignore-vuln PYSEC-2026-3740"
+
+[tasks."hooks:install"]
+description = "Install the pre-commit git hook (gitleaks/pip-audit/model-id/tool-conventions guards, Req 12.4)"
+run = "uv run pre-commit install"
+
+[tasks.evals]
+description = "Run the offline evals suite against the golden dataset (Req 6.5); pre-push only, never on GitHub Actions"
+run = "uv run python -m evals.runner"
+
+[tasks."evals:pr-gate"]
+description = "Compare two evals runs' EvalReport JSON files for regressions (X-8); offline, no LLM calls, not wired into CI"
+run = "uv run python -m evals.pr_gate"
+
+[tasks.lint]
+description = "Run ruff linter and ty type checker"
+run = ["uv run ruff check app/ evals/ tests/", "uv run ty check app/ evals/"]
+
+[tasks.format]
+description = "Run ruff formatter"
+run = "uv run ruff format app/ evals/ tests/"
+
+[tasks.build]
+description = "Build Docker image"
+run = "docker build -t fastapi-pydantic-ai-agent:latest ."
