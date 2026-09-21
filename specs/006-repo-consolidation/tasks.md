@@ -242,17 +242,27 @@ _Requirements:_ 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, NFR-1, NFR-2, NFR-4
 
 ## 7. パターンカタログの取捨選択（Phase 3）
 
-_Boundary:_ `docs/guide/**`（リンク更新）, 移設する教材コードの配置先,
-`scripts/forbid-model-ids.sh` の carve-out または allowlist
+_Boundary:_ `docs/guide/**`（リンク更新）, `specs/006-repo-consolidation/plan.md`（決定記録）
 _Depends:_ Task 6
 _Requirements:_ 7.1, 7.2, 7.3, 7.4
 
-- [ ] `pydantic-ai-sandbox` の 3 FW 横断比較は**取り込まない**。upstream 維持 ＋ リンク（R7.1）。
-- [ ] 教材用の単純版をガイドの正本とし、比較版は sandbox へリンクする（R7.2）。
-- [ ] 教材コード移設時の model-ID 2 箇所（`src/part1_foundations/prompt_caching.py:30` の
-      `Agent("claude-sonnet-5")`、`src/common/settings.py:37` の `Field(default="claude-sonnet-5")`）を
-      allowlist へ寄せる。**これらは docstring ではなく実代入**であり、案 (c) でも検出される（R7.3）。
-- [ ] `specs/review/`（点時記録）は移設しない（R7.4 / NFR-3）。
+- [x] `pydantic-ai-sandbox` の 3 FW 横断比較は**取り込まない**。upstream 維持 ＋ リンク（R7.1。
+      Task 5 の `docs/guide/agentic-engineering.md` で既に確立済み、本 Task で再確認）。
+- [x] **決定（plan.md §2.7）: 教材コードは物理的に移設しない。** R7.2 の「ガイドの正本とする」は
+      リンクによる designation で満たし、`docs/guide/agentic-engineering.md` に **6 パターン全ての
+      正本（教材の単純版）／比較版（sandbox）対応表**を追加した（14 ファイルパスをすべて実在
+      確認済み）。理由: 書籍原稿 14 章を link-only とした R5.3 の判断と整合させるため
+      （コードだけ引き剥がすと解説と実装が分裂する）。Task 6（本番アプリの移設）との性格の違いを
+      plan.md に明記。
+- [x] **R7.3 は不発火**: 移設しない決定のため、`src/part1_foundations/prompt_caching.py:30` /
+      `src/common/settings.py:37` の model-ID 2 箇所は移設対象にならず、allowlist 対応は不要。
+      `lint:model-ids` は追加の carve-out なしで green のままであることを確認した。
+- [x] `specs/review/`（点時記録）は移設していない（R7.4 / NFR-3。そもそも `pydantic-ai-agentic-patterns`
+      からは何も移設していないため自明に満たされる）。
+- [x] `mise run check` 相当（lint/typecheck/test:run/audit/lint:model-ids）が green であることを
+      確認した（コードは一切移動していないため、Task 5 と同じく NFR-1 準拠で独立着地）。
+
+**Task 7 完了。**
 
 ## 8. ギャップ充填・参照整合・旧 repo 整理（Phase 4〜5）
 

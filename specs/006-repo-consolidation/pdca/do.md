@@ -510,3 +510,65 @@ pytest 実測は **1462 passed, 3 skipped, 0 failed**（削除前 1461 passed / 
 | audit（Python, pip-audit） | ✅ No known vulnerabilities, 14 ignored |
 
 **Task 6 完了。**
+
+---
+
+## Task 7: パターンカタログの取捨選択
+
+### 実行日時
+2026-09-21（Task 6 完了直後）
+
+### 決定: 教材コードは物理的に移設しない
+
+R7.2（「教材用の単純版をガイドの正本とする」）は移設を明示的には要求していない。
+Task 6（本番アプリ `fastapi-pydantic-ai-agent` の移設）と対比して判断した:
+
+- Task 6 の対象は**単体で動く本番アプリケーション**であり、ハブの一部として実際に
+  デプロイ・運用される。移設しない理由がない。
+- Task 7 の対象（`pydantic-ai-agentic-patterns/src/part{3,4,5}_*`）は**書籍の実装コード**で、
+  `docs/part{1..5}/ch{01..14}.md` と 1 対 1 対応する。Phase 1（Task 5, R5.3）で書籍原稿 14 章を
+  **リンク参照のみ**と決めており、コードだけを先に移設すると解説と実装が別リポジトリに
+  分裂し、読者体験が悪化する。章ごと移設するなら Phase 1 の判断のやり直しであり、
+  Phase 3 の軽量な「取捨選択」の範囲を超える。
+
+判断の詳細は `plan.md` §2.7 に記録した。
+
+### R7.1/R7.2 — 6 パターンの正本表
+
+`docs/guide/agentic-engineering.md` に、Anthropic 6 パターンそれぞれの
+「教材用の単純版（正本）」と「比較版（sandbox、3 FW、参照のみ）」を対応させる表を追加した。
+14 ファイル・ディレクトリパスをすべて実在確認済み（`ls`/`test -e` で個別に検証）:
+
+| パターン | 正本 | 比較版 |
+|---|---|---|
+| Prompt Chaining | `src/part3_workflows/prompt_chaining.py` | `patterns/prompt-chaining/` |
+| Routing | `src/part3_workflows/routing_workflow.py` | `patterns/routing/` |
+| Parallelization | `src/part3_workflows/parallel_workflow.py` | `patterns/parallelization/` |
+| Evaluator-Optimizer | `src/part3_workflows/evaluator_optimizer.py` | `patterns/evaluator-optimizer/` |
+| Orchestrator-Workers | `src/part4_multi_agent_rag/research_system/orchestrator.py` | `patterns/orchestrator-workers/` |
+| Autonomous Agent | `src/part5_production/guarded_agent.py`（部分的） | `patterns/autonomous-agent/` |
+
+`I-H10`（`pydantic-ai-agentic-patterns/specs/review/integrated/findings.md:455` で実在確認）
+への言及と、`services/api/app/agents/guardrails.py:40` の閉じた `StopReason` 語彙
+（`grep` で実在確認: `Literal["completed", "max_iterations", "budget_exceeded", "denied",
+"disallowed_tool"]`）を移植機会として追記した（R8.5 の先取り言及）。
+
+### R7.3 — 不発火の確認
+
+移設していないため、`src/part1_foundations/prompt_caching.py:30` /
+`src/common/settings.py:37` の model-ID 2 箇所はハブの走査対象にならない。
+`bash scripts/forbid-model-ids.sh` を再実行し、追加の carve-out なしで green
+であることを確認した。
+
+### R7.4 — 確認
+
+`specs/review/`（`pydantic-ai-agentic-patterns` の点時記録）は移設していない
+（そもそも同リポジトリから何も移設していないため自明）。
+
+### NFR-2 検証結果
+
+git diff は `docs/guide/agentic-engineering.md` と本 spec の文書 3 ファイルのみ
+（`apps/`/`packages/`/`services/`/`.github/` への変更なし）。lint（160 files）/
+typecheck（9 projects）/ test:run（652 passed）/ audit / lint:model-ids すべて green。
+
+**Task 7 完了。** NFR-1 のとおり、コード移動ゼロで独立着地した。
