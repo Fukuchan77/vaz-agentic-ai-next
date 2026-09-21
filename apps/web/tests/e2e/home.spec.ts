@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("home", () => {
 	test("renders the chat UI", async ({ page }) => {
 		await page.goto("/");
-		await expect(page.getByRole("heading", { name: "vaz-ai-next" })).toBeVisible();
+		await expect(page.getByRole("heading", { name: "vaz-agentic-ai-next" })).toBeVisible();
 		await expect(page.getByPlaceholder(/メッセージを入力/)).toBeVisible();
 		await expect(page.getByRole("button", { name: "送信" })).toBeVisible();
 	});
