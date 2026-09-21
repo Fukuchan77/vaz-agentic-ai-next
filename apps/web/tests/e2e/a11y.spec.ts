@@ -15,7 +15,7 @@ import { expect, test } from "@playwright/test";
 test.describe("accessibility (WCAG 2.1 A/AA)", () => {
 	test("home page has no detectable a11y violations", async ({ page }) => {
 		await page.goto("/");
-		await expect(page.getByRole("heading", { name: "vaz-ai-next" })).toBeVisible();
+		await expect(page.getByRole("heading", { name: "vaz-agentic-ai-next" })).toBeVisible();
 
 		const results = await new AxeBuilder({ page })
 			.withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

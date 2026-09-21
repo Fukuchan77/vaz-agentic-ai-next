@@ -77,25 +77,34 @@ GitHub 上の 2 リポジトリ名
 _Depends:_ Task 1
 _Requirements:_ 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, NFR-5
 
-- [ ] **名前空け（既定）**: `Fukuchan77/vaz-agentic-ai-next` → `vaz-agentic-ai-next-archive` へ
-      リネームする。可逆であり全ブランチが保全される（plan §2.2）。
-- [ ]* **名前空け（代替）**: ユーザが Task 1 の検証結果を確認したうえで**明示的に削除を選択した
-      場合のみ**、削除する（R2.2）。既定ではない。
-- [ ] `Fukuchan77/vaz-ai-next` → `Fukuchan77/vaz-agentic-ai-next` へリネームする。
-      **可視性は public (MIT) のまま変更しない**（R2.3）。
-- [ ] ローカルクローンの remote URL を更新する（`git remote set-url origin ...`）。
-- [ ] **6 ファイルを 1 コミットで**更新する（R2.5 / plan §2.6 — 分割すると pre-push の
-      Playwright が赤になる）:
-  - [ ] `package.json:2` — `"name": "vaz-agentic-ai-next"`
-  - [ ] `apps/web/src/app/layout.tsx:6` — `title: "vaz-agentic-ai-next"`
-  - [ ] `apps/web/src/features/chat/Chat.tsx:124` — `<h1>` テキスト
-  - [ ] `apps/web/tests/e2e/home.spec.ts:6` — `getByRole("heading", { name: ... })`
-  - [ ] `apps/web/tests/e2e/a11y.spec.ts:18` — 同上
-  - [ ] `README.md:1` — 表題
-- [ ] `@vaz/*` の 9 パッケージ名が**変更されていない**ことを確認する（R2.6）:
-      `pnpm ls -r --depth -1` が 9 メンバーを列挙すること。
-- [ ] `specs/00{1,3,5}-*/` 配下の `vaz-ai-next` 言及 9 箇所を**書き換えていない**ことを確認する（R2.7）。
-- [ ] `mise run check` と `mise run test:e2e` が green であることを確認する（NFR-2）。
+- [x] **名前空け（既定）**: `Fukuchan77/vaz-agentic-ai-next` → `vaz-agentic-ai-next-archive` へ
+      リネームした（ユーザ実行）。可逆であり全ブランチが保全された（plan §2.2）。
+- [ ]* **名前空け（代替）**: 不使用（既定の archive リネームを採用）。
+- [x] `Fukuchan77/vaz-ai-next` → `Fukuchan77/vaz-agentic-ai-next` へリネームした（ユーザ実行）。
+      **可視性は public (MIT) のまま変更なし**（R2.3。`list_repos` で確認）。
+- [x] ローカルクローンの remote URL を更新した。**pdca/do.md の教訓（名前競合ウィンドウ）を適用し、
+      `git ls-remote origin HEAD` で実ハブの SHA（`6e6a558`）と一致することを信用する前に確認した**。
+      Task 1 で push した `archive/vaz-agentic-ai-next/*` 6 refs も新名の下でそのまま健在。
+- [x] **6 ファイルを 1 コミットで**更新した（R2.5 / plan §2.6）:
+  - [x] `package.json:2` — `"name": "vaz-agentic-ai-next"`
+  - [x] `apps/web/src/app/layout.tsx:6` — `title: "vaz-agentic-ai-next"`
+  - [x] `apps/web/src/features/chat/Chat.tsx:124` — `<h1>` テキスト
+  - [x] `apps/web/tests/e2e/home.spec.ts:6` — `getByRole("heading", { name: ... })`
+  - [x] `apps/web/tests/e2e/a11y.spec.ts:18` — 同上
+  - [x] `README.md:1` — 表題（`VAZ-Agentic-AI-Next`）
+- [x] `@vaz/*` の 9 パッケージ名が**変更されていない**ことを確認した（R2.6）:
+      `pnpm ls -r --depth -1` が root（`vaz-agentic-ai-next`）＋ 9 `@vaz/*` メンバーを列挙。
+- [x] `specs/00{1,3,5}-*/` 配下の `vaz-ai-next` 言及 9 箇所が**書き換わっていない**ことを確認した（R2.7）。
+- [x] **検証（NFR-2）**: `lint`（biome, 157 files）/ `typecheck`（9 workspace projects）/
+      `test:run`（vitest 648 passed, 1 skipped, 0 failed）/ `audit`（pnpm audit --audit-level=moderate,
+      no known vulnerabilities）/ `lint:model-ids` すべて green
+      （`mise` 未導入環境のため `AGENTS.md` の pnpm 直接実行版を使用）。
+      **E2E**: このサンドボックスの Playwright ブラウザは事前導入版（`chromium-1194`）で、
+      リポジトリが要求するバージョン（`chromium_headless_shell-1243`）と食い違い、
+      未変更の内容に対しても `playwright test` の `webServer` 起動が失敗する（`git stash` で
+      変更前の内容に対して再現・確認済み）ため、Playwright ランナー自体は実行できなかった。
+      代わりに同一の `next dev` コマンドを直接起動し、稼働中のページを直接 fetch して検証: `<title>`
+      と `<h1>` はいずれも `vaz-agentic-ai-next`（更新後の 2 E2E spec のアサート文字列と完全一致）。
 
 ## 3. 正本 `cross-repo-adoption-review.md` の設置
 

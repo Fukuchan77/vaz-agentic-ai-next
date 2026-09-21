@@ -123,3 +123,78 @@ Task 1 の途中、ハブのローカル clone の origin URL を先回りして
 3. GitHub 側の add_repo/セッションの repo alias は「呼び出し時に指定した owner/repo 文字列」で
    キャッシュされる場合があるため、rename 後は該当 repo を明示的に再 add_repo し、
    ローカル clone の `origin` URL も rename 後の正式名へ張り替えてから `fetch` で疎通確認する。
+
+---
+
+## Task 2: 同一性の移行
+
+### 実行日時
+2026-09-21（ユーザによる `vaz-ai-next` → `vaz-agentic-ai-next` リネーム直後）
+
+### リネーム後の疎通確認（pdca/do.md の教訓を適用）
+
+Task 1 のヒヤリハットを踏まえ、リネーム完了の報告後もローカル clone の origin を書き換える前に
+`list_repos` で GitHub 側の実際の状態を確認した:
+
+```
+Fukuchan77/vaz-agentic-ai-next          public   pushed_at: 2026-09-21T09:16:05Z
+Fukuchan77/vaz-agentic-ai-next-archive  private  pushed_at: 2026-09-21T08:18:23Z
+```
+
+`git remote set-url origin https://github.com/Fukuchan77/vaz-agentic-ai-next` の後、
+**信用する前に** `git ls-remote origin HEAD` を実行し、返る SHA（`6e6a558...`）が
+ハブの既知の `main` tip と一致することを確認した（アーカイブの `507161c` ではないこと）。
+続けて `git fetch origin claude/busy-hopper-5psrh2` を実行し、ローカル HEAD と完全一致、
+かつ Task 1 で push した `archive/vaz-agentic-ai-next/*` 6 refs が新名の下でも健在であることを
+確認してから作業を継続した。
+
+### R2.3〜R2.8 — 6 ファイルの更新
+
+1 コミットで以下を更新（分割すると pre-push の Playwright E2E が赤になるため — R2.5）:
+
+| ファイル | 変更 |
+|---|---|
+| `package.json:2` | `"vaz-ai-next"` → `"vaz-agentic-ai-next"` |
+| `apps/web/src/app/layout.tsx:6` | `title: "vaz-ai-next"` → `"vaz-agentic-ai-next"` |
+| `apps/web/src/features/chat/Chat.tsx:124` | `<h1>` テキスト同様 |
+| `apps/web/tests/e2e/home.spec.ts:6` | `getByRole` のアサート文字列同様 |
+| `apps/web/tests/e2e/a11y.spec.ts:18` | 同上 |
+| `README.md:1` | `VAZ-AI-Next` → `VAZ-Agentic-AI-Next` |
+
+`@vaz/*` 9 パッケージ名・`specs/00{1,3,5}-*/` の点時記録 9 箇所は未変更（`grep` で確認 — R2.6/R2.7）。
+
+### NFR-2 検証結果
+
+`mise` がこの実行環境に未導入のため、`AGENTS.md` の pnpm 直接実行版を使用（`pnpm install
+--frozen-lockfile` で依存を導入したうえで実行）:
+
+| ゲート | コマンド | 結果 |
+|---|---|---|
+| lint | `pnpm exec biome check .` | ✅ 157 files, no fixes needed |
+| typecheck | `pnpm run typecheck`（= `pnpm -r run typecheck`） | ✅ 9 workspace projects すべて green |
+| test:run | `pnpm exec vitest run` | ✅ 62 files / 648 passed, 1 skipped, 0 failed |
+| audit | `pnpm audit --audit-level=moderate` | ✅ No known vulnerabilities found |
+| lint:model-ids | `bash scripts/forbid-model-ids.sh` | ✅ green |
+
+**E2E（`mise run test:e2e` 相当）は Playwright ランナー自体を実行できなかった。**
+このサンドボックスに事前導入されているブラウザは `chromium-1194` だが、リポジトリの
+`@playwright/test`（1.63.0）は `chromium_headless_shell-1243` を要求し、バージョンが
+食い違う。`git stash` で**変更前の内容**に対して同じコマンドを実行しても同一のエラーが
+再現することを確認済みであり、**本 Task の変更が原因ではなく、サンドボックス環境の
+事前導入ブラウザとリポジトリのピン版のずれによる、既存の制約**である。
+
+代替として、Playwright が内部で起動するのと同じ `pnpm --filter @vaz/web exec next dev
+--port 3000` を直接起動し、稼働中のページを `curl` で直接検証した:
+
+```
+<title>vaz-agentic-ai-next</title>
+<h1 class="...">vaz-agentic-ai-next</h1>
+```
+
+更新後の 2 E2E spec のアサート文字列（`getByRole("heading", { name: "vaz-agentic-ai-next" })`）と
+完全一致。E2E ランナーそのものは通せなかったが、**その E2E が検証しようとしている対象
+（レンダリングされた見出し文字列）は実サーバーに対して直接確認済み**。
+
+### Task 2 完了。Task 3（正本設置）の前提が整った
+
+R3.4 の「7 参照が編集ゼロで解決する」検証（R9.1）を次に実行できる状態。
