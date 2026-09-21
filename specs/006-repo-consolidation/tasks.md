@@ -36,31 +36,37 @@ _Boundary:_ `specs/006-repo-consolidation/pdca/do.md`（退避記録の節）, �
 _Depends:_ none
 _Requirements:_ 1.1, 1.2, 1.3, 1.4, 1.5, NFR-5
 
-- [ ] `Fukuchan77/vaz-agentic-ai-next` の全 ref を列挙し、**6 本の非 main ブランチ**の tip SHA を
-      `pdca/do.md` に記録する（`git ls-remote --heads origin`）。
-- [ ] `claude/agentic-ai-repo-design-3k8e32`（正本レビューと憲章の両方を含む最大集合）を
-      `--depth 50` で fetch する。
-- [ ] 残り 5 ブランチについて、`claude/agentic-ai-repo-design-3k8e32` の**部分集合であるか**を
-      `git diff --stat` で判定する。部分集合でないものは個別に fetch する（R1.5）。
-- [ ] 退避 ref をハブへ push する: `git push origin <sha>:refs/heads/archive/vaz-agentic-ai-next`。
-      **ファイルコピーではなく ref の push**とする（履歴と作成者情報の保全 — R1.2）。
-- [ ] **検証（R1.3）**: 9 ファイルの行数が下表と一致することを確認し、結果を `pdca/do.md` に記録する。
-      1 件でも不一致なら Task 2 に進まない。
+- [x] `Fukuchan77/vaz-agentic-ai-next`（ユーザによりリネーム済み。現 `vaz-agentic-ai-next-archive`）の
+      全 ref を列挙し、**6 本の非 main ブランチ**の tip SHA を `pdca/do.md` に記録した。
+- [x] `claude/agentic-ai-repo-design-3k8e32`（正本レビューと憲章の両方を含む最大集合）を
+      `--depth 50` で fetch した。
+- [x] 残り 5 ブランチについて `claude/agentic-ai-repo-design-3k8e32` の部分集合であるかを判定した
+      （R1.5）。**結果は想定と異なった**: 真の部分集合（祖先）は `001-agentic-ai-core` の 1 本のみ。
+      残り 4 本（`claude/agentic-ai-app-spec-xo42j1` / `claude/attachment-spec-review-2g4d21` /
+      `claude/sharp-hopper-kbrpfo` / `claude/spec-agentic-001-review-jf4dcd`）はそれぞれ固有ファイル
+      （`docs/integration-plan.md` 前版、`docs/SPEC-AGENTIC-001.md` v1.5/v1.6、
+      `docs/REVIEW-VERIFICATION-001.md`）を持つため、**6 本すべてを push した**（詳細は `pdca/do.md`）。
+- [x] 退避 ref をハブへ push した: `archive/vaz-agentic-ai-next/<branch>`（6 本）。
+      **ファイルコピーではなく ref の push**（履歴と作成者情報の保全 — R1.2）。
+- [x] **検証（R1.3）**: 9 ファイルの行数が下表と一致することを push 済み ref から再読み出しで確認し、
+      `pdca/do.md` に記録した。**9 / 9 GREEN**。
 
-      | path | 期待行数 |
-      |---|---:|
-      | `docs/cross-repo-adoption-review.md` | 493 |
-      | `specs/001-agentic-ai-core-p0/spec-agenticai-core.md` | 1806 |
-      | `specs/001-agentic-ai-core-p0/plan.md` | 1338 |
-      | `specs/001-agentic-ai-core-p0/tasks.md` | 662 |
-      | `specs/001-agentic-ai-core-p0/research.md` | 330 |
-      | `specs/001-agentic-ai-core-p0/traceability.md` | 100 |
-      | `specs/memory/constitution.md` | 296 |
-      | `CLAUDE.md` | 241 |
-      | `AGENTS.md` | 141 |
+      | path | 期待行数 | 実測 |
+      |---|---:|---:|
+      | `docs/cross-repo-adoption-review.md` | 493 | 493 |
+      | `specs/001-agentic-ai-core-p0/spec-agenticai-core.md` | 1806 | 1806 |
+      | `specs/001-agentic-ai-core-p0/plan.md` | 1338 | 1338 |
+      | `specs/001-agentic-ai-core-p0/tasks.md` | 662 | 662 |
+      | `specs/001-agentic-ai-core-p0/research.md` | 330 | 330 |
+      | `specs/001-agentic-ai-core-p0/traceability.md` | 100 | 100 |
+      | `specs/memory/constitution.md` | 296 | 296 |
+      | `CLAUDE.md` | 241 | 241 |
+      | `AGENTS.md` | 141 | 141 |
 
-- [ ] 正本レビューが**ユーザ添付ファイルと byte 一致**することを `diff` で再確認する
-      （出所の同一性証明。既に 2026-09-21 に確認済みだが退避後の ref に対して再実行する）。
+- [x] 正本レビューが**ユーザ添付ファイルと byte 一致**することを `diff` で再確認した
+      （push 済み ref から再取得しても一致）。
+
+**Task 1 完了。Task 2 の Gate（9 ファイル検証 green）は解除された。**
 
 ## 2. 同一性の移行（不可逆操作を含む）
 
