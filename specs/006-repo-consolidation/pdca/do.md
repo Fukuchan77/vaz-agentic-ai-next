@@ -572,3 +572,82 @@ git diff は `docs/guide/agentic-engineering.md` と本 spec の文書 3 ファ�
 typecheck（9 projects）/ test:run（652 passed）/ audit / lint:model-ids すべて green。
 
 **Task 7 完了。** NFR-1 のとおり、コード移動ゼロで独立着地した。
+
+---
+
+## Task 8: ギャップ充填・参照整合・旧 repo 整理
+
+### 実行日時
+2026-09-21（Task 7 完了直後）
+
+### R9.1 — 参照検証の実装と実行
+
+2 段構成で実装した:
+
+1. **`tests/repo/cross-repo-reference-resolution.spec.ts`**（CI 常時実行、4 テスト）。
+   ハブ自身の tree だけから到達可能な範囲（ハブの 2 参照 ＋ Task 6 で `services/api` に
+   取り込まれた 3 参照 = 計 5 件）を対象に、正規表現で「reponame-qualified 参照」を抽出し
+   現ハブ名（`vaz-agentic-ai-next`）を名乗っているかを検証。非空アサート含む。
+   - 実装中に自分の誤りを 1 件訂正: 当初「言及があれば qualified 形式を要求する」設計にしたところ、
+     ハブ自身の `CLAUDE.md`/`AGENTS.md`/`docs/guide/` 等の**同一リポジトリ内の相対リンク**
+     （qualifier 不要が正しい）を誤検知した。qualified 形式（`reponame/docs/...`）が実際に
+     現れた箇所だけを検査する設計へ訂正。
+   - もう 1 件: `pdca/do.md` 自身が Task 3 の記録として古い grep 除外パターンを引用符付きで
+     残しており（`vaz-ai-next/docs/cross-repo-adoption-review.md` という文字列そのもの）、
+     これも誤検知した。`specs/*/pdca/` を運用ログとしてスキャン対象から除外して解決。
+2. **`scripts/verify-cross-repo-references.sh`**（CI 非配線、兄弟リポジトリ checkout 前提）。
+   実行結果:
+
+   ```
+   === Summary ===
+   Scanned 7 reference(s) total across reachable files.
+   ✅ [verify-cross-repo-references] all reachable references resolved to
+      vaz-agentic-ai-next/docs/cross-repo-adoption-review.md
+   ```
+
+   **7 / 7 全件解決を確認**（ハブ自身 2 件・`services/api` 3 件・`pydantic-ai-sandbox` 2 件）。
+   sibling checkout が無い環境での graceful degradation（5 / 7 を検証し `[skip]` で
+   残り 2 件を明示、exit 0）も動作確認済み。
+
+### R9.2 — `pydantic-ai-agentic-patterns` への注記
+
+`pydantic-ai-agentic-patterns/specs/review/INDEX.md` へ 1 行の注記を追加し、
+同リポジトリの `claude/busy-hopper-5psrh2` ブランチへ直接 push した（コミット `4d2939f`）。
+表・ディレクトリ名（`vaz-ai-next/`）・本文は変更していない（追記のみ規約）。
+
+### R8.3/R8.4 — ADR-0004
+
+`docs/adr/0004-stop-reason-vocabulary.md` を起票。ADR-0001/0002 と同一の
+Status/Date/仕様根拠ヘッダ構成。起票前に TS 側の実際のデータフローを再検証:
+`runStopReasonSchema` は `runMetricsSchema`（`stopReason` フィールド）を経由して
+`runAuditEntrySchema`（監査ログ永続化）と `JobEvent.completion.metrics`（SSE）の
+両方へ流れることを `grep` で確認済み（spec.md の「audit_log テーブルに既出」という
+表現は正確には `runAuditEntrySchema` 経由であり、ADR 本文はその正確な経路で記述した）。
+
+`docs/guide/loop-engineering.md` を更新: ADR-0004 への直接リンクに切り替え、
+`services/api/app/agents/guardrails.py`（Task 6 でハブ内実装になった）を
+「(b) 兄弟リポジトリの教材」から「(a) このハブでの実装」へ移設した。
+
+### R8.1/R8.2/R8.5 — 任意項目
+
+いずれも不採用・未実施のまま。Requirement が「採用/実施する場合」の条件付きであるため
+違反ではない。`pdca/act.md` に申し送りを記録。
+
+### R9.3/R9.4 — `pdca/act.md`
+
+新規作成。統合計画からの主要な乖離 5 件、学び 5 件、申し送り 6 件を記録。
+`beeai-agentic-ai-sandbox` の境界外扱い（R9.3）と旧リポジトリのアーカイブ判断
+（R9.4 — 3 repo とも現時点でアーカイブしない、理由つき）を含む。
+
+### NFR-2 検証結果（最終）
+
+| ゲート | 結果 |
+|---|---|
+| lint | ✅ 161 files |
+| typecheck | ✅ 9 workspace projects |
+| test:run | ✅ 656 passed / 1 skipped / 0 failed（新規 4 件含む） |
+| audit | ✅ No known vulnerabilities |
+| lint:model-ids | ✅ |
+| `verify-cross-repo-references.sh`（兄弟 checkout あり） | ✅ 7 / 7 |
+
+**Task 8 完了。全 8 Task 完了。`specs/006-repo-consolidation` の全 Requirement に対応した。**
