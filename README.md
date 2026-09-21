@@ -1,4 +1,4 @@
-<h1 align="center">VAZ-AI-Next</h1>
+<h1 align="center">VAZ-Agentic-AI-Next</h1>
 
 <p align="center">
   A bleeding-edge AI application repository architecture, blending modern frontend performance with seamless AI orchestration.

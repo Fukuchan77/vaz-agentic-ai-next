@@ -19,14 +19,28 @@
 # Only the anthropic / ollama providers are supported (provider-agnostic, no OpenAI).
 # The detection pattern centers on claude- / llama and includes other vendors
 # (gpt / gemini / qwen / mistral) as a defensive tripwire.
+#
+# Assignment-form only (spec 006-repo-consolidation R6.4, ADR-0003): the match
+# must sit inside a double-quoted string immediately preceded by `:` or `=`
+# (optionally with whitespace) — a real assignment, object property, or kwarg,
+# not illustrative prose. Without this, bringing in services/api (whose
+# docstrings legitimately write `(e.g., "openai:gpt-4o")` to explain the
+# "provider:model" → LiteLLM "provider/model" conversion) trips 3 false
+# positives with zero real violations behind them. Mirrors
+# services/api/tests/unit/test_no_hardcoded_model_ids.py's own
+# `[:=]\s*"(provider):...`  pattern, generalized from that file's
+# provider-prefix form to this script's vendor-substring form so one pattern
+# covers both this repo's "claude-opus-5" style and services/api's
+# "provider:model" style (e.g. "anthropic:claude-3-5-sonnet-20241022" still
+# matches on its embedded "claude-3" substring).
 set -euo pipefail
 
 # The script lives under scripts/ → move to the repo root so relative paths are stable.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-# Known model-ID literals to detect.
-PATTERN='claude-[a-z0-9]|llama-?[0-9]|gpt-[0-9]|gemini-[0-9]|qwen[0-9]|mistral-[a-z0-9]'
+# Known model-ID literals to detect, in assignment-form context only.
+PATTERN='[:=]\s*"[a-zA-Z0-9_./:-]*(claude-[a-z0-9]|llama-?[0-9]|gpt-[0-9]|gemini-[0-9]|qwen[0-9]|mistral-[a-z0-9])'
 
 # Scan apps/**, packages/**, and services/**, excluding the carve-outs.
 # (grep returns exit 1 on no match, so `|| true` absorbs it under set -e / pipefail.)

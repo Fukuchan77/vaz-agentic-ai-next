@@ -1,0 +1,34 @@
+{
+	"feature_name": "006-repo-consolidation",
+	"language": "ja",
+	"phase": "tasks-generated",
+	"created_at": "2026-09-21T09:00:00+0900",
+	"updated_at": "2026-09-21T09:00:00+0900",
+	"project_description": "Agentic AI 系 5 リポジトリの統合。vaz-ai-next を統合ハブへ昇格し vaz-agentic-ai-next へリネーム、同名の既存リポジトリが保持する憲章・P0 spec・正本レビューを退避のうえ継承する。以降、ガイド背骨（docs/guide/）と第 2 Python レーン（services/api）を段階的に迎える。",
+	"source_documents": {
+		"integration_plan": {
+			"title": "Agentic AI リポジトリ統合 — 調査結果と実行計画",
+			"dated": "2026-09-21",
+			"note": "本 spec の入力。§8 の未決定事項 1・2 はユーザ判断で確定、3・4 は本 spec の Clarifications で確定。"
+		},
+		"cross_repo_review": {
+			"path": "docs/cross-repo-adoption-review.md",
+			"reviewed_at": "2026-09-06",
+			"origin": "vaz-agentic-ai-next@claude/agentic-ai-repo-design-3k8e32",
+			"lines": 493,
+			"note": "欠損とされていたが実在。退避により回収（R1）。設置は verbatim + 日付付き addendum（R3）。"
+		},
+		"inherited_spec": {
+			"path": "specs/001-agentic-ai-core-p0/",
+			"requirement_count": 53,
+			"source_spec_version": "1.7",
+			"approvals": "requirements/design/tasks すべて approved",
+			"note": "退避対象。要件は継承、組み立て機構（T-0〜T-3）は本 spec が supersede（ADR-0003）。"
+		}
+	},
+	"approvals": {
+		"requirements": { "generated": true, "approved": false },
+		"design": { "generated": true, "approved": false },
+		"tasks": { "generated": true, "approved": false }
+	}
+}

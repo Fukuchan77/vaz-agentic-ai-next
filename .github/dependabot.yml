@@ -49,6 +49,54 @@ updates:
     cooldown:
       default-days: 1
 
+  # services/api's own lane (spec 006-repo-consolidation Task 6, ADR-0003):
+  # ignore list ported verbatim from the source repo's dependabot.yml, since
+  # the load-bearing pins it guards (pyproject.toml's `fastapi<0.137` /
+  # `starlette<1.0`) are unchanged by the move.
+  - package-ecosystem: "uv"
+    directory: "/services/api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # fastapi<0.137 and starlette<1.0 are load-bearing pins (see the
+      # dependency-pin comments in pyproject.toml and services/api/CLAUDE.md):
+      # the newer versions of each silently disable the global rate limit.
+      # Dependabot classifies fastapi's 0.x releases by patch-position, so
+      # 0.136 -> 0.137 is a *minor* bump -- ignoring only majors would let
+      # the rate-limit-breaking bump through unignored.
+      - dependency-name: "starlette"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "fastapi"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      # chromadb and redis majors are deliberately shelved pending a
+      # client-compatibility verification pass, not unsupported. See
+      # services/api/docs/dependency-runbook.md.
+      #
+      # chromadb is still shelved at 0.6.3: its three open advisories have no
+      # fix release (`fixed_in: []` on all three) and the affected range covers
+      # even the latest 1.5.9, so the major buys nothing security-wise, and the
+      # pass has not been run.
+      #
+      # redis has had its pass: 2026-09-05, client bumped 5.3.1 -> 8.1.0 in
+      # pyproject.toml after the live `-m redis` lane (EXPECT_LIVE_TESTS=7) and
+      # the full unit+integration+e2e suite both came back green. This entry
+      # stays because its meaning is forward-looking -- it now shelves redis 9.x
+      # until that major gets its own pass, exactly as it shelved 6.x-8.x until
+      # this one. `pyproject.toml`'s `redis<9.0` cap is the hard stop; this entry
+      # keeps Dependabot from proposing the bump that would need it lifted.
+      - dependency-name: "chromadb"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "redis"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

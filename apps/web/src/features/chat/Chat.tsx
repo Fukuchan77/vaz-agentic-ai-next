@@ -121,7 +121,7 @@ export function Chat() {
 			<Content>
 				<Grid>
 					<Column lg={16} md={8} sm={4}>
-						<h1 className={styles.heading}>vaz-ai-next</h1>
+						<h1 className={styles.heading}>vaz-agentic-ai-next</h1>
 						<p className={styles.tagline}>
 							Vercel AI SDK × Next.js App Router × Zod — streaming chat demo
 						</p>

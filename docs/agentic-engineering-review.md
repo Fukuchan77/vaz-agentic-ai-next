@@ -23,6 +23,11 @@
 > 「ギャップ」表記は、消化が完了した時点の**履歴記録**として読むこと(次の棚卸しは
 > `specs/005-baseline-recovery-refactor/spec.md` の台帳を出発点にする)。
 
+> **状態注記(2026-09-21、spec 006 R5.1)**: §1 の 8 手法を骨格に、実装リンク・兄弟
+> リポジトリの教材・[`docs/cross-repo-adoption-review.md`](./cross-repo-adoption-review.md)
+> の該当項目を束ねた学習パスを [`docs/guide/`](./guide/README.md) に構築した。
+> 本ドキュメント自体の内容は変更していない。
+
 ## 出典(一次情報)
 
 本文中は出典 ID(`[A1]` 等)で引用する。

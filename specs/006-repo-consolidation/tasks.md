@@ -1,0 +1,305 @@
+# 006-repo-consolidation — Implementation Tasks
+
+`plan.md` に準拠。散文は日本語、識別子・型・パス・コードは英語。
+
+規約（002/003/004/005 と同一）:
+
+- `- [ ]` 未着手 / `- [x]` 完了 / `- [ ]*` 任意・後回し可。
+- `(P)` = 並列実行安全（依存なし・境界が互いに素）。
+- 全タスクは `_Boundary:_` と `_Depends:_` を宣言する。
+- `_Requirements:_` は要件 ID のみをカンマ区切りで列挙する。
+- **`_Boundary:_` には周辺必須ファイル（テスト・lockfile・doc の該当節）を先回りで含める**。
+- **不可逆操作を含むタスク（Task 2）は、前提条件の検証 green を `_Gate:_` として宣言する。**
+
+## Task 依存図
+
+```
+Task 1（退避 R1）
+   └─→ Task 2（同一性移行 R2・不可逆）── Gate: Task 1 の 9 ファイル検証 green
+          ├─→ Task 3（正本設置 R3）      ← rename 後に実行すると参照が編集ゼロで解決
+          │      └─→ Task 4（憲章・継承 spec・ADR-0003  R4）
+          ├─→ Task 8.1（参照検証 R9.1）  ← rename 直後に実行
+          └─→ Task 5（ガイド背骨 R5）(P)
+                 └─→ Task 6（services/api R6）
+                        ├─→ Task 7（patterns R7）
+                        └─→ Task 8.3（ADR-0004 R8.3）← TS/Python 語彙の同居が成立した時点
+```
+
+NFR-1: Task 1〜5 はコード移動ゼロ。Task 6 以降の未決定を待たずに着地可能。
+
+---
+
+## 1. 継承資産の退避（P0・不可逆操作の前提）
+
+_Boundary:_ `specs/006-repo-consolidation/pdca/do.md`（退避記録の節）, ハブの
+`archive/vaz-agentic-ai-next` ブランチ（新規 ref）
+_Depends:_ none
+_Requirements:_ 1.1, 1.2, 1.3, 1.4, 1.5, NFR-5
+
+- [x] `Fukuchan77/vaz-agentic-ai-next`（ユーザによりリネーム済み。現 `vaz-agentic-ai-next-archive`）の
+      全 ref を列挙し、**6 本の非 main ブランチ**の tip SHA を `pdca/do.md` に記録した。
+- [x] `claude/agentic-ai-repo-design-3k8e32`（正本レビューと憲章の両方を含む最大集合）を
+      `--depth 50` で fetch した。
+- [x] 残り 5 ブランチについて `claude/agentic-ai-repo-design-3k8e32` の部分集合であるかを判定した
+      （R1.5）。**結果は想定と異なった**: 真の部分集合（祖先）は `001-agentic-ai-core` の 1 本のみ。
+      残り 4 本（`claude/agentic-ai-app-spec-xo42j1` / `claude/attachment-spec-review-2g4d21` /
+      `claude/sharp-hopper-kbrpfo` / `claude/spec-agentic-001-review-jf4dcd`）はそれぞれ固有ファイル
+      （`docs/integration-plan.md` 前版、`docs/SPEC-AGENTIC-001.md` v1.5/v1.6、
+      `docs/REVIEW-VERIFICATION-001.md`）を持つため、**6 本すべてを push した**（詳細は `pdca/do.md`）。
+- [x] 退避 ref をハブへ push した: `archive/vaz-agentic-ai-next/<branch>`（6 本）。
+      **ファイルコピーではなく ref の push**（履歴と作成者情報の保全 — R1.2）。
+- [x] **検証（R1.3）**: 9 ファイルの行数が下表と一致することを push 済み ref から再読み出しで確認し、
+      `pdca/do.md` に記録した。**9 / 9 GREEN**。
+
+      | path | 期待行数 | 実測 |
+      |---|---:|---:|
+      | `docs/cross-repo-adoption-review.md` | 493 | 493 |
+      | `specs/001-agentic-ai-core-p0/spec-agenticai-core.md` | 1806 | 1806 |
+      | `specs/001-agentic-ai-core-p0/plan.md` | 1338 | 1338 |
+      | `specs/001-agentic-ai-core-p0/tasks.md` | 662 | 662 |
+      | `specs/001-agentic-ai-core-p0/research.md` | 330 | 330 |
+      | `specs/001-agentic-ai-core-p0/traceability.md` | 100 | 100 |
+      | `specs/memory/constitution.md` | 296 | 296 |
+      | `CLAUDE.md` | 241 | 241 |
+      | `AGENTS.md` | 141 | 141 |
+
+- [x] 正本レビューが**ユーザ添付ファイルと byte 一致**することを `diff` で再確認した
+      （push 済み ref から再取得しても一致）。
+
+**Task 1 完了。Task 2 の Gate（9 ファイル検証 green）は解除された。**
+
+## 2. 同一性の移行（不可逆操作を含む）
+
+_Gate:_ **Task 1 の 9 ファイル検証が green であること。** 未 green での着手は禁止（NFR-5）。
+_Boundary:_ `package.json`, `apps/web/src/app/layout.tsx`, `apps/web/src/features/chat/Chat.tsx`,
+`apps/web/tests/e2e/home.spec.ts`, `apps/web/tests/e2e/a11y.spec.ts`, `README.md`,
+GitHub 上の 2 リポジトリ名
+_Depends:_ Task 1
+_Requirements:_ 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, NFR-5
+
+- [x] **名前空け（既定）**: `Fukuchan77/vaz-agentic-ai-next` → `vaz-agentic-ai-next-archive` へ
+      リネームした（ユーザ実行）。可逆であり全ブランチが保全された（plan §2.2）。
+- [ ]* **名前空け（代替）**: 不使用（既定の archive リネームを採用）。
+- [x] `Fukuchan77/vaz-ai-next` → `Fukuchan77/vaz-agentic-ai-next` へリネームした（ユーザ実行）。
+      **可視性は public (MIT) のまま変更なし**（R2.3。`list_repos` で確認）。
+- [x] ローカルクローンの remote URL を更新した。**pdca/do.md の教訓（名前競合ウィンドウ）を適用し、
+      `git ls-remote origin HEAD` で実ハブの SHA（`6e6a558`）と一致することを信用する前に確認した**。
+      Task 1 で push した `archive/vaz-agentic-ai-next/*` 6 refs も新名の下でそのまま健在。
+- [x] **6 ファイルを 1 コミットで**更新した（R2.5 / plan §2.6）:
+  - [x] `package.json:2` — `"name": "vaz-agentic-ai-next"`
+  - [x] `apps/web/src/app/layout.tsx:6` — `title: "vaz-agentic-ai-next"`
+  - [x] `apps/web/src/features/chat/Chat.tsx:124` — `<h1>` テキスト
+  - [x] `apps/web/tests/e2e/home.spec.ts:6` — `getByRole("heading", { name: ... })`
+  - [x] `apps/web/tests/e2e/a11y.spec.ts:18` — 同上
+  - [x] `README.md:1` — 表題（`VAZ-Agentic-AI-Next`）
+- [x] `@vaz/*` の 9 パッケージ名が**変更されていない**ことを確認した（R2.6）:
+      `pnpm ls -r --depth -1` が root（`vaz-agentic-ai-next`）＋ 9 `@vaz/*` メンバーを列挙。
+- [x] `specs/00{1,3,5}-*/` 配下の `vaz-ai-next` 言及 9 箇所が**書き換わっていない**ことを確認した（R2.7）。
+- [x] **検証（NFR-2）**: `lint`（biome, 157 files）/ `typecheck`（9 workspace projects）/
+      `test:run`（vitest 648 passed, 1 skipped, 0 failed）/ `audit`（pnpm audit --audit-level=moderate,
+      no known vulnerabilities）/ `lint:model-ids` すべて green
+      （`mise` 未導入環境のため `AGENTS.md` の pnpm 直接実行版を使用）。
+      **E2E**: このサンドボックスの Playwright ブラウザは事前導入版（`chromium-1194`）で、
+      リポジトリが要求するバージョン（`chromium_headless_shell-1243`）と食い違い、
+      未変更の内容に対しても `playwright test` の `webServer` 起動が失敗する（`git stash` で
+      変更前の内容に対して再現・確認済み）ため、Playwright ランナー自体は実行できなかった。
+      代わりに同一の `next dev` コマンドを直接起動し、稼働中のページを直接 fetch して検証: `<title>`
+      と `<h1>` はいずれも `vaz-agentic-ai-next`（更新後の 2 E2E spec のアサート文字列と完全一致）。
+
+**Task 2 完了。**
+
+## 3. 正本 `cross-repo-adoption-review.md` の設置
+
+_Boundary:_ `docs/cross-repo-adoption-review.md`（新規）, `specs/006-repo-consolidation/pdca/do.md`
+_Depends:_ Task 2（rename 後に置くことで 7 参照が編集ゼロで解決する — spec.md 前提誤り 2）
+_Requirements:_ 3.1, 3.2, 3.3, 3.4, 3.5, NFR-3
+
+- [x] `archive/vaz-agentic-ai-next` から `docs/cross-repo-adoption-review.md` を
+      **verbatim（493 行・本文改変なし）**で配置した。出所 SHA
+      `282d7064d90ba754e12f3a9a7acd912e272a3b83` を `pdca/do.md` に記録した。
+- [x] 本文末尾に `## §6 追記（2026-09-21）— 同一性の崩壊と再実測` を追加した（R3.2）:
+  - [x] **同一性の崩壊**: §1 の `vaz-ai-next` 列（実装・CI・依存の実測値）と
+        `vaz-agentic-ai-next` 列（憲章・P0 spec・REQ-7.5/7.6）が 1 本に畳まれた旨を写像表で記した。
+  - [x] **再実測で stale となった行**（R3.3）: `Actions SHA 固定 0/22 → 28/28`、
+        `workflow permissions: 0/6 → 6/6`。X-1 は着地済み。本文セルは書き換えていない。
+  - [x] **スコープ**: 本セッションに attach されたのは 4 repo ＋ ハブであり、
+        `beeai-agentic-ai-sandbox` は未検証（R9.3 へ申し送り）と明記した。
+- [x] `docs/README.md` 相当の索引は不在（該当なし）。
+- [x] **R9.1 先取り実行**: 3 repo・7 ファイルが `cross-repo-adoption-review` を参照しており、
+      すべて文字列 `vaz-agentic-ai-next/docs/cross-repo-adoption-review.md` を指す。リネーム後の
+      ハブに同名で正本が実在するため **7 / 7 が編集ゼロで解決**（非空アサート済み・NFR-4）。
+
+**Task 3 完了。**
+
+## 4. 憲章・継承 spec の受け入れと ADR-0003
+
+_Boundary:_ `specs/memory/constitution.md`（新規）,
+`specs/inherited/001-agentic-ai-core-p0/**`（新規 8 ファイル）,
+`docs/adr/0003-consolidation-direction.md`（新規）, `CLAUDE.md`, `AGENTS.md`（ペア編集）
+_Depends:_ Task 3
+_Requirements:_ 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, NFR-3
+
+- [x] `specs/memory/constitution.md`（296 行・11 原則・v1.2.0）を verbatim 配置した（R4.1）。
+      継承 spec の `spec.json.constitution.path` と同一パスのため参照が自動解決する。
+- [x] 継承 spec を **`specs/inherited/001-agentic-ai-core-p0/`** へ配置した（R4.2）。
+      **実在 7 ファイル**（tasks.md 起草時の「8 ファイル」見積もりは誤りだった — 実体を優先）。
+      ハブの `001-vaz-ai-update` との採番衝突を回避。
+- [x] `docs/adr/0003-consolidation-direction.md` を起草した:
+  - [x] **決定**: `vaz-ai-next` をリネームして昇格。ルート `pyproject.toml` / `turbo.json` は作らない。
+        Python レーンは `services/api`（`apps/agent-api` ではない — R4.6）。
+  - [x] **supersede 対象を明示列挙**（R4.4）: 継承 spec の `T-0` / `T-1.2` / `T-1.3` / `T-2`。
+        **53 要件は supersede しない**（R4.3）。
+  - [x] **両文書が独立に同じ結論へ到達した事実を記録**（R4.5）: 継承 spec の ADR-P0-05 候補 (a)
+        （uv workspace メンバーに含めない・独自 lock・mise 直接実行）と統合計画 §4.2 は同方向。
+        本 spec はその極限形。
+  - [x] **Turborepo を採らない根拠**: Python 対応は 2.10.13 で `FutureFlags` 下の experimental
+        （統合計画 §5.1）。継承 spec §12 R14 も「uv workspace メンバー選定は Turborepo 採否と
+        同一の決定」と述べる。
+- [x] `CLAUDE.md` / `AGENTS.md` を**ペアで**更新し、憲章・継承 spec・ADR-0003 への参照を追加した。
+      本文の重複は避け、参照のみとした。
+- [x] **副作用対応**: `specs/inherited/001-agentic-ai-core-p0/spec.json` が biome の
+      `indentStyle: "tab"` と衝突（継承元が 2-space）。`biome check --write` で 1 ファイルのみ
+      再フォーマットし、`JSON.parse` 結果の意味的完全一致を確認した（空白のみの変更）。
+- [x] **検証（NFR-2）**: lint（158 files）/ typecheck（9 workspace projects）/
+      test:run（648 passed, 1 skipped, 0 failed）/ audit（no known vulnerabilities）/
+      lint:model-ids すべて green。
+
+**Task 4 完了。**
+
+## 5. ガイド背骨 `docs/guide/`（Phase 1・コード移動ゼロ）(P)
+
+_Boundary:_ `docs/guide/**`（新規）, `docs/agentic-engineering-review.md`（リンク追記のみ）,
+`CLAUDE.md`, `AGENTS.md`（ペア編集）
+_Depends:_ Task 2
+_Requirements:_ 5.1, 5.2, 5.3, 5.4, NFR-1
+
+- [x] 8 手法（PE / CE / LE / HE / AE / AO / MCP / EV）を骨格に `docs/guide/` の目次
+      （`README.md` + 8 ページ、計 9 ファイル）を作った。
+- [x] 各手法から (a) ハブ内実装 (b) 兄弟 repo の教材 (c) 正本レビューの X-n へリンクした。
+- [x] **本文を複製していない**（R5.2 / 憲章原則 5）。リンクと 1〜3 文の導入に留めた。
+- [x] 書籍原稿 14 章はリンク参照のみとし、実体移設は Task 7 の裁定に従う（R5.3。対応表を
+      `docs/guide/README.md` に掲載）。
+- [x] `docs/agentic-engineering-review.md` に既存の「状態注記」形式で 1 段落を追記（本文不変）。
+- [x] `CLAUDE.md` / `AGENTS.md` をペアで更新（参照のみ）。
+- [x] **検証（R5.4/NFR-2）**: `git diff --name-only` で `apps/`/`packages/`/`services/`/
+      `.github/workflows/` への変更が皆無であることを確認。lint（158 files）/ typecheck
+      （9 projects）/ test:run（648 passed）/ audit / lint:model-ids すべて green。
+
+**Task 5 完了。** NFR-1 のとおり Task 6 の未決定を待たずに独立着地した。
+
+## 6. 第 2 Python レーン `services/api`（Phase 2）
+
+_Boundary:_ `services/api/**`（新規）, `mise.toml`（`api:check` / `api:audit` の節）,
+`.github/workflows/api.yml`（新規）, `scripts/forbid-model-ids.sh`,
+`services/api/CLAUDE.md`, ルート `CLAUDE.md` / `AGENTS.md`（ペア編集）,
+carve-out ドリフト検出テスト（新規）
+_Depends:_ Task 5
+_Requirements:_ 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, NFR-1, NFR-2, NFR-4
+
+- [x] `fastapi-pydantic-ai-agent` を `services/api/` として配置した（`git subtree add
+      --prefix=services/api --squash`、303 ファイル・43,592 行、統合計画の実測値と一致）。
+      **独自の `pyproject.toml` ＋ `uv.lock` を保持**し、ルート `pyproject.toml` / `uv.lock` は
+      作っていない（R6.1）。`uv sync --all-extras --dev` で Python 3.13.12 の自動解決を確認。
+- [x] `mise.toml` に `api:check`（`dir = "services/api"`）を `py:check` と同型で追加した。
+      **`check` の依存には加えていない**（R6.2 / NFR-1）。移送元の nested `mise.toml`（16 タスク）は
+      `api:` 接頭辞つきでルートへポートし、削除した（裸タスク名の衝突回避）。
+- [x] `.github/workflows/api.yml` を **path-filtered** で追加した（`services/api/**` / `mise.toml` /
+      自身）。`permissions: contents: read` 宣言、`jdx/mise-action` は既存 6 ワークフローと同一 SHA
+      を再利用。**`tests.yml` の `gate` 集約には含めていない**（R6.3）。
+- [x] **model-ID ゲートの解決**（R6.4）。案 (c) を採用:
+  - [x] `scripts/forbid-model-ids.sh` を**代入形検出**（`[:=]\s*"..."`）へ精密化した。
+  - [x] 精密化後に実測 3 箇所（`app/agents/chat_agent.py:39`, `app/config/settings.py:40,63`
+        — いずれも docstring 内の書式例）が green になることを確認した。合成テストと一時的な
+        実ファイル注入で真陽性検出が維持されることも確認した。
+  - [x] **carve-out ドリフト検出テスト**を追加した（R6.5）: `tests/repo/model-id-gate-precision.spec.ts`
+        （4 テスト）。ハブの shell gate と `services/api` の pytest guard それぞれの
+        代入形検出パターンを、実際に subprocess 実行して独立に検証する。
+- [x] **リポジトリガード**を移送した（R6.6）。`tests/` 全体が subtree で自動的に付いてきたため、
+      対応が必要だったのは移送先で構造衝突する 5 ファイルのみ:
+  - **`test_ci_workflows.py` / `test_dependabot_config.py` / `test_pre_push_hook.py` は削除**
+    （当初計画と異なる結果）。理由: ハブの `tests/repo/ci-workflows.spec.ts` が既に全
+    `.github/workflows/*`（`api.yml` 含む）を汎用的に走査し非空アサート済みで、
+    `tests/repo/dependabot.spec.ts` も `uv` エコシステムの存在を検証済み。
+    ハードコードパス（`pr.yml`/`security.yml`/`.github/dependabot.yml`）を持つ移送元の
+    テストをそのまま置くと存在しないファイルを参照して壊れるだけであり、
+    「非空アサートを追加してそのまま活かす」という当初想定（走査対象 6→7）は
+    実際には「ハブの既存汎用ガードが吸収し、移送元の個別テストは不要」という結果になった
+    （憲章原則 5「既存の単一経路に合流させる」）。
+  - **`test_python_version_pin.py` / `test_local_test_gating.py` は 1 関数のみ削除**
+    （`test_mise_pins_the_same_python_series` / `test_ollama_live_test_count_matches_pre_push_hook_literal`）。
+    理由をファイル内 docstring に記録。
+  - 実測: pytest 1462 passed / 3 skipped / 0 failed（削除・調整前は 1461 passed / 3 failed）。
+- [x] load-bearing な依存上限（`fastapi<0.137` / `starlette<1.0` / `pydantic-ai-litellm<0.3.0`）を
+      理由コメントごと保持していることを確認した（R6.7）。`services/agent`（`fastapi>=0.141.1`）との
+      同居は独立レーンゆえ成立する（両者 `requires-python = ">=3.13"`）。
+- [x] `services/api/CLAUDE.md` に固有規約を残し（冒頭に移送に伴う変更点の note を追加、それ以外は
+      不変）、ルート `CLAUDE.md` / `AGENTS.md` からは参照のみとした（R6.8）。
+- [x] **検証（NFR-2）**: TS 側（lint/typecheck/test:run/audit/model-ids）と Python 側
+      （ruff check/format/ty/pytest/pip-audit）の全ゲートが green であることを確認した
+      （`mise` 未導入環境のため直接コマンドで検証。詳細は `pdca/do.md`）。
+- [x] **既知のギャップとして申し送り**: pre-commit/pre-push フックの統合、`.gitleaksignore`
+      の再スキャン要否（squash import でコミット SHA が変わり指紋が無効化されるため）。
+
+**Task 6 完了。**
+
+## 7. パターンカタログの取捨選択（Phase 3）
+
+_Boundary:_ `docs/guide/**`（リンク更新）, `specs/006-repo-consolidation/plan.md`（決定記録）
+_Depends:_ Task 6
+_Requirements:_ 7.1, 7.2, 7.3, 7.4
+
+- [x] `pydantic-ai-sandbox` の 3 FW 横断比較は**取り込まない**。upstream 維持 ＋ リンク（R7.1。
+      Task 5 の `docs/guide/agentic-engineering.md` で既に確立済み、本 Task で再確認）。
+- [x] **決定（plan.md §2.7）: 教材コードは物理的に移設しない。** R7.2 の「ガイドの正本とする」は
+      リンクによる designation で満たし、`docs/guide/agentic-engineering.md` に **6 パターン全ての
+      正本（教材の単純版）／比較版（sandbox）対応表**を追加した（14 ファイルパスをすべて実在
+      確認済み）。理由: 書籍原稿 14 章を link-only とした R5.3 の判断と整合させるため
+      （コードだけ引き剥がすと解説と実装が分裂する）。Task 6（本番アプリの移設）との性格の違いを
+      plan.md に明記。
+- [x] **R7.3 は不発火**: 移設しない決定のため、`src/part1_foundations/prompt_caching.py:30` /
+      `src/common/settings.py:37` の model-ID 2 箇所は移設対象にならず、allowlist 対応は不要。
+      `lint:model-ids` は追加の carve-out なしで green のままであることを確認した。
+- [x] `specs/review/`（点時記録）は移設していない（R7.4 / NFR-3。そもそも `pydantic-ai-agentic-patterns`
+      からは何も移設していないため自明に満たされる）。
+- [x] `mise run check` 相当（lint/typecheck/test:run/audit/lint:model-ids）が green であることを
+      確認した（コードは一切移動していないため、Task 5 と同じく NFR-1 準拠で独立着地）。
+
+**Task 7 完了。**
+
+## 8. ギャップ充填・参照整合・旧 repo 整理（Phase 4〜5）
+
+_Boundary:_ `docs/adr/0004-stop-reason-vocabulary.md`（新規）, 参照検証スクリプト（新規）,
+`pydantic-ai-agentic-patterns/specs/review/INDEX.md`, `specs/006-repo-consolidation/pdca/act.md`
+_Depends:_ 8.1 は Task 2 / 8.3 は Task 6 / 8.4 は Task 6
+_Requirements:_ 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.3, 9.4, NFR-4
+
+- [x] **8.1 参照検証（R9.1）** — `tests/repo/cross-repo-reference-resolution.spec.ts`（CI 常時実行、
+      ハブ自身の 2 参照 ＋ `services/api` に取り込まれた 3 参照の計 5 件を非空アサート付きで検証）
+      と `scripts/verify-cross-repo-references.sh`（兄弟リポジトリを横並びに checkout した環境向け、
+      CI 非配線の手動ツール。`pydantic-ai-sandbox` の残り 2 件を含む）の 2 段構成で実装した。
+      本セッションで後者を実行し **7 / 7 全件解決を確認**（`pdca/do.md` に実行結果を記録）。
+- [x] **8.2**（R9.2）`pydantic-ai-agentic-patterns/specs/review/vaz-ai-next/` は**リネームしなかった**。
+      `specs/review/INDEX.md` に 1 行の注記を追加し、同リポジトリへ直接 push した（追記のみ規約に
+      従い本文は不変）。
+- [x] **8.3 ADR-0004（R8.3）** — `docs/adr/0004-stop-reason-vocabulary.md` を起票した。
+      正本レビュー X-5 の写像表を引用し、**強制統一はしない**という裁定と 3 つの根拠
+      （TS 4 値は SSE/監査ログの後方互換制約下にある、2 語彙は同じ抽象を指していない、
+      非対称性は設計差の帰結であり欠陥ではない）を記録した（R8.4）。
+      `docs/guide/loop-engineering.md` を ADR への直接リンクへ更新し、
+      `services/api/app/agents/guardrails.py` を「(a) このハブでの実装」へ移設した
+      （Task 6 で兄弟リポジトリからハブ内実装になったため）。
+- [x] **8.4**（R8.1/8.2、任意）— **不採用のまま**。統合計画 §5.2 が「4 repo すべてで 0 件」と
+      記録した真のギャップだが、Requirement は「採用する場合」の条件付きであり、本 spec は
+      採用を選択しなかった。`pdca/act.md` に申し送りを記録。
+- [x] **8.5**（R8.5、任意）— **未実施のまま**。`docs/guide/agentic-engineering.md`（Task 7）に
+      移植機会として記録済み。実施する場合は `pydantic-ai-agentic-patterns` 側の別セッションで
+      起票することを `pdca/act.md` に申し送った。
+- [x] **8.6**（R9.3）`beeai-agentic-ai-sandbox` への取り込みが本 spec の境界外であることを
+      `pdca/act.md` へ申し送った。
+- [x] **8.7**（R9.4）旧リポジトリのアーカイブ判断。Task 6・Task 7 が着地したため判断可能な
+      前提は揃ったが、**3 repo とも現時点でアーカイブしない**と判断した（`pdca/act.md` に理由を
+      記録: `fastapi-pydantic-ai-agent` は gitleaks/pre-commit/pre-push 未配線の既知ギャップが
+      解消するまで、`pydantic-ai-sandbox`/`pydantic-ai-agentic-patterns` は独立維持がそもそも
+      Task 7 の決定の前提）。
+
+**Task 8 完了。全 8 Task 完了により本 spec のすべての Requirement に対応した。**
