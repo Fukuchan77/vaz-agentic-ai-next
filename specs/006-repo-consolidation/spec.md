@@ -44,6 +44,19 @@ durable HITL・3 層 evals・境界契約 codegen が**既に動いている**�
 合計 **約 5,400 行**。「空リポジトリの削除」ではなく、**統合の入力資産そのものの破棄**である。
 したがって R1（退避）を R2（名前空け）の**強い前提条件**として先行させる。
 
+**Task 1 実行時（2026-09-21）にさらに判明**: 非 main 6 ブランチのうち `git merge-base
+--is-ancestor` で基準ブランチの**真の祖先**と確認できたのは `001-agentic-ai-core` の 1 本のみ。
+残り 4 本は基準ブランチに無い固有ファイルを持っていた:
+
+| ブランチ | 固有ファイル | 内容 |
+|---|---|---|
+| `claude/sharp-hopper-kbrpfo` | `docs/integration-plan.md`（371 行） | 統合計画の**前版**。5 リポジトリ対象で beeai を「ユーザ指示により保留」と明記。ユーザ添付版（365 行・4 リポジトリ対象）とは内容が異なる |
+| `claude/agentic-ai-app-spec-xo42j1` / `claude/attachment-spec-review-2g4d21` | `docs/SPEC-AGENTIC-001.md` | `specs/001-agentic-ai-core-p0/spec-agenticai-core.md`（v1.7）の**前身**（v1.5/v1.6 系列）。改訂履歴 A.1〜A.3 に撤回された推奨 2 件（`pydantic-ai-slim` フロア引き上げが litellm を後退させた事故など）を記録 |
+| `claude/spec-agentic-001-review-jf4dcd` | `docs/REVIEW-VERIFICATION-001.md`（425 行） | `SPEC-AGENTIC-001.md` v1.5 への Adversarial Review（CRITICAL 3 / HIGH 4）の検証報告。v1.6 への訂正根拠 |
+
+これにより R1.5 の「部分集合は push 省略可」という想定は事実上不成立と分かり、**6 本すべてを
+push した**（詳細と検証結果は `pdca/do.md`）。
+
 #### 前提誤り 2 — Phase 0 の dangling 参照張り替えは**不要**（リネームが自動解決する）
 
 統合計画 §7 Phase 0 は「3 repo の dangling 参照を張り替え（各 1 行）」を作業に数える。実測すると
