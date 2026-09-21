@@ -64,10 +64,10 @@ stopWhen: [isStepCount(MAX_STEPS), buildBudgetStopCondition(budget)]
 
 **5 repo 横断での停止理由語彙（X-5）**: 本 repo の `runStopReasonSchema` は 4 値
 （`natural`/`step-cap`/`budget-exceeded`/`error`）だが、Python 側 2 repo
-（`pydantic-ai-sandbox`/`fastapi-pydantic-ai-agent`）は `denied`/`disallowed_tool` を含む
-5 値を使っており非対称。写像表本体は
-[`docs/cross-repo-adoption-backlog.md`](cross-repo-adoption-backlog.md) の X-5 行（および正本の
-`vaz-agentic-ai-next/docs/cross-repo-adoption-review.md`）を参照。**今回は統一しない**——
+（`agentic-ai-sandbox`（旧 `pydantic-ai-sandbox`）の `reference/patterns/`・`fastapi-pydantic-ai-agent`
+＝ いまは `services/api`）は `denied`/`disallowed_tool` を含む 5 値を使っており非対称。写像表は
+[`docs/cross-repo-adoption-review.md`](cross-repo-adoption-review.md) §2 X-5、裁定（**統一しない**）は
+[`docs/adr/0004-stop-reason-vocabulary.md`](adr/0004-stop-reason-vocabulary.md) を参照。理由は——
 `JobEvent` SSE 契約と `audit_log` の後方互換に影響するため。承認拒否（`denied` 相当）は
 この 4 値の外、`ApprovalDeniedError` / supervisor の構造的 duck-typing
 （`(error as { reason?: unknown })?.reason`、`packages/agents/src/supervisor.ts`）という

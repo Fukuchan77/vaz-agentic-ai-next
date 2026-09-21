@@ -12,7 +12,7 @@ OWASP GenAI Security Project の [`Agentic AI – Threats and Mitigations`](http
 プロンプト/出力/サプライチェーンの脅威、本表は「複数ステップの自律実行」
 「ツール連鎖」「人間監督の破綻」といったエージェント特有の脅威を対象にする。
 
-参照実装: `pydantic-ai-sandbox/patterns/SECURITY-NOTES.md`(Agentic AI 脅威をレイヤ別に
+参照実装: `agentic-ai-sandbox/reference/patterns/SECURITY-NOTES.md`(Agentic AI 脅威をレイヤ別に
 整理する形式)。
 
 散文は日本語、識別子・型・パス・コードは英語。
