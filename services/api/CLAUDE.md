@@ -4,6 +4,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `AGENTS.md` is a condensed sibling of this file for other agent tools — when you change a convention here, update it there too.
 
+> **Note (2026-09-21, spec `006-repo-consolidation` Task 6, `docs/adr/0003-consolidation-direction.md`)**:
+> this repository (`fastapi-pydantic-ai-agent`) was imported whole into `services/api` of the
+> `vaz-agentic-ai-next` hub via `git subtree add --squash`. Below this note, the file is otherwise
+> **unmodified** — including its references to a repo root that is now `services/api/`, not this
+> repository's own root. Four things moved to the hub's actual root and no longer exist under
+> `services/api/`:
+>
+> - `.github/workflows/{pr,security}.yml` → superseded by the hub's path-filtered
+>   [`.github/workflows/api.yml`](../../.github/workflows/api.yml) (lint → test:ci → test:redis → audit,
+>   same shape) and the existing `security-daily.yml`/`lint.yml` for gitleaks/pip-audit-equivalent
+>   concerns. The hub's own `tests/repo/ci-workflows.spec.ts` (TS, not this repo's `test_ci_workflows.py`,
+>   which was removed — see below) generically enforces SHA-pinning + `permissions:` across **all**
+>   hub workflows, `api.yml` included.
+> - `.github/dependabot.yml` → merged into the hub's root `.github/dependabot.yml` as a second `uv`
+>   ecosystem entry (`directory: "/services/api"`), carrying this repo's `ignore:` list verbatim.
+> - `.pre-commit-config.yaml` / `.githooks/pre-push` → **not yet wired into the hub's shared
+>   `.githooks/pre-push`**. This is a known, deliberate gap (not a defect this note is hiding): the
+>   hub's single shared pre-push hook currently runs Playwright E2E only, and folding this lane's
+>   Ollama-gated `test:local` + `evals` probe into it is a follow-up, not part of Task 6's boundary.
+>   Run `mise run api:test:local` / `mise run api:evals` manually until that lands.
+> - `mise.toml` → its tasks were ported into the hub's root `mise.toml`, each `api:`-prefixed and
+>   `dir = "services/api"`-scoped (`api:check` mirrors `services/agent`'s `py:check`: `uv sync` →
+>   `ruff check` → `ty check` → `pytest` (unit+integration+e2e, coverage gate) → `api:audit`,
+>   independent of the hub's own `check`, NFR-1). Below, every `mise run <task>` in this file's
+>   prose means `mise run api:<task>` from the hub root, or the bare name from inside `services/api/`.
+>
+> Three of this repo's own repo-guard tests asserted on those four now-relocated files by hardcoded
+> path and were removed rather than left to fail: `test_ci_workflows.py` (superseded by the hub's TS
+> guard above), `test_dependabot_config.py` (superseded by the hub's `tests/repo/dependabot.spec.ts`),
+> and `test_pre_push_hook.py` (its target, `.githooks/pre-push`, doesn't exist in this location — see
+> the pre-commit gap above). `test_python_version_pin.py::test_mise_pins_the_same_python_series` and
+> `test_local_test_gating.py::test_ollama_live_test_count_matches_pre_push_hook_literal` were each
+> narrowed by removing one assertion whose backing file moved, not the whole file — see those files'
+> own inline notes. The hub's own model-ID gate (`scripts/forbid-model-ids.sh`) now scans this lane
+> too, refined to assignment-form detection matching `test_no_hardcoded_model_ids.py`'s own pattern
+> below (`docs/adr/0003-consolidation-direction.md` / spec `006` R6.4).
+
 ## Commands
 
 All tooling runs through `mise` (which wraps `uv`). Check `mise.toml` before running bare tools.
