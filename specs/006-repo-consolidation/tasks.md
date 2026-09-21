@@ -194,28 +194,51 @@ carve-out ドリフト検出テスト（新規）
 _Depends:_ Task 5
 _Requirements:_ 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, NFR-1, NFR-2, NFR-4
 
-- [ ] `fastapi-pydantic-ai-agent` を `services/api/` として配置する。**独自の `pyproject.toml` ＋
-      `uv.lock` を保持**し、ルート `pyproject.toml` / `uv.lock` は作らない（R6.1）。
-- [ ] `mise.toml` に `api:check`（`dir = "services/api"`）を `py:check` と同型で追加する。
-      **`check` の依存には加えない**（R6.2 / NFR-1）。
-- [ ] `.github/workflows/api.yml` を **path-filtered** で追加する（`services/api/**` / `mise.toml` /
-      自身）。`permissions: contents: read` 宣言、全 `uses:` を 40 桁 SHA 固定（既存 6/6・28/28 の
-      規律を維持）。**`tests.yml` の `gate` 集約には含めない**（R6.3）。
-- [ ] **model-ID ゲートの解決**（R6.4）。既定は案 (c):
-  - [ ] `scripts/forbid-model-ids.sh` を**代入形検出**へ精密化する（移植元
-        `tests/unit/test_no_hardcoded_model_ids.py` の `_PATTERN` を参照）。
-  - [ ] 精密化後に実測 3 箇所（`app/agents/chat_agent.py:39`, `app/config/settings.py:40,63`
-        — いずれも docstring 内の書式例）が green になることを確認する。
-  - [ ] **carve-out ドリフト検出テスト**を追加する（R6.5）。ハブの shell grep と
-        `services/api` の pytest guard が異なる carve-out を持つと静かに乖離するため。
-- [ ] **リポジトリガード 17 件**を移送する（R6.6）。`test_ci_workflows.py` には
-      **走査 workflow 数 > 0 の非空アサート**を追加する（X-1 の必須追加項目 / NFR-4）。
-      移送後の走査対象は 6 → 7 workflow。
-- [ ] load-bearing な依存上限（`fastapi<0.137` / `starlette<1.0` / `pydantic-ai-litellm<0.3.0`）を
-      理由コメントごと保持する（R6.7）。`services/agent`（`fastapi>=0.141.1`）との同居は
-      独立レーンゆえ成立する（両者 `requires-python = ">=3.13"`）。
-- [ ] `services/api/CLAUDE.md` に固有規約を残し、ルート `CLAUDE.md` からは参照のみとする（R6.8）。
-- [ ] `mise run check` green ＋ `mise run api:check` green を確認する（NFR-2）。
+- [x] `fastapi-pydantic-ai-agent` を `services/api/` として配置した（`git subtree add
+      --prefix=services/api --squash`、303 ファイル・43,592 行、統合計画の実測値と一致）。
+      **独自の `pyproject.toml` ＋ `uv.lock` を保持**し、ルート `pyproject.toml` / `uv.lock` は
+      作っていない（R6.1）。`uv sync --all-extras --dev` で Python 3.13.12 の自動解決を確認。
+- [x] `mise.toml` に `api:check`（`dir = "services/api"`）を `py:check` と同型で追加した。
+      **`check` の依存には加えていない**（R6.2 / NFR-1）。移送元の nested `mise.toml`（16 タスク）は
+      `api:` 接頭辞つきでルートへポートし、削除した（裸タスク名の衝突回避）。
+- [x] `.github/workflows/api.yml` を **path-filtered** で追加した（`services/api/**` / `mise.toml` /
+      自身）。`permissions: contents: read` 宣言、`jdx/mise-action` は既存 6 ワークフローと同一 SHA
+      を再利用。**`tests.yml` の `gate` 集約には含めていない**（R6.3）。
+- [x] **model-ID ゲートの解決**（R6.4）。案 (c) を採用:
+  - [x] `scripts/forbid-model-ids.sh` を**代入形検出**（`[:=]\s*"..."`）へ精密化した。
+  - [x] 精密化後に実測 3 箇所（`app/agents/chat_agent.py:39`, `app/config/settings.py:40,63`
+        — いずれも docstring 内の書式例）が green になることを確認した。合成テストと一時的な
+        実ファイル注入で真陽性検出が維持されることも確認した。
+  - [x] **carve-out ドリフト検出テスト**を追加した（R6.5）: `tests/repo/model-id-gate-precision.spec.ts`
+        （4 テスト）。ハブの shell gate と `services/api` の pytest guard それぞれの
+        代入形検出パターンを、実際に subprocess 実行して独立に検証する。
+- [x] **リポジトリガード**を移送した（R6.6）。`tests/` 全体が subtree で自動的に付いてきたため、
+      対応が必要だったのは移送先で構造衝突する 5 ファイルのみ:
+  - **`test_ci_workflows.py` / `test_dependabot_config.py` / `test_pre_push_hook.py` は削除**
+    （当初計画と異なる結果）。理由: ハブの `tests/repo/ci-workflows.spec.ts` が既に全
+    `.github/workflows/*`（`api.yml` 含む）を汎用的に走査し非空アサート済みで、
+    `tests/repo/dependabot.spec.ts` も `uv` エコシステムの存在を検証済み。
+    ハードコードパス（`pr.yml`/`security.yml`/`.github/dependabot.yml`）を持つ移送元の
+    テストをそのまま置くと存在しないファイルを参照して壊れるだけであり、
+    「非空アサートを追加してそのまま活かす」という当初想定（走査対象 6→7）は
+    実際には「ハブの既存汎用ガードが吸収し、移送元の個別テストは不要」という結果になった
+    （憲章原則 5「既存の単一経路に合流させる」）。
+  - **`test_python_version_pin.py` / `test_local_test_gating.py` は 1 関数のみ削除**
+    （`test_mise_pins_the_same_python_series` / `test_ollama_live_test_count_matches_pre_push_hook_literal`）。
+    理由をファイル内 docstring に記録。
+  - 実測: pytest 1462 passed / 3 skipped / 0 failed（削除・調整前は 1461 passed / 3 failed）。
+- [x] load-bearing な依存上限（`fastapi<0.137` / `starlette<1.0` / `pydantic-ai-litellm<0.3.0`）を
+      理由コメントごと保持していることを確認した（R6.7）。`services/agent`（`fastapi>=0.141.1`）との
+      同居は独立レーンゆえ成立する（両者 `requires-python = ">=3.13"`）。
+- [x] `services/api/CLAUDE.md` に固有規約を残し（冒頭に移送に伴う変更点の note を追加、それ以外は
+      不変）、ルート `CLAUDE.md` / `AGENTS.md` からは参照のみとした（R6.8）。
+- [x] **検証（NFR-2）**: TS 側（lint/typecheck/test:run/audit/model-ids）と Python 側
+      （ruff check/format/ty/pytest/pip-audit）の全ゲートが green であることを確認した
+      （`mise` 未導入環境のため直接コマンドで検証。詳細は `pdca/do.md`）。
+- [x] **既知のギャップとして申し送り**: pre-commit/pre-push フックの統合、`.gitleaksignore`
+      の再スキャン要否（squash import でコミット SHA が変わり指紋が無効化されるため）。
+
+**Task 6 完了。**
 
 ## 7. パターンカタログの取捨選択（Phase 3）
 

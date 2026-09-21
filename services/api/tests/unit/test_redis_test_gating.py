@@ -2,19 +2,25 @@
 
 Asserts `REDIS_LIVE_TEST_COUNT` matches both places that restate it: the
 number of `redis`-marked tests in the gated module, and the
-`EXPECT_LIVE_TESTS` literal the PR CI step supplies in
-`.github/workflows/pr.yml`. Mirrors `test_chroma_test_gating.py`'s
-precedent for the first restatement, extended to the second because the
-change unit that bumps the session-key prefix (Requirement 11) adds a case
-to this lane and therefore moves the constant - without the second
-assertion, that unit would break CI on a count mismatch with nothing in the
-repo to catch it before a real PR run failed.
+`EXPECT_LIVE_TESTS` literal the PR CI step supplies in the workflow that
+runs this lane. Mirrors `test_chroma_test_gating.py`'s precedent for the
+first restatement, extended to the second because the change unit that
+bumps the session-key prefix (Requirement 11) adds a case to this lane and
+therefore moves the constant - without the second assertion, that unit
+would break CI on a count mismatch with nothing in the repo to catch it
+before a real PR run failed.
 
 Boundary correction: Task 7.3's declared boundary is
 `tests/integration/test_redis_session_store_live.py` only, but TDD requires
 a failing test written before the constant is added - the same "boundary
 correction" precedent already used by `test_expect_live_tests_plugin.py` and
 `test_local_test_gating.py`.
+
+Path note (2026-09-21, spec `006-repo-consolidation` Task 6): this repo now
+lives at `services/api` of the `vaz-agentic-ai-next` hub, and the CI workflow
+that runs this lane moved with it - `pr.yml` was superseded by the hub's
+`.github/workflows/api.yml`, two directories up from this repo's own root.
+`PR_WORKFLOW` below points there instead.
 """
 
 import inspect
@@ -26,7 +32,7 @@ from tests.integration import test_redis_session_store_live
 from tests.support.redis import REDIS_LIVE_TEST_COUNT
 
 
-PR_WORKFLOW = Path(".github/workflows/pr.yml")
+PR_WORKFLOW = Path(__file__).resolve().parents[4] / ".github" / "workflows" / "api.yml"
 
 
 def test_redis_live_test_count_matches_gated_module() -> None:

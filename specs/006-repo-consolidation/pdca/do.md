@@ -370,3 +370,143 @@ git diff --name-only  → docs/agentic-engineering-review.md, CLAUDE.md, AGENTS.
 | lint:model-ids | ✅ |
 
 **Task 5 完了。** NFR-1 のとおり、Task 6（`services/api`）の未決定を待たずに独立着地した。
+
+---
+
+## Task 6: 第 2 Python レーン `services/api`
+
+### 実行日時
+2026-09-21（Task 5 完了直後）
+
+### 取り込み手段
+
+`git subtree add --prefix=services/api fastapi-src/main --squash`（`fastapi-src` は
+`https://github.com/Fukuchan77/fastapi-pydantic-ai-agent`、fetch した `main`@`c12ac7f`
+から取得。ローカルの浅い clone は fetch 元として使えなかったため GitHub から直接 fetch した）。
+squash マージにより 2 コミットで導入（`11a87f5` squash 本体 / `cec9be6` ラッパー）。
+303 ファイル・43,592 行が一致することを確認（統合計画の実測値と完全一致）。
+
+### R6.1 — 独立レーンの確認
+
+`services/api/pyproject.toml` ＋ `uv.lock` はそのまま。ルート `pyproject.toml` / `uv.lock` は
+作成していない。`uv sync --all-extras --dev` を `services/api/` で実行し、Python 3.13.12 を
+自動解決・全依存を解決できることを確認済み。
+
+### R6.2 — mise タスクの移送
+
+`services/api/mise.toml`（16 タスク）を root `mise.toml` へ `api:` 接頭辞 ＋
+`dir = "services/api"` で移送し、ネストした `mise.toml` は削除した。理由:
+移送元の裸タスク名（`lint`/`test`/`dev`/`build`/`audit`）がハブの TS 側タスクと衝突するため、
+かつネストした `mise.toml` は `mise run` の設定解決を `services/agent` のパターン
+（ネストなし、root 一元管理）と非対称にしてしまう。
+
+新規に **`api:check`**（R6.2 の要求どおり `py:check` と同型の集約ゲート）を追加:
+`uv sync → ruff check → ty check → pytest(unit+integration+e2e, coverage) → api:audit`。
+`check` の依存には加えていない（NFR-1）。移送元の pip-audit `--ignore-vuln` 理由コメント
+（starlette/chromadb/nltk の 3 グループ、計 81 行）は一字一句そのまま `api:audit` へ移した。
+
+`api:hooks:install`（`uv run pre-commit install`）は**ポートしなかった** — 対象の
+`.pre-commit-config.yaml` を削除したため（後述）。
+
+### R6.3 — CI ワークフロー
+
+`.github/workflows/api.yml` を新規作成。`python.yml` と同一の形（path-filtered、
+`tests.yml` の `gate` 集約に**含めない**、least-privilege `permissions: contents: read`）。
+ステップは移送元 `pr.yml` の内容を反映: `mise run api:check` → Redis サービスコンテナ上で
+`EXPECT_LIVE_TESTS=7 mise run api:test:redis`。`jdx/mise-action` の SHA は既存 6 ワークフローと
+同一のもの（`c2a87611a18de5b3828c5652fe268e992400cb5c # v4`）を再利用し、新規 SHA を持ち込んでいない。
+
+`.github/dependabot.yml` に `directory: "/services/api"` の `uv` エコシステムを追加。
+移送元 `ignore:` リスト（`fastapi`/`starlette`/`chromadb`/`redis` の理由コメント込み）を verbatim 移植。
+
+### R6.4 — model-ID ゲートの精密化（案 c を採用）
+
+実測: `services/api` を素の substring パターンで走査すると **3 箇所**（いずれも docstring 内の
+書式例）が誤検出される。`scripts/forbid-model-ids.sh` の `PATTERN` を
+`[:=]\s*"[a-zA-Z0-9_./:-]*(claude-[a-z0-9]|...)"` へ精密化し、代入文脈（`:`/`=` の直後の
+引用符）のみを検出するよう変更。移送元の `test_no_hardcoded_model_ids.py` 自身の
+`[:=]\s*"(provider):...` パターンと同じ設計思想（代入形のみ検出）を、ハブ側のベンダー部分
+文字列マッチング方式に一般化した形。
+
+検証: 3 箇所の docstring は精密化後に green。合成テスト（`const model = "claude-opus-5";` 等
+3 パターン）で真陽性が引き続き検出されることを確認。一時的に実ファイルへ違反を注入する
+sanity check でも実際に赤くなることを確認（注入・確認後に削除）。
+
+### R6.5 — carve-out ドリフト検出テスト
+
+`tests/repo/model-id-gate-precision.spec.ts`（新規、4 テスト）:
+1. 実リポジトリに対してデプロイ済みスクリプトを実行し green であることを確認
+2. 一時ディレクトリへスクリプトをコピーし、代入形の真陽性が引き続き検出されることを
+   subprocess 実行で確認
+3. 同様に docstring 形の偽陽性が発生しないことを確認
+4. `services/api/tests/unit/test_no_hardcoded_model_ids.py` 自身のパターンが
+   代入形要求（`[:=]\s*"`）を保持していることを確認 — ハブ側とサービス側が
+   独立に緩む事故を検知する
+
+### R6.6 — リポジトリガード 17 件の移送
+
+`tests/` 全体が subtree でそのまま移送されたため大半は自動的に付いてきた。ただし
+以下 3 件は移送先の構造（`.github/`/`.pre-commit-config.yaml`/`mise.toml` が
+ハブのルートへ移動）と直接衝突するため対応:
+
+| ファイル | 対応 | 理由 |
+|---|---|---|
+| `test_ci_workflows.py` | **削除** | ハブの `tests/repo/ci-workflows.spec.ts` が既に全 `.github/workflows/*` を汎用的に走査し非空アサート済み（`api.yml` も自動的にカバーされる）。移送元は `pr.yml`/`security.yml` のハードコードパスであり、そもそも存在しない |
+| `test_dependabot_config.py` | **削除** | ハブの `tests/repo/dependabot.spec.ts` が `uv` エコシステムの存在を既に検証 |
+| `test_pre_push_hook.py` | **削除** | 対象の `.githooks/pre-push` を移送していない（後述の既知ギャップ） |
+| `test_python_version_pin.py` | **1 関数のみ削除**（`test_mise_pins_the_same_python_series`） | ハブの `mise.toml` は `[tools].python` を持たない設計（`.python-version` が単一の正）。旧来の「2 箇所が一致すること」という前提自体が構造的に成立しなくなった |
+| `test_local_test_gating.py` | **1 関数のみ削除**（`test_ollama_live_test_count_matches_pre_push_hook_literal`） | 同上、対象ファイル不在 |
+
+いずれも `git rm` または個別関数の削除で対応し、削除理由をファイル内 docstring に記録した。
+`test_ci_workflows.py`/`test_dependabot_config.py`/`test_pre_push_hook.py` 削除後の
+pytest 実測は **1462 passed, 3 skipped, 0 failed**（削除前 1461 passed / 3 failed から回復）。
+
+### R6.7 — load-bearing 依存上限の保持確認
+
+`services/api/pyproject.toml` は subtree import でそのまま持ち込まれており改変していない。
+`fastapi>=0.136.3,<0.137` / `starlette>=0.52.1,<1.0` / `pydantic-ai-litellm>=0.2.8,<0.3.0`
+の 3 件を `grep` で再確認済み。`services/agent`（`fastapi>=0.141.1`）との同居は
+両者 `requires-python = ">=3.13"` の独立レーンとして成立（統合計画 §4.2）。
+
+### R6.8 — CLAUDE.md/AGENTS.md（ペア × 2 箇所）
+
+- `services/api/CLAUDE.md` / `AGENTS.md`: 冒頭に移送に伴う変更点（`.github/`・
+  `.pre-commit-config.yaml`・`.githooks/`・`mise.toml` の移動先、削除した 3 テストファイル、
+  model-ID ゲートの精密化）を記す note ブロックを追加。**本文はそれ以外変更していない**。
+- ハブの `CLAUDE.md` / `AGENTS.md`: 参照のみの短い言及（`CLAUDE.md` は 1 文追加、
+  `AGENTS.md` は新規 "## Python API lane (`services/api`)" セクションを追加し、
+  `services/api/CLAUDE.md` への誘導のみで本文は複製していない）。
+
+### 副作用: biome フォーマッタ（2 件目）
+
+`services/api/evals/golden/basic_qa.json`（2-space インデント）がハブの tab 規約と衝突。
+`biome check --write` で再フォーマットし、`json.load()` による意味的完全一致を確認
+（Task 4 の `spec.json` と同じ対応パターン）。
+
+### 既知のギャップ（申し送り）
+
+1. **pre-commit / pre-push フックが未配線**。`services/api` 独自の gitleaks・pip-audit・
+   model-ID pygrep フック、および Ollama ゲート付き pre-push プローブは、ハブの共有
+   `.githooks/pre-push`（現状 Playwright E2E のみ）に統合していない。フォローアップ課題として
+   `services/api/CLAUDE.md` 冒頭の note と `AGENTS.md` の "Python API lane" 節に明記した。
+2. **`.gitleaksignore`（365 件の指紋リスト）は移送していない**。squash import により
+   全コミットが新しい SHA を持つため、コミットハッシュに基づく指紋は元々無効になる
+   （`services/api/CLAUDE.md` 自身が「新しいコミットは新しい指紋を持つ」と説明する仕組み）。
+   gitleaks 自体がまだ配線されていないため実害はないが、配線時には再スキャンが必要。
+
+### NFR-2 検証結果（最終）
+
+| ゲート | 結果 |
+|---|---|
+| lint（TS, biome） | ✅ 160 files |
+| typecheck（TS） | ✅ 9 workspace projects |
+| test:run（TS, vitest） | ✅ 652 passed / 1 skipped / 0 failed（新規 4 件含む） |
+| audit（TS, pnpm audit） | ✅ No known vulnerabilities |
+| lint:model-ids | ✅ |
+| lint（Python, ruff check） | ✅ |
+| format（Python, ruff format --check） | ✅ 300 files |
+| typecheck（Python, ty） | ✅ |
+| test（Python, pytest unit） | ✅ 1462 passed / 3 skipped / 0 failed |
+| audit（Python, pip-audit） | ✅ No known vulnerabilities, 14 ignored |
+
+**Task 6 完了。**

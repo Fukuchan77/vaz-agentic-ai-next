@@ -2,6 +2,12 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+> **Note (2026-09-21, spec `006-repo-consolidation` Task 6)**: this repo now lives at `services/api`
+> of the `vaz-agentic-ai-next` hub (`git subtree add --squash`). `.github/`, `.pre-commit-config.yaml`,
+> `.githooks/`, and `mise.toml` moved to the hub's actual root — see the longer note at the top of
+> `CLAUDE.md` for what replaced each. `mise run <task>` below means `mise run api:<task>` from the
+> hub root.
+
 ## Commands
 
 All tooling runs through `mise` (which wraps `uv`). Check `mise.toml` before running bare tools.

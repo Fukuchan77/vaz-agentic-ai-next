@@ -13,6 +13,18 @@ because slowapi 0.1.10 silently disables the global rate limit on starlette
 1.x. `filterwarnings = ["error::DeprecationWarning"]` then turns each of those
 calls into a hard failure. So the interpreter version is load-bearing until
 those two libraries migrate, and it must stay pinned rather than floating.
+
+Path note (2026-09-21, spec `006-repo-consolidation` Task 6): this repo now
+lives at `services/api` of the `vaz-agentic-ai-next` hub. `test_mise_pins_the_same_python_series`
+was removed rather than repointed: the hub's root `mise.toml` deliberately does
+not carry a `[tools].python` pin for this lane (or for `services/agent`, its
+sibling) - each independent Python lane provisions its interpreter from its own
+`.python-version` via `uv`, so there is no second pin left to drift out of
+agreement with it. The single-source-of-truth structure this test used to
+enforce by comparison is now enforced by construction (there is nothing else
+to compare against); the remaining three tests below (which check
+`.python-version` itself, that it satisfies `requires-python`, and that the
+interpreter actually running the suite matches it) still guard the real risk.
 """
 
 import tomllib
@@ -21,7 +33,6 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 PYTHON_VERSION_FILE = _REPO_ROOT / ".python-version"
-MISE_TOML = _REPO_ROOT / "mise.toml"
 PYPROJECT = _REPO_ROOT / "pyproject.toml"
 
 _EXPECTED_SERIES = "3.13"
@@ -34,17 +45,6 @@ def test_python_version_file_pins_the_series() -> None:
         "interpreter allowed by requires-python"
     )
     assert PYTHON_VERSION_FILE.read_text(encoding="utf-8").strip() == _EXPECTED_SERIES
-
-
-def test_mise_pins_the_same_python_series() -> None:
-    """Mise installs the toolchain in CI, so it must agree with `.python-version`."""
-    config = tomllib.loads(MISE_TOML.read_text(encoding="utf-8"))
-    pinned = config["tools"].get("python")
-    assert pinned is not None, "mise.toml [tools] does not pin python"
-    assert str(pinned) == _EXPECTED_SERIES, (
-        f"mise.toml pins python={pinned!r} but .python-version says {_EXPECTED_SERIES!r}; "
-        f"CI and local development would use different interpreters"
-    )
 
 
 def test_pinned_series_satisfies_requires_python() -> None:

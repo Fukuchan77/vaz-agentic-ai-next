@@ -35,6 +35,16 @@ against `.githooks/pre-push`, `CLAUDE.md`, and `AGENTS.md` only, but TDD
 requires a failing test written before the raise - the same "boundary
 correction" precedent already used by `test_chroma_test_gating.py` and
 `test_redis_test_gating.py` for their own restatement guards.
+
+Path note (2026-09-21, spec `006-repo-consolidation` Task 6): this repo now
+lives at `services/api` of the `vaz-agentic-ai-next` hub, and
+`test_ollama_live_test_count_matches_pre_push_hook_literal` was removed
+(rather than repointed) along with it. This lane's `.githooks/pre-push` was
+not carried over in the move - the hub's single shared pre-push hook (at the
+hub's actual root) runs Playwright E2E only, and folding this lane's
+Ollama-gated probe into it is a deliberate follow-up, not part of Task 6 (see
+the note at the top of this repo's `CLAUDE.md`). The two restatement guards
+below, against this lane's own `CLAUDE.md`/`AGENTS.md`, are unaffected.
 """
 
 import importlib
@@ -51,7 +61,6 @@ from tests.support.ollama import OLLAMA_LIVE_TEST_COUNT
 from tests.support.ollama import skip_unless_model_pulled
 
 
-PRE_PUSH_HOOK = Path(".githooks/pre-push")
 CLAUDE_MD = Path("CLAUDE.md")
 AGENTS_MD = Path("AGENTS.md")
 
@@ -133,11 +142,6 @@ def _extract_expect_live_tests(path: Path) -> int:
         f"expected an 'EXPECT_LIVE_TESTS=N mise run test:local' literal in {path}"
     )
     return int(match.group(1))
-
-
-def test_ollama_live_test_count_matches_pre_push_hook_literal() -> None:
-    """The pre-push hook's `EXPECT_LIVE_TESTS` literal for `test:local` matches the constant."""
-    assert _extract_expect_live_tests(PRE_PUSH_HOOK) == OLLAMA_LIVE_TEST_COUNT
 
 
 def test_ollama_live_test_count_matches_claude_md_restatement() -> None:

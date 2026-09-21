@@ -101,6 +101,16 @@ Spec `002-pydantic-enhance` (complete) added a Python sidecar alongside the TS m
 - **`py:check` mise task**: `uv sync + ruff + pyright + pytest` — intentionally NOT a dependency of `mise run check` (TS gates stay green without Python toolchain). Runs in CI via the path-filtered `.github/workflows/python.yml`. Must be run from `services/agent/` (or use `mise run py:check` which sets `dir = "services/agent"`).
 - **`openapi:gen` mise task**: `mise run openapi:gen` regenerates `packages/schemas/src/generated/agent-service.ts` and `openapi.snapshot.json` from the live FastAPI app's Pydantic models. Re-run whenever `services/agent/app/schemas.py` models change. Requires `uv` and `pnpm exec openapi-typescript`.
 
+## Python API lane (`services/api`)
+
+A second, independent Python lane (spec `006-repo-consolidation` Task 6, `docs/adr/0003-consolidation-direction.md`): `fastapi-pydantic-ai-agent` imported whole via `git subtree add --squash`, mirroring `services/agent`'s pattern (own `pyproject.toml`/`uv.lock`, no root uv workspace, no connection to `services/agent` beyond sharing that pattern). **This section stays a pointer, not a restatement** — [`services/api/CLAUDE.md`](services/api/CLAUDE.md) carries the real detail (composition root, middleware order, SSE lifecycle traps, dependency pins, and everything else that repo's own guide already documents in depth); read it before touching anything under `services/api/`.
+
+- **Tasks**: `api:*`-prefixed in the root `mise.toml`, `dir`-scoped to `services/api` (`api:check` mirrors `py:check`: `uv sync` → `ruff check` → `ty check` → `pytest` unit+integration+e2e with coverage → `api:audit`; independent of `check`, NFR-1). `services/api`'s own nested `mise.toml` was removed as part of the import — every task it defined was ported here.
+- **CI**: path-filtered `.github/workflows/api.yml` (`services/api/**`, `mise.toml`, itself), same shape as `python.yml`, not in `tests.yml`'s `gate` aggregation for the same reason.
+- **Model-ID gate**: `scripts/forbid-model-ids.sh` was refined to assignment-form-only detection (`[:=]\s*"..."`) specifically for this lane's docstrings (e.g. `(e.g., "openai:gpt-4o")`), which the previous bare-substring match flagged as false positives. `tests/repo/model-id-gate-precision.spec.ts` guards both the shell gate and `services/api`'s own `test_no_hardcoded_model_ids.py` against drifting apart.
+- **Dependabot**: a second `uv` ecosystem entry in the root `.github/dependabot.yml` (`directory: "/services/api"`), carrying this lane's own `fastapi`/`starlette`/`chromadb`/`redis` `ignore:` list verbatim.
+- **Known gap**: this lane's pre-commit hook (gitleaks/pip-audit/model-id) and Ollama-gated pre-push probe were not carried over or wired into the hub's shared `.githooks/pre-push` — see the note at the top of `services/api/CLAUDE.md`.
+
 ## Repository identity and consolidation
 
 This repo was renamed from `vaz-ai-next` to `vaz-agentic-ai-next` on 2026-09-21 (spec `006-repo-consolidation`) and is now the Agentic AI cross-repo consolidation hub — the polyglot production monorepo was judged more valuable to promote than to rebuild against an empty shell. What this means concretely:
