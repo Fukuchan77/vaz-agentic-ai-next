@@ -3,6 +3,10 @@
 > `/sdd-validate-gap` の成果物。承認済み要件（`spec.md` R1〜R5 / NFR-1〜7）と既存
 > コードベースの差分を整理し、`/sdd-plan` の設計判断へ情報提供する。**決定ではなく
 > 選択肢と根拠を提示する。**
+>
+> **パスの読み方**: 本書のコード位置は**移行前**（ルート `src/**` / ルート `tsconfig.json`
+> / `next.config.ts`）の座標で、001 の移行完了によりいずれも現存しない（`apps/web` が
+> 唯一の正本）。当時の記録として原文のまま残し、解決しないリンクにはしていない。
 
 ## Analysis Summary
 
@@ -28,12 +32,12 @@
 
 | 資産 | 位置 | Phase 1 での扱い |
 |------|------|------------------|
-| `resolveModel(env)` 環境変数駆動プロバイダ解決 | [src/lib/ai/provider.ts:13](../../src/lib/ai/provider.ts#L13) | `packages/agents`（または `packages/config`）へ移設。R1.8 の env 駆動原則の実体。 |
-| `aiEnvSchema` / `parseAiEnv`（空文字→undefined） | [src/lib/ai/env.ts:7](../../src/lib/ai/env.ts#L7) | `packages/schemas` へ移設し、R2.3（`AI_EMBEDDING_PROVIDER`）/ R4（`LANGFUSE_*`）/ R3（engine 設定）で拡張。 |
-| `chatRequestSchema`（UIMessage loose 検証） | [src/lib/ai/chat-schema.ts:8](../../src/lib/ai/chat-schema.ts#L8) | `packages/schemas` へ。NFR-6 単一正本の起点。 |
-| `streamText` + `tool()` + `stopWhen: isStepCount(5)` | [src/app/api/chat/route.ts:33](../../src/app/api/chat/route.ts#L33) | `createChatAgent(deps)`（`ToolLoopAgent` ラップ）へ抽出。route は薄いアダプタへ（R1.5）。 |
-| `getCurrentTime` デモツール | [src/app/api/chat/route.ts:15](../../src/app/api/chat/route.ts#L15) | `packages/tools`（capability パターン）へ。`execute` を deps closure 化（R1.4）。 |
-| `useChat` チャット UI | [src/features/chat/Chat.tsx:43](../../src/features/chat/Chat.tsx#L43) | `apps/web` に残置。R3.6 で `useJobStream` を兄弟実装。 |
+| `resolveModel(env)` 環境変数駆動プロバイダ解決 | `src/lib/ai/provider.ts:13` | `packages/agents`（または `packages/config`）へ移設。R1.8 の env 駆動原則の実体。 |
+| `aiEnvSchema` / `parseAiEnv`（空文字→undefined） | `src/lib/ai/env.ts:7` | `packages/schemas` へ移設し、R2.3（`AI_EMBEDDING_PROVIDER`）/ R4（`LANGFUSE_*`）/ R3（engine 設定）で拡張。 |
+| `chatRequestSchema`（UIMessage loose 検証） | `src/lib/ai/chat-schema.ts:8` | `packages/schemas` へ。NFR-6 単一正本の起点。 |
+| `streamText` + `tool()` + `stopWhen: isStepCount(5)` | `src/app/api/chat/route.ts:33` | `createChatAgent(deps)`（`ToolLoopAgent` ラップ）へ抽出。route は薄いアダプタへ（R1.5）。 |
+| `getCurrentTime` デモツール | `src/app/api/chat/route.ts:15` | `packages/tools`（capability パターン）へ。`execute` を deps closure 化（R1.4）。 |
+| `useChat` チャット UI | `src/features/chat/Chat.tsx:43` | `apps/web` に残置。R3.6 で `useJobStream` を兄弟実装。 |
 | 品質基盤（Biome/Vitest/Playwright/hooks/CI/supply-chain） | ルート各 config + `.githooks/` | 非劣化維持（NFR-1）。ワークスペース対応へ改修（下記課題）。 |
 
 ## 要件別ギャップ表
@@ -105,7 +109,7 @@
 ## 統合課題（Integration Challenges）
 
 1. **tsconfig のワークスペース化**: 現 `tsconfig.json` は Next 管理 + `paths: @/* → ./src/*` +
-   `include: src`（[tsconfig.json:20](../../tsconfig.json#L20)）。`apps/web` へ移すと alias/include が変わり、
+   `include: src`（`tsconfig.json:20`）。`apps/web` へ移すと alias/include が変わり、
    各 package は独自 tsconfig（`packages/config` で base 共有）が必要。ルート `tsc --noEmit` は
    **project references** か `pnpm -r typecheck` へ。
 2. **Vitest のワークスペース化**: `@ → ./src` alias と `include: tests/**`、`coverage.include: src/**`
@@ -119,7 +123,7 @@
    `minimumReleaseAge`/`allowBuilds` を維持（R1.2）。新規依存（pg・drizzle・otel・langfuse・
    workflow engine・sharp 等）のうち install script を持つものは allowBuilds へ監査記録。
 6. **React Compiler の適用境界**: `babel-plugin-react-compiler` / `reactCompiler: true` は web 専用
-   （[next.config.ts:5](../../next.config.ts#L5)）。node ライブラリ package では有効化しない。
+   （`next.config.ts:5`）。node ライブラリ package では有効化しない。
 7. **依存バージョン整合**: `ai@^7` に対し `@ai-sdk/anthropic@^4` / `@ai-sdk/react@^4`
    （[package.json:8](../../package.json#L8)）。Agent/telemetry/tool-approval API は同梱 docs で存在確認済み。
    provider 側 API は plan 前にバージョン別に要確認。
