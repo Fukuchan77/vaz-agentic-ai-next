@@ -171,11 +171,19 @@ _Boundary:_ `docs/guide/**`（新規）, `docs/agentic-engineering-review.md`（
 _Depends:_ Task 2
 _Requirements:_ 5.1, 5.2, 5.3, 5.4, NFR-1
 
-- [ ] 8 手法（PE / CE / LE / HE / AE / AO / MCP / EV）を骨格に `docs/guide/` の目次を作る。
-- [ ] 各手法から (a) ハブ内実装 (b) 兄弟 repo の教材 (c) 正本レビューの X-n へリンクする。
-- [ ] **本文を複製しない**（R5.2 / 憲章原則 5）。リンクと 1〜3 文の導入に留める。
-- [ ] 書籍原稿 14 章はリンク参照のみとし、実体移設は Task 7 の裁定に従う（R5.3）。
-- [ ] `mise run check` が green であることを確認する（コード・CI に触れていないこと）。
+- [x] 8 手法（PE / CE / LE / HE / AE / AO / MCP / EV）を骨格に `docs/guide/` の目次
+      （`README.md` + 8 ページ、計 9 ファイル）を作った。
+- [x] 各手法から (a) ハブ内実装 (b) 兄弟 repo の教材 (c) 正本レビューの X-n へリンクした。
+- [x] **本文を複製していない**（R5.2 / 憲章原則 5）。リンクと 1〜3 文の導入に留めた。
+- [x] 書籍原稿 14 章はリンク参照のみとし、実体移設は Task 7 の裁定に従う（R5.3。対応表を
+      `docs/guide/README.md` に掲載）。
+- [x] `docs/agentic-engineering-review.md` に既存の「状態注記」形式で 1 段落を追記（本文不変）。
+- [x] `CLAUDE.md` / `AGENTS.md` をペアで更新（参照のみ）。
+- [x] **検証（R5.4/NFR-2）**: `git diff --name-only` で `apps/`/`packages/`/`services/`/
+      `.github/workflows/` への変更が皆無であることを確認。lint（158 files）/ typecheck
+      （9 projects）/ test:run（648 passed）/ audit / lint:model-ids すべて green。
+
+**Task 5 完了。** NFR-1 のとおり Task 6 の未決定を待たずに独立着地した。
 
 ## 6. 第 2 Python レーン `services/api`（Phase 2）
 
