@@ -15,6 +15,6 @@
 		"@ai-sdk/openai-compatible": "^3.0.52",
 		"@ai-sdk/otel": "^1.0.106",
 		"@vaz/schemas": "workspace:*",
-		"ai": "^7.0.106"
+		"ai": "^7.0.107"
 	}
 }
