@@ -1,0 +1,183 @@
+"""Unit tests for authentication dependency."""
+
+import pytest
+from fastapi import HTTPException
+
+from app.config import Settings
+from app.deps.auth import verify_api_key
+from app.models.errors import ErrorResponse
+from app.security.principal import Principal
+from app.security.principal import derive_principal_id
+
+
+class TestVerifyApiKey:
+    """Test suite for verify_api_key dependency."""
+
+    @pytest.mark.asyncio
+    async def test_missing_api_key_raises_401(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that missing X-API-Key header raises HTTPException with 401."""
+        # Arrange
+        monkeypatch.setenv("API_KEY", "test-secret-key-1234567")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        # Act & Assert
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_api_key(api_key=None, settings=settings)
+
+        assert exc_info.value.status_code == 401
+        assert "detail" in exc_info.value.__dict__
+        # The detail should be an ErrorResponse or dict with message field
+        detail = exc_info.value.detail
+        if isinstance(detail, dict):
+            assert "message" in detail
+            assert detail["message"] == "Unauthorized"
+        else:
+            # If it's an ErrorResponse model
+            assert hasattr(detail, "message")
+            assert detail.message == "Unauthorized"
+
+    @pytest.mark.asyncio
+    async def test_invalid_api_key_raises_401(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that invalid X-API-Key value raises HTTPException with 401."""
+        # Arrange
+        monkeypatch.setenv("API_KEY", "correct-secret-key")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        # Act & Assert
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_api_key(api_key="wrong-key", settings=settings)
+
+        assert exc_info.value.status_code == 401
+        detail = exc_info.value.detail
+        if isinstance(detail, dict):
+            assert detail["message"] == "Unauthorized"
+        else:
+            assert detail.message == "Unauthorized"
+
+    @pytest.mark.asyncio
+    async def test_valid_api_key_succeeds(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that valid X-API-Key allows request to proceed."""
+        # Arrange
+        monkeypatch.setenv("API_KEY", "correct-secret-key")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        # Act
+        result = await verify_api_key(api_key="correct-secret-key", settings=settings)
+
+        # Assert - dependency should return the authenticated Principal (Req 11.1)
+        assert result == Principal(id=derive_principal_id("correct-secret-key"))
+
+    @pytest.mark.asyncio
+    async def test_empty_string_api_key_raises_401(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that empty string X-API-Key raises HTTPException with 401."""
+        # Arrange
+        monkeypatch.setenv("API_KEY", "test-secret-key-1234567")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        # Act & Assert
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_api_key(api_key="", settings=settings)
+
+        assert exc_info.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_case_sensitive_api_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that API key comparison is case-sensitive."""
+        # Arrange
+        monkeypatch.setenv("API_KEY", "TestKey123456789")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        # Act & Assert - wrong case should fail
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_api_key(api_key="testkey123", settings=settings)
+
+        assert exc_info.value.status_code == 401
+
+        # Correct case should succeed
+        result = await verify_api_key(api_key="TestKey123456789", settings=settings)
+        assert result == Principal(id=derive_principal_id("TestKey123456789"))
+
+    @pytest.mark.asyncio
+    async def test_non_ascii_api_key_raises_401_not_500(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Non-ASCII bytes in the header must 401, not raise TypeError (Req 5.1, 5.3)."""
+        # Arrange
+        monkeypatch.setenv("API_KEY", "test-secret-key-1234567")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        # Act & Assert
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_api_key(api_key="wrong-key-é", settings=settings)
+
+        assert exc_info.value.status_code == 401
+        detail = exc_info.value.detail
+        if isinstance(detail, dict):
+            assert detail["message"] == "Unauthorized"
+        else:
+            assert detail.message == "Unauthorized"
+
+    @pytest.mark.asyncio
+    async def test_all_rejection_reasons_yield_identical_response(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Missing, empty, non-ASCII, and wrong-but-ASCII keys must be indistinguishable.
+
+        Req 5.5: same status, same body, same headers.
+        """
+        # Arrange
+        monkeypatch.setenv("API_KEY", "test-secret-key-1234567")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        candidates: list[str | None] = [None, "", "wrong-key-é", "wrong-ascii-key"]
+        responses = []
+        for candidate in candidates:
+            with pytest.raises(HTTPException) as exc_info:
+                await verify_api_key(api_key=candidate, settings=settings)
+            responses.append(
+                (exc_info.value.status_code, exc_info.value.detail, exc_info.value.headers)
+            )
+
+        # Assert - every rejection reason produces the exact same response shape
+        first = responses[0]
+        assert all(response == first for response in responses)
+
+    @pytest.mark.asyncio
+    async def test_error_response_has_correct_structure(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that error response follows ErrorResponse model structure."""
+        # Arrange
+        monkeypatch.setenv("API_KEY", "test-api-key-12345")
+        monkeypatch.setenv("LLM_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("LLM_API_KEY", "sk-test123456789")
+        settings = Settings()
+
+        # Act & Assert
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_api_key(api_key=None, settings=settings)
+
+        # Verify the detail can be converted to ErrorResponse model
+        detail = exc_info.value.detail
+        if isinstance(detail, dict):
+            # Should be convertible to ErrorResponse
+            error_response = ErrorResponse(**detail)
+            assert error_response.message == "Unauthorized"
+        else:
+            # Already an ErrorResponse
+            assert isinstance(detail, ErrorResponse)
+            assert detail.message == "Unauthorized"
