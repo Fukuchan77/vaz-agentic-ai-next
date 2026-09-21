@@ -198,3 +198,126 @@ Fukuchan77/vaz-agentic-ai-next-archive  private  pushed_at: 2026-09-21T08:18:23Z
 ### Task 2 完了。Task 3（正本設置）の前提が整った
 
 R3.4 の「7 参照が編集ゼロで解決する」検証（R9.1）を次に実行できる状態。
+
+---
+
+## Task 3: 正本 `cross-repo-adoption-review.md` の設置
+
+### 実行日時
+2026-09-21（Task 2 完了直後。本体の verbatim 配置と §6 addendum は先行コミット `b3a334f` で
+実施済みだったため、本タスクでは配置内容の再検証と R9.1（参照解決）を実行した）
+
+### R3.1 — verbatim 配置の再検証
+
+`archive/vaz-agentic-ai-next/claude/agentic-ai-repo-design-3k8e32`（出所 SHA
+`282d7064d90ba754e12f3a9a7acd912e272a3b83`）から取得した本文と、ハブの
+`docs/cross-repo-adoption-review.md` の先頭 493 行を `diff` で突合。**完全一致（改変なし）**。
+
+### R3.2/R3.3 — §6 addendum の存在確認
+
+`docs/cross-repo-adoption-review.md:497` に `## §6 追記（2026-09-21）— 同一性の崩壊と再実測`
+が存在。同一性の崩壊（`vaz-ai-next`/`vaz-agentic-ai-next` 列の統合）、stale 行（X-1: 0/22→28/28、
+0/6→6/6）、beeai スコープ外の申し送りをいずれも含む。
+
+### 索引ファイル
+
+`docs/README.md` 相当の索引はハブに存在しない（`ls docs/README.md` → No such file）。
+該当作業なし。
+
+### R9.1（先取り実行）— 参照解決の非空検証
+
+Task 2 完了・リネーム後の状態で実行:
+
+```bash
+grep -rln "cross-repo-adoption-review" fastapi-pydantic-ai-agent pydantic-ai-sandbox vaz-ai-next \
+  --include='*.md' | grep -v 'vaz-ai-next/docs/cross-repo-adoption-review.md' \
+                    | grep -v 'vaz-ai-next/specs/006-repo-consolidation'
+```
+
+**7 ファイルがヒット（非空 — NFR-4 満たす）**:
+
+```
+fastapi-pydantic-ai-agent/CLAUDE.md
+fastapi-pydantic-ai-agent/AGENTS.md
+fastapi-pydantic-ai-agent/docs/cross-repo-adoption-backlog.md
+pydantic-ai-sandbox/docs/README.md
+pydantic-ai-sandbox/docs/cross-repo-adoption-backlog.md
+vaz-ai-next/docs/cross-repo-adoption-backlog.md
+vaz-ai-next/docs/context-budget.md
+```
+
+全 7 件が文字列 `vaz-agentic-ai-next/docs/cross-repo-adoption-review.md` を参照しており、
+リネーム後のハブに同名で正本が実在することを確認。**7 / 7 が編集ゼロで解決した**
+（spec.md 前提誤り 2 のとおり、Phase 0 の「張り替え」作業は不要だった）。
+
+**Task 3 完了。**
+
+---
+
+## Task 4: 憲章・継承 spec の受け入れと ADR-0003
+
+### 実行日時
+2026-09-21（Task 3 完了直後）
+
+### R4.1 — 憲章の verbatim 配置
+
+`archive/vaz-agentic-ai-next/claude/agentic-ai-repo-design-3k8e32`（出所 SHA
+`282d7064d90ba754e12f3a9a7acd912e272a3b83`）から `specs/memory/constitution.md`（296 行・
+11 原則・v1.2.0）を verbatim 配置。行数一致を確認済み（R1.3 で既に検証済み）。
+
+### R4.2 — 継承 spec の配置先
+
+`specs/001-agentic-ai-core-p0/` 配下の実在 7 ファイル（`spec.md` / `spec.json` /
+`spec-agenticai-core.md` / `plan.md` / `research.md` / `tasks.md` / `traceability.md`）を
+`specs/inherited/001-agentic-ai-core-p0/` へ配置した。
+
+**tasks.md 起草時の「8 ファイル」という見積もりは誤りだった**（実在するのは 7 ファイル。
+`git ls-tree` で確認）。tasks.md の記述と食い違うが、実体を優先する（憲章原則 8）。
+
+**発見**: `spec.md`（継承 spec の要件仕様、446 行）はヘッダに「`approvals.tasks` は未承認」と
+記すが、`spec.json` の `approvals` フィールドは 3 種すべて `approved: true`。継承元の記録上の
+揺れであり、構造化データ（`spec.json`）を優先する判断を ADR-0003 の Consequences に記録した。
+
+### R4.4〜R4.6 — ADR-0003 の起草
+
+`docs/adr/0003-consolidation-direction.md` を作成（ADR-0001/0002 と同一の Status/Date/
+仕様根拠ヘッダ + Context/Decision/Consequences/Re-trigger Conditions/References 構成）。
+
+- **supersede 対象を明示列挙**（R4.4）: 継承 spec の `T-0` / `T-1.2` / `T-1.3` / `T-2` の 4 タスク。
+  53 要件は supersede しない（R4.3）ことを明記。
+- **両文書が独立に同じ結論へ到達した事実**（R4.5）: 継承 spec の ADR-P0-05 候補 (a) と
+  統合計画 §4.2 の対比表を記載。
+- **Turborepo を採らない根拠 / Python レーンは `services/api`**（R4.6）: `apps/agent-api` ではなく
+  `services/api` を採る理由（`apps/` は pnpm workspace メンバーに予約済み、`services/agent` との
+  対称性）を明記。
+
+### R4.7（CLAUDE.md / AGENTS.md ペア編集）
+
+- `CLAUDE.md`: 既存の "Governance docs:" 段落の直後に、統合ハブとしての位置づけ・正本レビュー・
+  憲章・継承 spec への 1 段落（参照のみ、本文非複製）を追加。
+- `AGENTS.md`: "Python sidecar" セクションと "Non-Obvious Patterns" セクションの間に
+  新規 "## Repository identity and consolidation" セクションを追加。同じ参照を、
+  AGENTS.md の詳細度に合わせてやや厚く記載（ただし正本文書の本文は複製していない）。
+
+### 予期しなかった副作用: biome フォーマッタ
+
+`specs/inherited/001-agentic-ai-core-p0/spec.json` は継承元が 2-space インデントで書いており、
+ハブの `biome.json`（`indentStyle: "tab"`、`includes: ["**", ...]` で `specs/**` も対象）と
+衝突し `lint` ゲートが赤になった。
+
+**対応**: `pnpm exec biome check --write` で該当 1 ファイルのみ再フォーマット。適用前後で
+`JSON.parse` の結果が意味的に完全一致することを Node で検証済み（空白のみの変更、内容変更なし）。
+この扱いは spec.md の verbatim 要件（R4.1 は `constitution.md` のみ、R3.1 は正本レビューのみを
+対象としており、継承 spec の個別ファイルには verbatim 要求がない）と矛盾しない。
+
+### NFR-2 検証結果（Task 2 と同じ手段）
+
+| ゲート | 結果 |
+|---|---|
+| lint | ✅ 158 files, no fixes needed |
+| typecheck | ✅ 全 9 workspace projects |
+| test:run | ✅ 648 passed / 1 skipped / 0 failed |
+| audit | ✅ No known vulnerabilities |
+| lint:model-ids | ✅ |
+
+**Task 4 完了。**
