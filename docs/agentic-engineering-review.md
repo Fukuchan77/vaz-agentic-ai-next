@@ -157,7 +157,7 @@ vibe coding(レビューなしで受け入れる)との対比で定義される�
   (`docs/cross-repo-adoption-backlog.md`)を参照:
   `beeai-agentic-ai-sandbox/effective_agents/`(`_print_usage()` によるマルチ
   エージェント構成の ~15 倍コスト可視化)と
-  `pydantic-ai-sandbox/patterns/deep-research/COMPARISON.md`(6 パターンの
+  `agentic-ai-sandbox/reference/patterns/deep-research/COMPARISON.md`(6 パターンの
   比較表)。単一エージェント + 最小プリミティブ(この AE-1 の原則)で足りるか、
   複数エージェントのコストに見合うだけの並列性・専門性の分離があるかを、
   これらの実測を材料に判断する。
