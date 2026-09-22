@@ -36,16 +36,16 @@
 | REQ-003 (3.3) | DES-3.1, DES-3.2, DES-3.4 | T-3.2, T-4.1, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "preamble … ISO-8601 date" green (Agentic doc); LLM doc pending T-4 | `4c4e0b8` |
 | REQ-003 (3.4) | DES-3.1, DES-3.2, DES-3.13 | T-3.1, T-4.3 | `tests/repo/doc-links.spec.ts` ✓ all 6 reference files updated | `4c4e0b8` |
 | REQ-003 (3.5) | DES-3.1, DES-3.2 | T-3.1, T-4.3 | cross-ref docs/owasp-llm-top10-mapping.md:12 updated to new filename | `4c4e0b8` |
-| REQ-004 (4.1) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all path citations in … exist" (T-2.2 guard; full GREEN on T-4.4 documents) | |
-| REQ-004 (4.2) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all symbol citations in … are resolvable" (T-2.2 guard; full GREEN on T-4.4 documents) | |
-| REQ-004 (4.3) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all CI citations in … are valid" (T-2.2 guard; full GREEN on T-4.4 documents) | |
-| REQ-004 (4.4) | DES-3.4 | T-2.3, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all status tokens in … are valid" (T-2.3 guard; full GREEN on T-4.4 documents) | |
-| REQ-004 (4.5) | DES-3.4 | T-2.3, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "preamble contains an ISO-8601 taxonomy version date" (T-2.3 guard; full GREEN on T-4.4 documents) | |
-| REQ-004 (4.6) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` — "exactly 2 mapping documents are declared" + per-doc "document exists" + "> 0" non-empty asserts (T-2.1 ✓) | |
-| REQ-004 (4.7) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` — "document exists: docs/owasp-*.md" asserts (T-2.1 ✓) | |
-| REQ-004 (4.8) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` lives in `tests/repo/` project, no new workflow file added (T-2.1 ✓) | |
-| REQ-005 (5.1) | DES-3.7 | T-5.1, T-5.2 | | |
-| REQ-005 (5.2) | DES-3.7, DES-3.8, DES-3.12, DES-5.1 | T-5.1, T-5.2, T-10.1, T-10.2 | | |
+| REQ-004 (4.1) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all path citations in … exist" (T-2.2 guard; full GREEN on T-4.4 documents) | `b99912c` |
+| REQ-004 (4.2) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all symbol citations in … are resolvable" (T-2.2 guard; full GREEN on T-4.4 documents) | `b99912c` |
+| REQ-004 (4.3) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all CI citations in … are valid" (T-2.2 guard; full GREEN on T-4.4 documents) | `b99912c` |
+| REQ-004 (4.4) | DES-3.4 | T-2.3, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all status tokens in … are valid" (T-2.3 guard; full GREEN on T-4.4 documents) | `b99912c` |
+| REQ-004 (4.5) | DES-3.4 | T-2.3, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "preamble contains an ISO-8601 taxonomy version date" (T-2.3 guard; full GREEN on T-4.4 documents) | `b99912c` |
+| REQ-004 (4.6) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` — "exactly 2 mapping documents are declared" + per-doc "document exists" + "> 0" non-empty asserts (T-2.1 ✓) | `b99912c` |
+| REQ-004 (4.7) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` — "document exists: docs/owasp-*.md" asserts (T-2.1 ✓) | `b99912c` |
+| REQ-004 (4.8) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` lives in `tests/repo/` project, no new workflow file added (T-2.1 ✓) | `b99912c` |
+| REQ-005 (5.1) | DES-3.7 | T-5.1, T-5.2 | `packages/schemas/tests/workflows.spec.ts` — "approval wire contracts" (UUID toolCallId, approve/reject, strict reject on history/usage/model) | `4d60458` |
+| REQ-005 (5.2) | DES-3.7, DES-3.8, DES-3.12, DES-5.1 | T-5.1, T-5.2, T-10.1, T-10.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalDecisionSchema`/`approvalDecisionSetSchema`/`approvalRequestSchema` | `4d60458` |
 | REQ-005 (5.3) | DES-3.12, DES-7 | T-10.1, T-10.2 | | |
 | REQ-005 (5.4) | DES-3.12 | T-10.1 | | |
 | REQ-005 (5.5) | DES-3.8, DES-3.12 | T-9.2, T-10.2 | | |
@@ -58,7 +58,7 @@
 | REQ-007 (7.1) | DES-3.9, DES-3.11, DES-4 | T-6.1, T-6.2, T-7.1, T-7.2, T-8.1, T-8.2 | | |
 | REQ-007 (7.2) | DES-3.8, DES-3.12 | T-9.1, T-9.3, T-10.1, T-10.2 | | |
 | REQ-007 (7.3) | DES-3.8, DES-3.12 | T-9.3, T-10.1, T-10.2 | | |
-| REQ-007 (7.4) | DES-3.10, DES-5.5 | T-5.3 | | |
+| REQ-007 (7.4) | DES-3.10, DES-5.5 | T-5.3 | `packages/schemas/tests/env.spec.ts` — `aiEnvSchema JOB_TOKEN_BUDGET` (default 200_000, coerce, positive/int constraints) | `4d60458` |
 | REQ-007 (7.5) | DES-3.9, DES-4 | T-6.2, T-13.2 | | |
 | REQ-007 (7.6) | DES-3.8, DES-3.11 | T-8.1, T-8.2, T-9.3 | | |
 | REQ-008 (8.1) | DES-3.8 | T-9.1, T-9.2, T-9.4 | | |
@@ -67,10 +67,10 @@
 | REQ-008 (8.4) | DES-3.8 | T-9.1, T-9.4 | | |
 | REQ-008 (8.5) | DES-3.6 | T-11.2, T-13.2 | | |
 | REQ-008 (8.6) | DES-3.8 | T-9.4 | | |
-| REQ-009 (9.1) | DES-3.7, DES-3.12 | T-5.1, T-5.2, T-10.1, T-10.2 | | |
+| REQ-009 (9.1) | DES-3.7, DES-3.12 | T-5.1, T-5.2, T-10.1, T-10.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalDecisionSchema` accepts valid single decision | `4d60458` |
 | REQ-009 (9.2) | DES-3.8, DES-3.9, DES-5.2 | T-7.1, T-7.2, T-9.3, T-10.1 | | |
-| REQ-009 (9.3) | DES-3.7, DES-3.8 | T-5.2, T-9.1, T-9.2 | | |
-| REQ-009 (9.4) | DES-3.7, DES-3.12 | T-5.1, T-5.2, T-10.1, T-10.2 | | |
+| REQ-009 (9.3) | DES-3.7, DES-3.8 | T-5.2, T-9.1, T-9.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalDecisionSetSchema` min(1) and strictObject | `4d60458` |
+| REQ-009 (9.4) | DES-3.7, DES-3.12 | T-5.1, T-5.2, T-10.1, T-10.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalRequestSchema` discriminated union | `4d60458` |
 | REQ-009 (9.5) | DES-3.8, DES-3.12 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-009 (9.6) | DES-3.8, DES-3.9 | T-7.1, T-7.2, T-9.3 | | |
 | REQ-010 (10.1) | DES-3.6 | T-11.1 | | |
