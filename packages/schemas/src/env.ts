@@ -23,6 +23,9 @@ export const aiEnvSchema = z.object({
 	// against `isStepCount(MAX_STEPS)` in `stopWhen` (ADR-A). Conservative
 	// default so pre-existing deployments aren't cut off mid-conversation.
 	CHAT_TOKEN_BUDGET: z.coerce.number().int().positive().default(200_000),
+	// Cumulative input+output token ceiling across all steps of a durable supervisor job (R7.4).
+	// Read by approval decision logic in `apps/web/src/lib/approvals.ts` (C-10).
+	JOB_TOKEN_BUDGET: z.coerce.number().int().positive().default(200_000),
 });
 
 export type AiEnv = z.infer<typeof aiEnvSchema>;
@@ -36,5 +39,6 @@ export function parseAiEnv(env: Record<string, string | undefined> = process.env
 		AI_EMBEDDING_PROVIDER: emptyToUndefined(env.AI_EMBEDDING_PROVIDER),
 		AI_EMBEDDING_MODEL: emptyToUndefined(env.AI_EMBEDDING_MODEL),
 		CHAT_TOKEN_BUDGET: emptyToUndefined(env.CHAT_TOKEN_BUDGET),
+		JOB_TOKEN_BUDGET: emptyToUndefined(env.JOB_TOKEN_BUDGET),
 	});
 }

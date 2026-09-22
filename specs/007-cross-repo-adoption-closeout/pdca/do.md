@@ -149,3 +149,37 @@ mise run check  →  lint ✓ | audit ✓ | typecheck ✓ | test:run 686 passed 
   テストファイルで当該シンボルを import・使用していない場合は `- テスト:` 行から除去する。
 - `- CI:` 行の第 1 コードスパン = ワークフローファイル、以降 = そのワークフロー内の `name:` 値。
   ガードは `yaml.parse` で構造的に検証するため、ステップ名の表記は YAML `name:` と完全一致が必要。
+
+---
+
+## Task 5: 承認の wire 契約と予算 env（2026-09-22）
+
+### 実施内容
+
+**5.1 — 単一形・セット形のテスト先行作成**
+
+- [`packages/schemas/tests/workflows.spec.ts`](packages/schemas/tests/workflows.spec.ts:316) にテストを追加。
+- UUID `toolCallId`、`decision: "approve" | "reject"`、任意 `args` を持つ単一形と、`min(1)` のセット形 `{ decisions: [...] }` の受理を検証。
+- 余剰・禁止フィールド（`history`, `messages`, `usage`, `model`, `prompt`, `extraField`）が単一形・セット形の双方および union (`approvalRequestSchema`) で確実に **reject** されることをテスト（D1 の「証明」）。
+
+**5.2 — `approvalDecisionSchema` / `approvalDecisionSetSchema` / `approvalRequestSchema` 実装**
+
+- [`packages/schemas/src/workflows.ts`](packages/schemas/src/workflows.ts:220) に `approvalDecisionSchema`（`z.strictObject`）、`approvalDecisionSetSchema`（`z.strictObject`）、`approvalRequestSchema`（`z.union`）を実装。
+- `ApprovalDecision`, `ApprovalDecisionSet`, `ApprovalRequest` 型（`z.infer`）を export。
+
+**5.3 — `JOB_TOKEN_BUDGET` の env 定義とテスト**
+
+- [`packages/schemas/tests/env.spec.ts`](packages/schemas/tests/env.spec.ts:31) に既定値 (200,000)、文字列 coerce、空文字フォールバック、非正数/非整数 reject のテストを作成。
+- [`packages/schemas/src/env.ts`](packages/schemas/src/env.ts:24) の `aiEnvSchema` および `parseAiEnv` に `JOB_TOKEN_BUDGET` を `CHAT_TOKEN_BUDGET` と同型で追加。
+- [`.env.example`](.env.example:20) に `JOB_TOKEN_BUDGET=200000` を追記。
+
+### PROVE 証拠
+
+1. **`approvalDecisionSchema` strictObject の非空虚性**: `z.strictObject` を `z.object` に意図的に書き換えると、`rejects excess / forbidden fields in single decision` テストが期待通り `expected true to be false` で FAIL することを確認。
+2. **`JOB_TOKEN_BUDGET` positive/int 制約の非空虚性**: `.int().positive()` を外すと `rejects a non-positive value` / `rejects a non-integer value` が FAIL することを確認。
+
+### Verification Gate
+
+```
+mise run check  →  lint ✓ | audit ✓ | typecheck ✓ | test:run 702 passed / 1 skipped ✓
+```

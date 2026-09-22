@@ -27,3 +27,25 @@ describe("aiEnvSchema CHAT_TOKEN_BUDGET", () => {
 		expect(() => parseAiEnv({ CHAT_TOKEN_BUDGET: "1.5" })).toThrow();
 	});
 });
+
+describe("aiEnvSchema JOB_TOKEN_BUDGET (C-10 / R7.4)", () => {
+	test("defaults to 200_000 when unset", () => {
+		expect(parseAiEnv({}).JOB_TOKEN_BUDGET).toBe(200_000);
+	});
+
+	test("coerces a numeric string override", () => {
+		expect(parseAiEnv({ JOB_TOKEN_BUDGET: "50000" }).JOB_TOKEN_BUDGET).toBe(50_000);
+	});
+
+	test("treats an empty string as unset (falls back to the default)", () => {
+		expect(parseAiEnv({ JOB_TOKEN_BUDGET: "" }).JOB_TOKEN_BUDGET).toBe(200_000);
+	});
+
+	test("rejects a non-positive value", () => {
+		expect(() => parseAiEnv({ JOB_TOKEN_BUDGET: "0" })).toThrow();
+	});
+
+	test("rejects a non-integer value", () => {
+		expect(() => parseAiEnv({ JOB_TOKEN_BUDGET: "1.5" })).toThrow();
+	});
+});
