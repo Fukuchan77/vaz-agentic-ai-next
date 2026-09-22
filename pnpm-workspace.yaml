@@ -12,6 +12,12 @@ packages:
 # detection/takedown). Use minimumReleaseAgeExclude for an urgent security patch.
 minimumReleaseAge: 1440
 
+# Keep pnpm 12 from prepending a package-manager env document to pnpm-lock.yaml.
+# Single-document consumers (including dependency graph/security scanners) can
+# otherwise read only the pnpm bootstrap metadata and miss project dependencies.
+# Corepack and mise already enforce the exact packageManager/tool version.
+pmOnFail: ignore
+
 # Pin transitive-dependency vulnerabilities with the minimal patch (per pnpm audit).
 # No override is active: every entry below has been retired against its own declared
 # condition. Re-add one here (with its advisory, scope and retirement condition) when
@@ -46,7 +52,7 @@ minimumReleaseAge: 1440
 #   clean.
 
 # pnpm blocks dependency install/postinstall scripts by default.
-# allowBuilds (pnpm 11) records the audited decision explicitly (false = deny):
+# allowBuilds (pnpm 12) records the audited decision explicitly (false = deny):
 # - @carbon/* / @ibm/plex*: the only script is ibmtelemetry (telemetry collection).
 # - @parcel/watcher: works from prebuilt binaries in optionalDependencies.
 # - sharp: works from prebuilt binaries (@img/sharp-*). Only consider flipping to
