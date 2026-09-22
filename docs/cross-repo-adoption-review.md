@@ -17,6 +17,9 @@ Agentic AI アプリ開発のベース・学習用リポジトリ 5 本を横断
 - [§3 見送るもの（と理由）](#3-見送るものと理由)
 - [§4 着地順](#4-着地順)
 - [§5 repo 別の取り込み主軸](#5-repo-別の取り込み主軸)
+- [§6 追記（2026-09-21）— 同一性の崩壊と再実測](#6-追記2026-09-21--同一性の崩壊と再実測)
+- [§7 追記（2026-09-22）— 全 5 repo 実クローン再検証](#7-追記2026-09-22--全-5-repo-実クローン再検証)
+- [§8 追記（2026-09-23）— spec `007-cross-repo-adoption-closeout` による着地](#8-追記2026-09-23--spec-007-cross-repo-adoption-closeout-による着地)
 
 ---
 
@@ -747,3 +750,66 @@ X-17〜X-20 として起票した:
 いずれも後者に当たる。したがって横断レビューを判断材料にする際は、
 **数値を再実測する前に、まず「その repo は今も同じ repo か」を確認すること**。
 確認のコストは最終コミット日時とトップレベル構造を見るだけで済む。
+
+---
+
+## §8 追記（2026-09-23）— spec `007-cross-repo-adoption-closeout` による着地
+
+> **この節の位置づけ**: §1〜§7 は改変しない（追記のみ規約）。本節は、§7.6 が起票した
+> X-17〜X-20 と、§7.3 が列挙した D1〜D6（`pydantic-ai-sandbox` の `patterns/hitl/` が
+> 持ち本ハブが持たなかった 6 防御）の着地を記録する。
+> 実装の詳細・PROVE 証拠・ゲート出力は `specs/007-cross-repo-adoption-closeout/pdca/do.md`
+> および `specs/007-cross-repo-adoption-closeout/traceability.md` を参照。
+
+### §8.1 X-17〜X-20 の着地
+
+| ID | 優先度 | 着地 | 内容 |
+|---|---|---|---|
+| X-17 | 高 | ✅ 着地 | [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) を 15 脅威全件（T1〜T15）に拡張。T11〜T15（Unexpected RCE / Agent Communication Poisoning / Rogue Agents / Human Attacks on MAS / Human Manipulation）を追加し、supervisor → specialist 間の保証・非保証を明記。状態トークン + 再評価トリガを全受容行に付与 |
+| X-18 | 中 | ✅ 着地 | 対応表 2 文書の語彙を `Mitigated` / `Partial · accepted` / `Accepted`（出所 verbatim 3 値）に統一。受容行（`Partial · accepted` / `Accepted`）に具体的な将来の変更としての再評価トリガを必須化。語彙定義を各文書冒頭に配置 |
+| X-19 | 中 | ✅ 着地 | `docs/owasp-agentic-ai-top10-mapping.md` → `docs/owasp-agentic-threats-mitigations-mapping.md` に `git mv`。内容（レイヤ別 Threats and Mitigations・15 脅威）に合わせてファイル名を揃え、ASI01–ASI10 の名称を廃止。両文書の冒頭に ISO-8601 タクソノミバージョン日付を明記 |
+| X-20 | 低 | ✅ 着地 | `tests/repo/owasp-mapping-citations.spec.ts` を追加。引用パス実在・シンボル実在・CI ステップ名・3 値語彙・バージョン日付の 5 軸を機械検証し、各軸に「走査 > 0」の非空アサートを配置。新規 GitHub Actions ワークフローなし |
+
+**§7.6 / `specs/review/` リンク是正の記録（追記のみ規約に関わる手続き事項）**:
+X-19 のリネームにより、§7.6 の [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md)
+および `specs/review/2026-09-22-cross-repo-verification.md` 内の参照が旧ファイル名（`owasp-agentic-ai-top10-mapping.md`）を
+指したままになっていたため、**主張を一切変えずリンク先のみを新ファイル名へ是正した**
+（`tests/repo/doc-links.spec.ts` が未更新リンクを失敗させるため必須の修正）。
+これはテキストの改変ではなく、リンク先の実体が変わったことへの追従であり、
+追記のみ規約（§1〜§7 の主張・測定値・判定を書き換えない）の例外としてここに記録する。
+
+### §8.2 D1〜D6 の着地（`apps/web` の job/approval 経路のみ）
+
+**実装対象の限定**: D1〜D6 はすべて `apps/web` の job/approval 経路（`POST /api/jobs/:id/approve` ＋
+`GET /api/jobs/:id/stream`）に実装した。`/api/chat` と `services/api` は対象外とした。
+
+- `/api/chat` は `useChat` がクライアント側履歴を送る前提のため、「サーバ側履歴が正」の封鎖は
+  別設計判断として out of scope（spec `007` Scope 参照）。
+- `services/api` は verbatim `git subtree` 取り込みであり上流の所有物。
+
+| 防御 | 着地 | 実装ファイル / テストファイル |
+|---|---|---|
+| D1 — 履歴注入のスキーマレベル封鎖 | ✅ 着地 | `packages/schemas/src/workflows.ts`（`z.strictObject` — `history` / `usage` / `model` を定義しない）、余剰フィールドを 400 で拒否。`packages/schemas/tests/workflows.spec.ts` |
+| D2 — consume-once ＋ 存在秘匿 | ✅ 着地 | `apps/web/src/lib/approvals.ts`（`claimApprovalTargets`）＋ `apps/worker/src/stores.ts`（`claimPending` トランザクション）。unknown / in-flight / consumed を単一 404 に畳み、ボディに識別子・状態語を含まない。`apps/web/tests/approvals.spec.ts`、`apps/web/tests/jobs-approve-route.spec.ts` |
+| D3 — 境界を跨ぐ usage 予算 | ✅ 着地（Partial）| `apps/worker/src/stores.ts`（`recordStepUsage` / `claimPending` 内 sum）＋ `apps/web/src/lib/approvals.ts`（`resolveJobTokenBudget`）＋ `apps/web/src/app/api/jobs/[id]/approve/route.ts`（429 返却）。`packages/schemas/src/env.ts`（`JOB_TOKEN_BUDGET` env）。現状 usage を報告するのは `document-generation` specialist のみ — 対応表に `Partial · accepted` ＋ 再評価トリガとして記録 |
+| D4 — マスク済み監査の単一 fail-soft 境界 | ✅ 着地 | `apps/web/src/lib/approvals.ts`（`maskedArgKeys` ＋ `recordApprovalDecisions`）。キー名のみ記録・値なし、fail-soft（audit シンク失敗で resume を失敗させない）、単一発火点（`apps/web/src/lib/approvals.ts` の 1 箇所のみ）。`tests/repo/egress-policy-bypass.spec.ts` が発火点唯一性を機械検証 |
+| D5 — pending set の原子性 | ✅ 着地 | `apps/web/src/lib/approvals.ts`（`findDuplicateTarget` ＋ `claimApprovalTargets`）。1 件でも不正な `toolCallId` があれば DB 接触なしで 409、決定セット全体を拒否。`apps/web/tests/approvals.spec.ts`、`apps/web/tests/jobs-approve-route.spec.ts` |
+| D6 — egress ポリシーの回帰スキャン | ✅ 着地 | `tests/repo/egress-policy-bypass.spec.ts`。メールアドレス形リテラルと許可リスト判定の短絡を `apps/*/src/**` ＋ `packages/*/src/**` から検出。監査発火点唯一性アサートを同一走査に相乗り。新規ワークフローなし |
+
+**スキーマ・環境変数**:
+- `job_step` テーブル（`packages/db/src/schema.ts`、`packages/db/drizzle/0002_add_job_step.sql`）:
+  `(job_id, step_id)` 複合 PK による consume-once 一意性担保、`approval_state` pg enum（`pending` / `consumed`）、`total_tokens` による観測 usage 蓄積。`jobEventTypeEnum` は無改変（SSE 後方互換）。
+- `JOB_TOKEN_BUDGET` env（`packages/schemas/src/env.ts`）: 既定値 200,000 トークン。未設定の環境で既存ジョブが失敗しない。
+
+**既存テストの保護**: `GET /api/jobs/:id/stream`、`jobEventTypeEnum`、ツール実行監査（`packages/agents/src/audit-hook.ts` fail-loud 経路）はすべて無改変。
+
+### §8.3 検証ゲートの状態（2026-09-23 時点）
+
+```
+mise run check（lint / typecheck / test:run / audit）: 全 GREEN
+  test:run: 793 テスト passed / 1 skipped（Task 11 完了時点）
+lint:model-ids（forbid-model-ids.sh）: GREEN（新たな hardcode なし）
+.github/workflows/: 7 本（変更なし。新規ワークフローファイルを追加しない）
+```
+
+カバレッジ閾値（lines / functions ≥ 80%）: 下回らないことを Task 13.2 で確認予定。

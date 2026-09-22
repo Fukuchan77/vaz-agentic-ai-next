@@ -133,27 +133,25 @@ X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み
   recipient allow-list と sticky taint を "X-9a" / "X-9b" として実装、出所として
   本 repo を明記）、相互取り込みが双方向に成立した最初の事例になっている。
 
-**新規に起票すべき項目**（いずれも本 repo 側の作業。本文書の表には未追加）:
+**新規に起票し解決した項目**（spec `007-cross-repo-adoption-closeout`、2026-09-23 完了）:
 
 - **X-17 — agentic 脅威 5 件の欠落**（優先度: 高）。
   [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) は
   出所タクソノミ 15 脅威のうち T1〜T10 のみを収録し、残る 5 件
   （Unexpected RCE / Agent Communication Poisoning / Rogue Agents in Multi-Agent Systems /
-  Human Attacks on Multi-Agent Systems / Human Manipulation）を**受容と明記せずに落としている**。
+  Human Attacks on Multi-Agent Systems / Human Manipulation）を**受容と明記せずに落としていた**。
   本 repo は `packages/agents/src/supervisor.ts` で supervisor → specialist の多エージェント
   構成を持つため、**エージェント間脅威は単一エージェントの兄弟 repo よりむしろ該当する**。
-  受け入れ条件: 5 件を節として追加し、supervisor が specialist 間で何を保証し何を保証しないかを
-  明記する。→ **spec 007-cross-repo-adoption-closeout により解決**（X-17〜X-20 全件を本 spec が扱う。
-  [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) へリネーム済み）。
+  → **spec 007 により解決**（X-17〜X-20 全件を本 spec が扱う。
+  [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) へリネーム済み。
+  15 脅威全件収録・supervisor 保証/非保証を明記。）
 - **X-18 — 状態語彙と再評価トリガの不在**（優先度: 中）。本 repo の 2 文書は
   「対応済み」と「未対応」しか表現できず、部分対応＋残余リスク受容（LLM05、Overwhelming HITL）を
-  区別できない。出所側の 3 値（`Mitigated` / `Partial · accepted` / `Accepted`）と、
-  受容行ごとの**再評価トリガを具体的な将来の変更として書く**形式を取り込む。→ **spec 007 により解決**。
+  区別できなかった。
+  → **spec 007 により解決**（3 値語彙 `Mitigated` / `Partial · accepted` / `Accepted` と受容行の再評価トリガを全文書に適用済み）。
 - **X-19 — タクソノミ名と内容の不一致**（優先度: 中）。
-  `docs/owasp-agentic-threats-mitigations-mapping.md` はファイル名が Agentic Top 10（ASI01–ASI10）を
-  名乗るが、内容は旧「Agentic AI – Threats and Mitigations」のレイヤ別脅威表。
-  どちらかに揃え、両文書の冒頭にタクソノミのバージョン日付を明記する。→ **spec 007 により解決**（ファイル名を内容に揃えてリネーム済み）。
-- **X-20 — 引用パスの腐敗検知**（優先度: 低）。2 文書の全 40 引用は 2026-09-22 時点で
-  すべて解決したが、これを守る仕組みが無い。`tests/repo/` に
-  「両文書が引用するパスが実在する」ガードを足す（`ci-workflows.spec.ts` と同じく
-  「走査した引用数 > 0」の非空アサート付きで）。→ **spec 007 により解決**（`tests/repo/owasp-mapping-citations.spec.ts` 追加済み）。
+  ファイル名が Agentic Top 10（ASI01–ASI10）を名乗るのに内容はレイヤ別 Threats and Mitigations だった。
+  → **spec 007 により解決**（ファイル名を内容に揃えてリネーム済み。両文書冒頭に ISO-8601 バージョン日付を追加）。
+- **X-20 — 引用パスの腐敗検知**（優先度: 低）。2 文書の全引用を守る仕組みがなかった。
+  → **spec 007 により解決**（[`tests/repo/owasp-mapping-citations.spec.ts`](../tests/repo/owasp-mapping-citations.spec.ts) 追加済み。
+  引用パス実在・シンボル実在・CI ステップ名・3 値語彙・バージョン日付を機械検証）。

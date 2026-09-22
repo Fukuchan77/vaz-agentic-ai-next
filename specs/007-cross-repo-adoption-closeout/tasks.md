@@ -538,7 +538,7 @@ _Depends:_ 11
 _Requirements:_ 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7
 _Traces:_ REQ-011, DES-3.13
 
-- [ ] 12.1 日付付き §8 addendum を末尾に追記する: X-17 / X-18 / X-19 / X-20 ＋ D1〜D6 の
+- [x] 12.1 日付付き §8 addendum を末尾に追記する: X-17 / X-18 / X-19 / X-20 ＋ D1〜D6 の
       それぞれの着地・非着地（非着地には理由）、適用面の限定（`apps/web` の job/approval 経路のみ、
       `/api/chat` と `services/api` は対象外）、および §7.6 と `specs/review/…` で行った
       「本文の改変ではなくリンク先の是正」の記録
@@ -546,13 +546,13 @@ _Traces:_ REQ-011, DES-3.13
   _Depends:_ 11.3
   _Requirements:_ 11.2, 11.3, 11.4, 11.7
   _Traces:_ REQ-011, DES-3.13
-- [ ] 12.2 §1〜§7 の主張・測定値・判定が無改変（タスク 3.1 のリンク先是正のみ）であることを
+- [x] 12.2 §1〜§7 の主張・測定値・判定が無改変（タスク 3.1 のリンク先是正のみ）であることを
       差分で確認する
   _Boundary:_ `docs/cross-repo-adoption-review.md`
   _Depends:_ 12.1
   _Requirements:_ 11.1
   _Traces:_ REQ-011, DES-3.13
-- [ ] 12.3 `docs/cross-repo-adoption-backlog.md` §5 の X-17〜X-20 を「起票」から本 spec による
+- [x] 12.3 `docs/cross-repo-adoption-backlog.md` §5 の X-17〜X-20 を「起票」から本 spec による
       解決へ更新し、`AGENTS.md` の「Repo-governance guards」一覧へ新規ガード 2 本を、
       `AGENTS.md` / `CLAUDE.md` の不変条件として `job_step` テーブルと承認 API が
       fire-and-forget でなくなった点（404 / 409 / 429）を記録する。本リポジトリ内の文書はリンク・
@@ -565,8 +565,9 @@ _Traces:_ REQ-011, DES-3.13
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- 追記のみ規約と `doc-links.spec.ts` 強制の両立: X-19 のリネームで §7.6 のリンク先が解決しなくなるため、**本文を変えずリンク先のみ是正**し §8 addendum にその旨を記録するというパターンを確立した（ADR-4 相当）。今後の rename が追記のみ文書に影響する場合は同じアプローチを採る。
+- `AGENTS.md` の Repo-governance guards 一覧は **1 行に全ガードを列挙する方針**で運用されている。新規ガードは末尾の `and` の前後に挿入するのではなく、末尾の最後の guard の直後（`and` を 1 つだけ保って追加）に追記すること。
+- `CLAUDE.md` の durable job flow 行は最も参照頻度が高い要約文であるため、**承認 API の振る舞い変更はここにも反映する**（AGENTS.md の HITL 節との二重管理は意図的。CLAUDE.md は短期記憶、AGENTS.md は詳細仕様）。
 
 ---
 
