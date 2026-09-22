@@ -68,7 +68,7 @@ _Depends:_ 1
 _Requirements:_ 1.6, 2.1, 2.3, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8
 _Traces:_ REQ-001, REQ-002, REQ-004, DES-3.4, DES-5.3
 
-- [ ] 2.1 対象 2 文書のパスを定数配列で持ち、走査文書数 = 2・各ファイルの実在・抽出引用数 > 0・
+- [x] 2.1 対象 2 文書のパスを定数配列で持ち、走査文書数 = 2・各ファイルの実在・抽出引用数 > 0・
       状態トークン数 > 0・索引行数 = 15 の非空アサート群を検査本体より前に置く。
       `repo` Vitest プロジェクトの 1 ファイルとして追加し、新規ワークフローファイルを伴わない。
       走査は 1 回のツリー走査に収める（NFR「ガードの実行コスト」）
@@ -76,7 +76,7 @@ _Traces:_ REQ-001, REQ-002, REQ-004, DES-3.4, DES-5.3
   _Depends:_ 1.2
   _Requirements:_ 4.6, 4.7, 4.8
   _Traces:_ REQ-004, DES-3.4
-- [ ] 2.2 構造化引用ブロックのパーサ（行頭キー `- 状態:` / `- 実装:` / `- テスト:` / `- CI:` /
+- [x] 2.2 構造化引用ブロックのパーサ（行頭キー `- 状態:` / `- 実装:` / `- テスト:` / `- CI:` /
       `- 再評価トリガ:`）とパス／シンボルの判別規則（`/` を含み既知拡張子で終わる、または末尾 `/`
       ならパス、それ以外のコードスパンはシンボル）を実装し、パス実在・シンボルが**同一キー行**
       （`- 実装:` / `- テスト:` の 1 行）が挙げたパス群のいずれかに実在すること（行をまたいで
@@ -86,7 +86,7 @@ _Traces:_ REQ-001, REQ-002, REQ-004, DES-3.4, DES-5.3
   _Depends:_ 2.1
   _Requirements:_ 4.1, 4.2, 4.3
   _Traces:_ REQ-004, DES-5.3
-- [ ] 2.3 状態トークンが**ガード側の定数**として持つ 3 値（`Mitigated` / `Partial · accepted` /
+- [x] 2.3 状態トークンが**ガード側の定数**として持つ 3 値（`Mitigated` / `Partial · accepted` /
       `Accepted`）のいずれかであり、各節の `- 状態:` 行が**ちょうど 1 行**であること（R2.1。
       0 行または 2 行以上は失敗）、受容 2 値の節に `- 再評価トリガ:` が 1 行以上あること、
       両文書冒頭のタクソノミ名 ＋ ISO-8601 版日付の存在、脅威索引 15 行と脅威節の全単射を検査する
@@ -98,8 +98,14 @@ _Traces:_ REQ-001, REQ-002, REQ-004, DES-3.4, DES-5.3
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- `parseSections` parses only level-2 headings (`## …`) — top-level and deeper headings are skipped.
+  This means the guard correctly ignores the preamble/intro and picks up only threat-level sections.
+- Path vs. symbol discrimination uses the plan.md IF-3 rule verbatim (extension set + `/` heuristic).
+  Shell commands (e.g. `grep -rn … apps/web/src`) are correctly classified as symbols and will fail
+  the guard in the LLM doc's current form — this is intentional (Task 4 migrates commands to prose).
+- `parseThreatIndex` identifies tables by `---` separator rows and locates the `脅威` column by header
+  text. If the Agentic doc uses a different column name, the 15-row non-empty pre-assertion will
+  catch it before the bijection check.
 
 ---
 
