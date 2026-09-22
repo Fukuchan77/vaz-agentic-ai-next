@@ -313,7 +313,7 @@ _Depends:_ 6
 _Requirements:_ 6.1, 6.6, 7.1, 9.2, 9.6
 _Traces:_ REQ-006, REQ-007, REQ-009, DES-3.9, DES-5.2
 
-- [ ] 7.1 `apps/worker/tests/stores-job-step.spec.ts` を新規作成し、Drizzle をフェイクで受けて
+- [x] 7.1 `apps/worker/tests/stores-job-step.spec.ts` を新規作成し、Drizzle をフェイクで受けて
       3 メソッドの期待形を先に固定する: `registerPending` が `ON CONFLICT DO NOTHING`、
       `recordStepUsage` が絶対値 upsert（increment しない）、`claimPending` が 1 トランザクションで
       `sum(total_tokens)` 読み出し ＋ `approval_state = 'pending'` の行のみの条件付き UPDATE を行い
@@ -322,7 +322,7 @@ _Traces:_ REQ-006, REQ-007, REQ-009, DES-3.9, DES-5.2
   _Depends:_ 6.3
   _Requirements:_ 6.1, 7.1, 9.2, 9.6
   _Traces:_ REQ-006, REQ-007, REQ-009, DES-5.2
-- [ ] 7.2 `createJobStepStore` を `apps/worker/src/stores.ts` に実装し `JobStepStore` port として
+- [x] 7.2 `createJobStepStore` を `apps/worker/src/stores.ts` に実装し `JobStepStore` port として
       export する（`apps/web` からも `lib/jobs.ts` と同じ作法で再利用できる形）。
       `consumed` → `pending` へ戻す UPDATE を API として持たせない
   _Boundary:_ `apps/worker/src/stores.ts`
@@ -332,8 +332,9 @@ _Traces:_ REQ-006, REQ-007, REQ-009, DES-3.9, DES-5.2
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- `registerPending` は `onConflictDoNothing()` で冪等化。Inngest 関数本体の再実行（retries/resume）で同一 `(jobId, stepId)` が 2 度登録されても複合 PK 違反を起こさない。
+- `recordStepUsage` は `onConflictDoUpdate({ target: [jobStep.jobId, jobStep.stepId], set: { totalTokens } })` で絶対値 upsert（increment なし）。同一 step が再実行された場合に二重計上を起こさない。
+- `claimPending` の `consumed_at` は SQL `now()` でなく注入された `at: Date` から設定することでテスト可能性を確保し、`db.transaction` の 1 コール内に select（sum）と conditional UPDATE を収めた（D5 原子性）。`consumed` → `pending` 逆方向の API は意図的に提供しない。
 
 ---
 

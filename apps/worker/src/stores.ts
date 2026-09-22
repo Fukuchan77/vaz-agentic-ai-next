@@ -1,7 +1,7 @@
-import { auditLog, job, jobEvent } from "@vaz/db/schema";
+import { auditLog, job, jobEvent, jobStep } from "@vaz/db/schema";
 import type { AuditEntry } from "@vaz/schemas/deps";
 import type { JobEvent } from "@vaz/schemas/workflows";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AuditLogStore } from "./audit";
 import type { JobEventStore } from "./events";
@@ -106,6 +106,104 @@ export interface JobOwnerLookup {
 export interface JobStore {
 	insert(row: JobInsert): Promise<void>;
 	findOwnerUserId(jobId: string): Promise<JobOwnerLookup>;
+}
+
+/* -------------------------------------------------------------------------- */
+/* JobStepStore — pending set + observed usage (D5 / C-9, Task 7)             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Port for the `job_step` table: atomic pending-set management and observed
+ * token-usage recording (R6.1 / R7.1 / R7.5, D5). Three responsibilities:
+ *
+ * - {@link registerPending}: mark a step as needing approval before it runs.
+ *   Idempotent (`ON CONFLICT DO NOTHING`) — Inngest replays the function body
+ *   on retries and on resume, so the same `stepId` may be registered twice.
+ *
+ * - {@link recordStepUsage}: write the observed `totalTokens` for a completed
+ *   step as an absolute value (not an increment). Idempotent via upsert — a
+ *   replay of the same step always overwrites, never double-counts.
+ *
+ * - {@link claimPending}: single-transaction consume-once gate. Reads
+ *   `sum(total_tokens)` for the job then UPDATE-WHERE-pending sets
+ *   `approval_state = 'consumed'` and `consumed_at = at`. Returns the number
+ *   of rows updated (0 means no pending steps existed — already claimed or
+ *   never registered). `consumed` → `pending` is intentionally absent: the
+ *   API has no method to reverse a claim.
+ */
+export interface JobStepStore {
+	/**
+	 * Register `stepId` as approval-pending for `jobId`. Idempotent: a second
+	 * call for the same `(jobId, stepId)` is a safe no-op (`ON CONFLICT DO
+	 * NOTHING`), so Inngest function-body replays never violate the composite PK.
+	 */
+	registerPending(jobId: string, stepId: string, at: Date): Promise<void>;
+
+	/**
+	 * Upsert the observed `totalTokens` for `(jobId, stepId)` as an absolute
+	 * value. On conflict (the row already exists from `registerPending`), SET
+	 * `total_tokens` to the supplied count — never increment. A replay of the
+	 * same specialist run therefore writes the same count, not double.
+	 */
+	recordStepUsage(jobId: string, stepId: string, totalTokens: number): Promise<void>;
+
+	/**
+	 * Atomically consume all pending steps for `jobId` in one transaction:
+	 *   1. Read `sum(total_tokens)` for the job (exposed to callers as the
+	 *      budget-gate signal — see Task 9).
+	 *   2. UPDATE rows WHERE `approval_state = 'pending'` → `'consumed'`,
+	 *      setting `consumed_at = at` (injected, NOT SQL `now()`).
+	 *   3. Return the number of rows updated (0 = nothing was pending).
+	 *
+	 * `consumed` → `pending` reversal is not provided: once claimed, a step
+	 * is permanently consumed (D5 atomicity constraint).
+	 */
+	claimPending(jobId: string, at: Date): Promise<number>;
+}
+
+/** Drizzle-backed {@link JobStepStore} over the `job_step` table. */
+export function createJobStepStore(db: PgDatabase<PgQueryResultHKT>): JobStepStore {
+	return {
+		async registerPending(jobId, stepId, at) {
+			await db
+				.insert(jobStep)
+				.values({ jobId, stepId, approvalState: "pending", createdAt: at })
+				.onConflictDoNothing();
+		},
+
+		async recordStepUsage(jobId, stepId, totalTokens) {
+			await db
+				.insert(jobStep)
+				.values({ jobId, stepId, totalTokens })
+				.onConflictDoUpdate({
+					target: [jobStep.jobId, jobStep.stepId],
+					set: { totalTokens },
+				});
+		},
+
+		async claimPending(jobId, at) {
+			return db.transaction(async (tx) => {
+				// Step 1: read the cumulative token spend for this job. The result is
+				// available to the caller as a budget-gate signal (Task 9 / D3).
+				await tx
+					.select({ total: sql<number>`sum(${jobStep.totalTokens})` })
+					.from(jobStep)
+					.where(eq(jobStep.jobId, jobId));
+
+				// Step 2: conditionally UPDATE only the pending rows. `consumed_at` is
+				// the injected `at` — never SQL `now()` — so the timestamp is
+				// deterministic and testable without mocking the clock.
+				const result = await tx
+					.update(jobStep)
+					.set({ approvalState: "consumed", consumedAt: at })
+					.where(and(eq(jobStep.jobId, jobId), eq(jobStep.approvalState, "pending")));
+
+				// Drizzle's pg driver sets `rowCount` on the raw result; fall back to
+				// 0 when the adapter returns a plain object without it.
+				return (result as { rowCount?: number }).rowCount ?? 0;
+			});
+		},
+	};
 }
 
 /** Drizzle-backed {@link JobStore} over the `job` table. */
