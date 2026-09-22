@@ -288,3 +288,59 @@ mise run typecheck
 ```
 
 Worker test count delta: 72 → 83（+11 新規テスト、全件 stores-job-step.spec.ts）
+
+---
+
+## Task 8: worker 側で pending set と観測 usage をミラーする（C-11）（2026-09-23）
+
+### 実施内容
+
+**8.1 — `apps/worker/tests/main.spec.ts` へのテスト先行作成（RED）**
+
+- `describe("WorkerApprovalMirror")` ブロックに 8 テスト、`describe("submitApproval — idempotency")` ブロックに 1 テストを追加（計 9 テスト）。
+- INV-1 順序アサート: `callOrder` 配列で `registerPending → approvalGate` の順序を記録し、`expect(callOrder).toEqual(["registerPending", "approvalGate"])` で検証。
+- I-2 再実行トラップ: 同一 `stepId` で `runner.run()` を 2 度呼ぶと `registerPending` が 2 度呼ばれることを確認（main.ts に条件分岐を持ち込まないことの証明）。
+- `recordStepUsage`: `document-generation` specialist が `usage: { totalTokens: 150 }` を返すと `recordStepUsage(JOB_ID, STEP_ID, 150)` が呼ばれることを確認。
+- `jobStepStore` 未注入時の no-op: `requiresApproval: () => true` でもエラーなく完了。
+- `submitApproval` 冪等化: `sent[0].id === "<jobId>:<stepId>"` を検証。
+- 5 テストが RED（残り 4 はすでに no-op 動作が正しい）であることを確認。
+
+**8.2 — `apps/worker/src/main.ts` 実装（GREEN）**
+
+- `import type { JobStepStore, JobStore }` を更新。
+- `CreateDurableStepRunnerOptions` に `jobStepStore?: JobStepStore` と `now?: () => Date` を追加（ドックコメント付き）。
+- `createDurableStepRunner.run()`: `requiresApproval(stepId)` が真のとき、`approvalGate` await の直前に `await jobStepStore?.registerPending(jobId, stepId, now?.() ?? new Date())` を呼ぶ（INV-1 確保）。
+- `instrumentEmit` のシグネチャに `jobStepStore?: JobStepStore` を追加。`completion` イベントで `event.stepId` が存在し `event.result.usage.totalTokens` が `number` のとき `jobStepStore.recordStepUsage(jobId, event.stepId, totalTokens)` を呼ぶ（構造的アクセス、Zod 再パースなし）。
+- `RunJobOptions` に `jobStepStore?: JobStepStore` を追加。`runJob` 内で `jobStepStore` を destructure し、`instrumentEmit` と `createDurableStepRunner` の双方へ渡す（`now: deps.now`）。
+
+**8.3 — `submitApproval` 冪等化 ＋ `start.ts` 配線**
+
+- `submitApproval` の `engine.send` に `id: \`${signal.jobId}:${signal.stepId}\`` を追加（`submitJob` と対称）。
+- `apps/worker/src/start.ts`: `createJobStepStore` import 追加、`registerJobFunction` オプションに `jobStepStore: createJobStepStore(db)` を注入。
+- 既存テスト（`durability.spec.ts`・`start.spec.ts`）が新シグネチャの変更を反映するよう更新（VDD トリガ #3: 既存テスト修正 → 正当。変更は「送信された id フィールドを期待に追加」と「stores モックに `createJobStepStore` を追加し `options.jobStepStore` のアサートを追加」の 2 点のみ）。
+
+### PROVE 証拠（非空虚性）
+
+以下の 3 点を意図的に破り、対応するテストが FAIL することを確認:
+
+1. **INV-1 順序**: `registerPending` と `approvalGate` の呼び出し順序を入れ替えると  
+   `AssertionError: expected [ 'approvalGate', 'registerPending' ] to deeply equal [ 'registerPending', 'approvalGate' ]`
+
+2. **`recordStepUsage` コールブロックをコメントアウト**: usage 付き completion が来ても `recordStepUsage` が呼ばれず  
+   `AssertionError: expected [] to have a length of 1 but got +0`
+
+3. **`submitApproval` から `id` フィールドを削除**: idempotency テストが  
+   `AssertionError: expected undefined to be '11111111...:22222222...'`
+
+### Verification Gate
+
+```
+pnpm exec vitest run --project worker
+  Test Files  9 passed (9)
+  Tests       91 passed (91)
+
+mise run check
+  lint ✓ | audit ✓ | typecheck ✓ | test:run  729 passed / 1 skipped ✓
+```
+
+Worker test count delta: 83 → 91（+8 新規テスト: 7 x WorkerApprovalMirror + 1 x submitApproval idempotency。既存 2 テストは新シグネチャ対応で修正）。

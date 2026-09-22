@@ -5,7 +5,12 @@ import { createJobEventSink } from "./events";
 import { createInngestEngine, registerJobFunction } from "./inngest";
 import { buildWorkerDeps } from "./main";
 import { createJobEventPublisher } from "./publisher";
-import { createAuditLogStore, createJobEventStore, createJobStore } from "./stores";
+import {
+	createAuditLogStore,
+	createJobEventStore,
+	createJobStepStore,
+	createJobStore,
+} from "./stores";
 
 /**
  * `apps/worker` process entry — the composition root (R3.1). Wires the concrete
@@ -117,6 +122,11 @@ export async function main(env: Record<string, string | undefined> = process.env
 		const fn = registerJobFunction(engine, deps, {
 			emit,
 			jobStore: createJobStore(db),
+			// D5 / C-9 / C-11 (Task 8): pending-set + usage mirror. Records which
+			// steps are awaiting approval (registerPending) and their observed token
+			// usage (recordStepUsage) in the job_step table so the approve route can
+			// gate on consume-once and budget checks without reading engine internals.
+			jobStepStore: createJobStepStore(db),
 			requiresApprovalForKind: () => false,
 		});
 

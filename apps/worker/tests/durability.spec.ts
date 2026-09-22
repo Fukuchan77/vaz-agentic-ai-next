@@ -329,7 +329,7 @@ describe("R3.4 — an approval's edited arguments are applied to the step that r
 
 describe("web → engine approval resume signal (R3.5)", () => {
 	test("submitApproval fires the approval event with the decision signal", async () => {
-		const sent: Array<{ name: string; data: unknown }> = [];
+		const sent: Array<{ name: string; data: unknown; id?: string }> = [];
 		const engine: DurableEngine = {
 			createFunction: () => ({}),
 			send: async (payload) => {
@@ -341,6 +341,8 @@ describe("web → engine approval resume signal (R3.5)", () => {
 			{
 				name: APPROVAL_EVENT,
 				data: { jobId: JOB_ID, stepId: SID1, approved: true, args: { x: 1 } },
+				// Idempotency key: "<jobId>:<stepId>" (C-11 / R6.1 — symmetric with submitJob)
+				id: `${JOB_ID}:${SID1}`,
 			},
 		]);
 	});

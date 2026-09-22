@@ -112,8 +112,13 @@ describe("main() job-store wiring (R5.1)", () => {
 		vi.doUnmock("../src/publisher");
 	});
 
-	test("passes a JobStore built over the composed db into registerJobFunction", async () => {
+	test("passes a JobStore and JobStepStore built over the composed db into registerJobFunction", async () => {
 		const jobStoreSentinel = { insert: vi.fn(), findOwnerUserId: vi.fn() };
+		const jobStepStoreSentinel = {
+			registerPending: vi.fn(),
+			recordStepUsage: vi.fn(),
+			claimPending: vi.fn(),
+		};
 		const registerJobFunction = vi.fn().mockReturnValue({});
 
 		vi.doMock("pg", () => ({
@@ -142,6 +147,8 @@ describe("main() job-store wiring (R5.1)", () => {
 			createAuditLogStore: vi.fn(),
 			createJobEventStore: vi.fn(),
 			createJobStore: vi.fn().mockReturnValue(jobStoreSentinel),
+			// C-11 / Task 8: JobStepStore wired alongside JobStore
+			createJobStepStore: vi.fn().mockReturnValue(jobStepStoreSentinel),
 		}));
 		vi.doMock("../src/events", () => ({ createJobEventSink: vi.fn() }));
 		vi.doMock("../src/publisher", () => ({ createJobEventPublisher: vi.fn() }));
@@ -152,5 +159,7 @@ describe("main() job-store wiring (R5.1)", () => {
 		expect(registerJobFunction).toHaveBeenCalledTimes(1);
 		const options = registerJobFunction.mock.calls[0]?.[2];
 		expect(options?.jobStore).toBe(jobStoreSentinel);
+		// C-11 / Task 8: JobStepStore must also be passed to registerJobFunction
+		expect(options?.jobStepStore).toBe(jobStepStoreSentinel);
 	});
 });

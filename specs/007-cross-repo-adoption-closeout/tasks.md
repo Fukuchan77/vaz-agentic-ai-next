@@ -348,7 +348,7 @@ _Depends:_ 7
 _Requirements:_ 6.1, 6.6, 7.1, 7.6
 _Traces:_ REQ-006, REQ-007, DES-3.11, DES-5.2
 
-- [ ] 8.1 `apps/worker/tests/main.spec.ts` に先にテストを追加する: INV-1 の**順序アサート**
+- [x] 8.1 `apps/worker/tests/main.spec.ts` に先にテストを追加する: INV-1 の**順序アサート**
       （`registerPending` が `approvalGate` の await より前に、同一の同期経路で 1 度だけ呼ばれる）、
       同一 `stepId` で関数本体を再実行しても consumed が pending へ戻らないこと（I-2 の罠）、
       `recordStepUsage` が `specialistResult.usage` 由来の絶対値で呼ばれること、
@@ -357,7 +357,7 @@ _Traces:_ REQ-006, REQ-007, DES-3.11, DES-5.2
   _Depends:_ 7.2
   _Requirements:_ 6.1, 6.6, 7.1, 7.6
   _Traces:_ REQ-006, REQ-007, DES-3.11
-- [ ] 8.2 `CreateDurableStepRunnerOptions` / `RunJobOptions` に optional な `jobStepStore?` を
+- [x] 8.2 `CreateDurableStepRunnerOptions` / `RunJobOptions` に optional な `jobStepStore?` を
       追加し（省略時 no-op、既存呼び出しとテストは無改変で動く）、`requiresApproval` が真の step で
       `approvalGate` を await する直前に `registerPending` を呼ぶ（`engineStep.run` で包まない）。
       `instrumentEmit` の `completion` イベントが `usage` を伴うとき `recordStepUsage` を呼ぶ
@@ -365,7 +365,7 @@ _Traces:_ REQ-006, REQ-007, DES-3.11, DES-5.2
   _Depends:_ 8.1
   _Requirements:_ 6.1, 6.6, 7.1, 7.6
   _Traces:_ REQ-006, REQ-007, DES-3.11
-- [ ] 8.3 `submitApproval` の `engine.send` に `id: "<jobId>:<stepId>"` を渡して `submitJob` と
+- [x] 8.3 `submitApproval` の `engine.send` に `id: "<jobId>:<stepId>"` を渡して `submitJob` と
       対称な冪等化を与え、`apps/worker/src/start.ts` の composition root で `createJobStepStore` を
       構築して `registerWorker` へ注入する。`apps/web/tests/e2e/approval-resume.spec.ts`（`submitApproval`
       / `ApprovalSignal` / `DurableEngine.send` を直接叩く周辺 E2E）が新シグネチャで無言に壊れて
@@ -377,8 +377,9 @@ _Traces:_ REQ-006, REQ-007, DES-3.11, DES-5.2
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- **INV-1 は await の直前呼び出しで確実に保証できる**: `registerPending` を `approvalGate` の `await` の直前の行に置けば、JS のシングルスレッドイベントループにより 2 つの非同期操作の間に他の処理が割り込む余地はなく、順序アサートは green になる。`engineStep.run` で包む必要もない（包むと「step のネスト」制約を破る）。
+- **I-2 の冪等性は main.ts に条件分岐を持ち込まないことで担保**: Inngest 関数本体の再実行時に `registerPending` が再度呼ばれるが、port が `ON CONFLICT DO NOTHING` を持つため `consumed` → `pending` 逆行は起きない。main.ts 側に「すでに consumed なら skip」ガードを入れると、そのガードのために DB 読み取りの `await` が必要になり INV-1 を破る——条件分岐なしが唯一正しい実装。
+- **E2E ファイルは存在しなかった**: `apps/web/tests/e2e/approval-resume.spec.ts` は計画段階で periphery として挙げられたが、実際にはリポジトリに存在しないため確認は不要だった（E2E は `apps/worker/tests/durability.spec.ts` 側がカバー）。
 
 ---
 

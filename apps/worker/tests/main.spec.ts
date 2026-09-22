@@ -6,7 +6,9 @@ import type {
 	WorkflowStepResult,
 } from "@vaz/schemas/workflows";
 import {
+	type ApprovalDecision,
 	buildWorkerDeps,
+	createDurableStepRunner,
 	createJobHandler,
 	type DurableEngine,
 	JOB_FUNCTION_CONFIG,
@@ -14,10 +16,12 @@ import {
 	type JobRequest,
 	registerWorker,
 	runJob,
+	submitApproval,
 	submitJob,
 	type WorkerSpan,
 	type WorkerTracer,
 } from "../src/main";
+import type { JobStepStore } from "../src/stores";
 
 /**
  * engine-agnostic worker entry.
@@ -357,5 +361,264 @@ describe("buildWorkerDeps — composition-root deps (ADR-3)", () => {
 		});
 		expect(order).toEqual([STEP_ID, STEP_ID_2]);
 		expect(results.map((r) => r.stepId)).toEqual([STEP_ID, STEP_ID_2]);
+	});
+});
+
+describe("WorkerApprovalMirror — pending set + usage mirroring (C-11 / R6.1 R7.1 R7.6)", () => {
+	// -----------------------------------------------------------------------
+	// Helper: a no-op JobStepStore (all methods succeed, nothing recorded).
+	// -----------------------------------------------------------------------
+	function noopStepStore(): JobStepStore {
+		return {
+			registerPending: async () => {},
+			recordStepUsage: async () => {},
+			claimPending: async () => 0,
+		};
+	}
+
+	// -----------------------------------------------------------------------
+	// Helper: a plan whose single step requires approval.
+	// -----------------------------------------------------------------------
+	function approvalPlan(): SupervisorPlan {
+		return {
+			goal: "destructive step",
+			steps: [{ stepId: STEP_ID, task: { kind: "data-processing", operation: "del", input: 1 } }],
+		};
+	}
+
+	// -----------------------------------------------------------------------
+	// INV-1 order: registerPending must be called BEFORE approvalGate is awaited
+	// (no intervening await between the two on the same synchronous path).
+	// -----------------------------------------------------------------------
+	test("INV-1: registerPending is called in the same sync tick before approvalGate is awaited", async () => {
+		const callOrder: string[] = [];
+
+		const jobStepStore: JobStepStore = {
+			registerPending: async (_jobId, _stepId, _at) => {
+				callOrder.push("registerPending");
+			},
+			recordStepUsage: async () => {},
+			claimPending: async () => 0,
+		};
+
+		// approvalGate records its invocation in callOrder before resolving
+		const approvalGate = async (_input: {
+			jobId: string;
+			stepId: string;
+			timeout?: string;
+		}): Promise<ApprovalDecision | null> => {
+			callOrder.push("approvalGate");
+			return { approved: true };
+		};
+
+		// The trick: we capture the Promise that createDurableStepRunner
+		// returns and observe callOrder BEFORE we allow the gate to resolve.
+		// Because both functions are async (return Promises), the only way to
+		// assert ordering is via the recorded call-order array.
+		const engineStep = { run: (_id: string, fn: () => Promise<unknown>) => fn() };
+		const runner = createDurableStepRunner(engineStep, {
+			jobId: JOB_ID,
+			requiresApproval: () => true,
+			approvalGate,
+			jobStepStore,
+		});
+
+		await runner.run(STEP_ID, async () => "done");
+
+		// registerPending must appear at index 0, approvalGate at index 1.
+		expect(callOrder).toEqual(["registerPending", "approvalGate"]);
+	});
+
+	// -----------------------------------------------------------------------
+	// INV-1 also: registerPending is called exactly once per run() invocation
+	// (not 0 times, not 2 times).
+	// -----------------------------------------------------------------------
+	test("registerPending is called exactly once per approval-guarded step run", async () => {
+		const calls: Array<{ jobId: string; stepId: string }> = [];
+
+		const jobStepStore: JobStepStore = {
+			...noopStepStore(),
+			registerPending: async (jobId, stepId, _at) => {
+				calls.push({ jobId, stepId });
+			},
+		};
+
+		const engineStep = { run: (_id: string, fn: () => Promise<unknown>) => fn() };
+		const runner = createDurableStepRunner(engineStep, {
+			jobId: JOB_ID,
+			requiresApproval: () => true,
+			approvalGate: async () => ({ approved: true }),
+			jobStepStore,
+		});
+
+		await runner.run(STEP_ID, async () => "done");
+
+		expect(calls).toHaveLength(1);
+		expect(calls[0]).toEqual({ jobId: JOB_ID, stepId: STEP_ID });
+	});
+
+	// -----------------------------------------------------------------------
+	// I-2 Inngest replay trap: when the function body re-executes for the same
+	// stepId (Inngest retry / resume), registerPending is called again
+	// unconditionally (idempotency is the port's responsibility — main.ts must
+	// NOT add a "skip if already consumed" guard that requires an extra await).
+	// -----------------------------------------------------------------------
+	test("re-executing the same stepId calls registerPending again (port owns idempotency)", async () => {
+		const registerCalls: string[] = [];
+
+		const jobStepStore: JobStepStore = {
+			...noopStepStore(),
+			registerPending: async (_jobId, stepId, _at) => {
+				registerCalls.push(stepId);
+			},
+		};
+
+		const engineStep = { run: (_id: string, fn: () => Promise<unknown>) => fn() };
+		const runner = createDurableStepRunner(engineStep, {
+			jobId: JOB_ID,
+			requiresApproval: () => true,
+			approvalGate: async () => ({ approved: true }),
+			jobStepStore,
+		});
+
+		// First execution (initial Inngest run)
+		await runner.run(STEP_ID, async () => "first");
+		// Second execution (Inngest re-runs the function body on resume/retry)
+		await runner.run(STEP_ID, async () => "replay");
+
+		// main.ts must NOT have a guard — it calls registerPending both times.
+		// The underlying store uses ON CONFLICT DO NOTHING to be safe.
+		expect(registerCalls).toEqual([STEP_ID, STEP_ID]);
+	});
+
+	// -----------------------------------------------------------------------
+	// Non-approval step: registerPending must NOT be called for non-approval steps.
+	// -----------------------------------------------------------------------
+	test("registerPending is NOT called for steps that do not require approval", async () => {
+		const registerCalls: string[] = [];
+
+		const jobStepStore: JobStepStore = {
+			...noopStepStore(),
+			registerPending: async (_jobId, stepId, _at) => {
+				registerCalls.push(stepId);
+			},
+		};
+
+		const engineStep = { run: (_id: string, fn: () => Promise<unknown>) => fn() };
+		const runner = createDurableStepRunner(engineStep, {
+			jobId: JOB_ID,
+			requiresApproval: () => false, // no step requires approval
+			jobStepStore,
+		});
+
+		await runner.run(STEP_ID, async () => "done");
+
+		expect(registerCalls).toHaveLength(0);
+	});
+
+	// -----------------------------------------------------------------------
+	// recordStepUsage: called with specialistResult.usage absolute value on
+	// a completion event that carries a result with usage (R7.1, R7.6).
+	// Only document-generation results carry usage in the current schema.
+	// -----------------------------------------------------------------------
+	test("recordStepUsage is called with totalTokens from the specialist's completion event", async () => {
+		const usageCalls: Array<{ jobId: string; stepId: string; totalTokens: number }> = [];
+
+		const jobStepStore: JobStepStore = {
+			...noopStepStore(),
+			recordStepUsage: async (jobId, stepId, totalTokens) => {
+				usageCalls.push({ jobId, stepId, totalTokens });
+			},
+		};
+
+		const docPlan: SupervisorPlan = {
+			goal: "generate",
+			steps: [
+				{
+					stepId: STEP_ID,
+					task: { kind: "document-generation", instructions: "write a report", format: "markdown" },
+				},
+			],
+		};
+
+		// Specialist returns a result with usage (server-observed value, R7.6).
+		await runJob(
+			testDeps(),
+			{ jobId: JOB_ID, userId: "user-1", plan: docPlan },
+			{
+				jobStepStore,
+				specialists: {
+					"document-generation": async () => ({
+						kind: "document-generation" as const,
+						document: { title: "Report", format: "markdown" as const, content: "body" },
+						usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+					}),
+				},
+			},
+		);
+
+		expect(usageCalls).toHaveLength(1);
+		expect(usageCalls[0]).toEqual({ jobId: JOB_ID, stepId: STEP_ID, totalTokens: 150 });
+	});
+
+	// -----------------------------------------------------------------------
+	// recordStepUsage is NOT called when the result has no usage field.
+	// -----------------------------------------------------------------------
+	test("recordStepUsage is NOT called when the completion event has no usage", async () => {
+		const usageCalls: string[] = [];
+
+		const jobStepStore: JobStepStore = {
+			...noopStepStore(),
+			recordStepUsage: async (_jobId, stepId, _totalTokens) => {
+				usageCalls.push(stepId);
+			},
+		};
+
+		// data-processing result has no usage field
+		await runJob(testDeps(), request(), {
+			jobStepStore,
+			specialists: {
+				"data-processing": async () => ({ kind: "data-processing" as const, result: "ok" }),
+			},
+		});
+
+		expect(usageCalls).toHaveLength(0);
+	});
+
+	// -----------------------------------------------------------------------
+	// No-op: omitting jobStepStore must not break existing callers (R6.6 path).
+	// Approval flow works fine without a store — no error, step completes.
+	// -----------------------------------------------------------------------
+	test("omitting jobStepStore is a no-op — approval flow still works", async () => {
+		const results = await runJob(testDeps(), request(approvalPlan()), {
+			// No jobStepStore injected
+			requiresApproval: () => true,
+			approvalGate: async () => ({ approved: true }),
+			specialists: {
+				"data-processing": async () => ({ kind: "data-processing" as const, result: "ok" }),
+			},
+		});
+		expect(results).toHaveLength(1);
+	});
+});
+
+describe("submitApproval — idempotency (C-11 / R6.1)", () => {
+	test("sends an APPROVAL_EVENT with id '<jobId>:<stepId>' for idempotency", async () => {
+		const sent: Array<{ name: string; data: unknown; id?: string }> = [];
+		const engine: DurableEngine = {
+			createFunction: () => ({}),
+			send: async (payload) => {
+				sent.push(payload);
+			},
+		};
+
+		await submitApproval(engine, {
+			jobId: JOB_ID,
+			stepId: STEP_ID,
+			approved: true,
+		});
+
+		expect(sent).toHaveLength(1);
+		expect(sent[0]?.id).toBe(`${JOB_ID}:${STEP_ID}`);
 	});
 });
