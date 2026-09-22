@@ -259,6 +259,22 @@ function buildOnEnd(deps: AgentDeps, options: { budget: number; maxSteps: number
  * even after the delimiter scrolls out of the step's message window. The flag
  * is scoped to this call (one per `stream()`), so taint never leaks across
  * requests.
+ *
+ * `experimental_toolApprovalSecret` (X-9): this chat path is stateless — the
+ * server holds no session, so a client resubmits the full message history
+ * (including any prior `tool-approval-request`) on every turn. Without a
+ * secret, the AI SDK re-synthesizes a `tool-approval-request` straight from
+ * whatever `approval.id` the client sends, so a forged id trivially matches
+ * itself (see the `ai` package's tool-approvals docs, "Trust model") and the
+ * `needsApproval`/`toolApproval` gate above becomes a rubber stamp — the
+ * `RECIPIENT_ALLOWLIST` second gate (`@vaz/tools/allowlist`) would be the
+ * *only* real control left. Signing with `TOOL_APPROVAL_SECRET` makes the
+ * SDK HMAC-bind each approval request to the exact tool/call/input at
+ * issuance and reject a forged or tampered one (`AI_InvalidToolApprovalSignatureError`)
+ * before the tool ever executes. `undefined` (unset) keeps the SDK's
+ * documented backward-compatible behavior — chat still works, just without
+ * this binding; see `.env.example` for why it should be set in any real
+ * deployment.
  */
 export function buildStreamTextOptions(
 	deps: AgentDeps,
@@ -281,6 +297,7 @@ export function buildStreamTextOptions(
 			// Additive sticky signal; the policy still OR-s in its own delimiter scan.
 			isExternallyDriven: () => externallyDriven,
 		}),
+		experimental_toolApprovalSecret: process.env.TOOL_APPROVAL_SECRET || undefined,
 		prepareStep: buildPrepareStep(() => {
 			externallyDriven = true;
 		}, options.windowMessages),

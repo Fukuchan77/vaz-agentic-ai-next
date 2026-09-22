@@ -520,6 +520,24 @@ describe("buildStreamTextOptions — system prompt / stopWhen / onEnd (Req 1.2/1
 			expect(opts[key]).toBeDefined();
 		}
 	});
+
+	describe("experimental_toolApprovalSecret (X-9: HMAC-binds approvals, closes the forged-id gap)", () => {
+		afterEach(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("reflects TOOL_APPROVAL_SECRET when set", () => {
+			vi.stubEnv("TOOL_APPROVAL_SECRET", "test-secret-value");
+			const opts = buildStreamTextOptions(makeDeps(new Date()), {}, {}, []);
+			expect(opts.experimental_toolApprovalSecret).toBe("test-secret-value");
+		});
+
+		test("is undefined when unset — the SDK's documented backward-compatible default", () => {
+			vi.stubEnv("TOOL_APPROVAL_SECRET", "");
+			const opts = buildStreamTextOptions(makeDeps(new Date()), {}, {}, []);
+			expect(opts.experimental_toolApprovalSecret).toBeUndefined();
+		});
+	});
 });
 
 describe("createChatAgent — MockLanguageModelV4 stop-reason runs end-to-end (Req 1.2/1.6)", () => {
