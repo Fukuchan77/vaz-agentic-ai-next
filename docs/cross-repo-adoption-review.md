@@ -20,6 +20,7 @@ Agentic AI アプリ開発のベース・学習用リポジトリ 5 本を横断
 - [§6 追記（2026-09-21）— 同一性の崩壊と再実測](#6-追記2026-09-21--同一性の崩壊と再実測)
 - [§7 追記（2026-09-22）— 全 5 repo 実クローン再検証](#7-追記2026-09-22--全-5-repo-実クローン再検証)
 - [§8 追記（2026-09-23）— spec `007-cross-repo-adoption-closeout` による着地](#8-追記2026-09-23--spec-007-cross-repo-adoption-closeout-による着地)
+- [§9 追記（2026-09-22）— 実装検証による §8 の訂正と追加修正](#9-追記2026-09-22--実装検証による-8-の訂正と追加修正)
 
 ---
 
@@ -813,3 +814,76 @@ lint:model-ids（forbid-model-ids.sh）: GREEN（新たな hardcode なし）
 ```
 
 カバレッジ閾値（lines / functions ≥ 80%）: 下回らないことを Task 13.2 で確認予定。
+
+
+---
+
+## §9 追記（2026-09-22）— 実装検証による §8 の訂正と追加修正
+
+> **この節の位置づけ**: 追記のみ規約に従い、§1〜§8 は 1 文字も改変しない。
+> 本節は `007-cross-repo-adoption` ブランチを HEAD で独立に検証した結果、
+> §8 の記述のうち 4 件が事実とずれていたことと、その検証で見つかった
+> 3 件の実装上の欠陥を修正したことを記録する。
+
+### §9.1 §8 の記述の訂正
+
+| # | §8 の記述 | 実際 |
+|---|---|---|
+| 1 | §8 見出しの日付が **2026-09-23** | §8 を追記したコミット `b894e19` は **2026-09-22 15:48 JST**。本文書は時点記録である以上、未来日付は記録として成立しない。spec `007` の全コミットが 2026-09-22 内（最終 `b9edc46` = 22:23 JST）。見出しは追記のみ規約のため改変せず、本行を訂正とする |
+| 2 | §8.2 D5: 「1 件でも不正な `toolCallId` があれば **DB 接触なしで** 409」 | DB 接触なしなのは**セット内重複**の場合のみ（`findDuplicateTarget`）。未登録 ID が混在する場合は `claimPending` まで到達して ROLLBACK し、single 形式なら **404**、set 形式なら 409 を返す。この混在ケースの原子性修正（`98926c4`）は §8 執筆後に入ったため、§8.2 は修正前の振る舞いを記述している |
+| 3 | §8.3: `test:run` が「793 passed / 1 skipped」 | それは **Task 11 完了時点**の値。その後 `5383d66` / `98926c4` / `bb952fa` / `b9edc46` が入り、§9 時点の実測は **70 files / 821 passed / 1 skipped**（本節 §9.3） |
+| 4 | §8.3: カバレッジ閾値を「Task 13.2 で確認**予定**」 | Task 13 は完了済みで、`traceability.md` REQ-012.6 に実測値が入っている。「予定」のまま残っていたのは記録の更新漏れ |
+
+### §9.2 実装上の修正 3 件
+
+| ID | 内容 | 修正 |
+|---|---|---|
+| §9.2a | **D6 の非空虚性が実際には成立していなかった** | `tests/repo/egress-policy-bypass.spec.ts` の `ALLOWED_EXCEPTION_PATHS` は `packages/tools/src/email.ts`——つまり CVE-2026-46678 と同型の欠陥（エージェントのメールツール内の宛先ハードコード）が起きるまさにそのファイル——を除外していた。`traceability.md` REQ-010 (1) は「除外を外すと FAIL する」を PROVE 証拠としていたが、実測では 7/7 GREEN のままだった（両除外パスとも現状 1 行も正規表現に一致しない）。送信ツールを除外から外し、検出器自体の発火を固定する self-test 6 件を追加。`email.ts` に宛先リテラルを入れると FAIL することを実測で確認 |
+| §9.2b | **`TOOL_APPROVAL_SECRET` が検証外の `process.env` 直読みで、未設定時に無言で劣化** | `packages/agents/src/chat-agent.ts` の当該行は `packages/*/src` 配下で唯一の `process.env.X` 直読みだった（他は全て `env` 引数注入）。`aiEnvSchema` に optional で追加し、`parseAiEnv()` 経由に変更。未設定時は `deps.logger.warn` を 1 回出す（値は決してログしない——R4.7）。LLM06 の引用にも追加 |
+| §9.2c | **T6 / LLM10 の `Mitigated` が過大申告** | `supervisorPlanSchema.steps` は `.min(1)` のみで上限がなく、`POST /api/jobs` は未認証でも 401 を返さない。両文書が引用していた `buildBudgetStopCondition` は chat 側のみで、ジョブを一切縛っていなかった。`MAX_PLAN_STEPS = 20` を導入して step 数を構造的に縛り、それでも残る未認証リクエスト数と `JOB_TOKEN_BUDGET` の未到達性を明記して `Partial · accepted` ➕ 再評価トリガへ降格 |
+
+`JOB_TOKEN_BUDGET` の未到達性について補足: `apps/worker/src/start.ts` は
+`requiresApprovalForKind: () => false` なので、本番では `registerPending` が一度も呼ばれず、
+承認再開経路（したがって D2 / D3 / D5）に到達しない。これは `start.ts` のコメントが
+明示的に記録している意図的な境界（`workflowStepSchema` への step 単位フラグ追加を伴う横断変更）であり、
+欠陥ではない。ただし**対応表がそれを前提に `Mitigated` を名乗るのは別問題**であり、
+上記 §9.2c はそこを分離したもの。
+
+### §9.3 検証ゲートの状態（2026-09-22、§9 の修正適用後）
+
+```
+biome check .                 : clean（169 files）
+pnpm -r run typecheck         : clean（9 projects）
+vitest run                    : 70 files / 821 passed / 1 skipped
+pnpm audit --audit-level=high : No known vulnerabilities found
+scripts/forbid-model-ids.sh   : clean
+.github/workflows/            : 7 本（本節の修正でも新規追加なし）
+```
+
+### §9.4 本検証で GREEN を裏付けられた不変条件
+
+「テストが通っている」ではなく、実際に壊して FAIL を確認したものだけを挙げる。
+
+| 変異 | 結果 |
+|---|---|
+| `approvals.ts` の `rowCount !== decisions.length` → `rowCount === 0` | FAIL（混在セットの原子性） |
+| `stores.ts` の `if (rowCount !== stepIds.length)` → `if (false)` | FAIL（ROLLBACK 経路） |
+| `packages/tools/src/email.ts` に宛先リテラルを追加 | FAIL（§9.2a の修正後。修正前は GREEN のままだった） |
+
+以下は今回の検証で「正しいことを確認したが変更していない」点（記録のため）:
+
+- `job_step.approval_state` は nullable かつ **DB default なし**。したがって `recordStepUsage` が
+  未登録 step の行を作っても `approval_state = NULL` となり、`claimPending` の
+  `WHERE approval_state = 'pending'` に掛からない——usage 記録が claimable な pending 行を生まない。
+- `recordStepUsage` の `onConflictDoUpdate({ set: { totalTokens } })` は `approval_state` を温存する。
+- `.gitleaksignore` の 242 件は全件が単一コミット `11a87f5`（`Squashed 'services/api/' content`）由来。
+  fingerprint が commit 固定なので、新規シークレットを遂施できない。
+
+### §9.5 未対応として残したもの
+
+- **存在秘匿の層間不整合**: 承認ターゲット層は unknown / in-flight / consumed を単一 404 に畳む一方で、
+  その上の `authorizeJobAccess` は 404（ジョブ無し）と 403（他人のジョブ）を撃ち分けるため
+  ジョブ存在オラクルになっている。R5.1 は spec `007` が意図的に無改変とした範囲なので本節でも触らない。
+- **予算ゲートの並行性**: `claimPending` の `sum()` と UPDATE は同一トランザクション内だが
+  READ COMMITTED なので、**互いに素な step 集合**への同時 approve 2 本は両方とも予算チェックを
+  通過し得る。consume-once は行ロックが守るため実害は予算の超過のみ。

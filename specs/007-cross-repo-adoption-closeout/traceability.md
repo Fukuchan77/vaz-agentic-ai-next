@@ -73,9 +73,9 @@
 | REQ-009 (9.4) | DES-3.7, DES-3.12 | T-5.1, T-5.2, T-10.1, T-10.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalRequestSchema` discriminated union | discriminated union の片方を削ると "approvalRequestSchema accepts valid set decision" が FAIL（PDCA do.md T-5 PROVE） | `4d60458` |
 | REQ-009 (9.5) | DES-3.8, DES-3.12 | T-9.3, T-10.1, T-10.2 | `apps/web/tests/jobs-approve-route.spec.ts` — "409 body does NOT reveal which toolCallId was the duplicate" ✓ | 409 ボディに toolCallId を含めると "does NOT reveal which toolCallId" が FAIL（PDCA do.md T-10 PROVE） | `c495961` |
 | REQ-009 (9.6) | DES-3.8, DES-3.9 | T-7.1, T-7.2, T-9.3 | `apps/worker/tests/stores-job-step.spec.ts` — recordStepUsage absolute upsert ✓、`claimPending` 不一致時ロールバック ✓（REQ-009 (9.2) と同一ガード）; `apps/web/tests/jobs-approve-route.spec.ts` — "does NOT call claimApprovalTargets when duplicates are detected" ✓ | 重複検出経路: duplicate 検出後に `claimApprovalTargets` を呼ぶと "does NOT call claimApprovalTargets when duplicates are detected" が FAIL（PDCA do.md T-10 PROVE）。混在セット経路（9.3 の重複とは別のケース）: REQ-009 (9.2) の PROVE と同一——不一致時は 1 件も消費されない | `69f827a` / `c495961` + adversarial-review fix（pending commit） |
-| REQ-010 (10.1) | DES-3.6 | T-11.1 | `tests/repo/egress-policy-bypass.spec.ts` — "no email-address literals in app/package source files" + "no allowlist-override patterns in app/package source files" ✓ | T-11 PROVE: `packages/tools/src/email.ts` を例外リストから除去すると email リテラル scan で FAIL（PDCA do.md T-11 PROVE） | `020941a` |
+| REQ-010 (10.1) | DES-3.6 | T-11.1 | `tests/repo/egress-policy-bypass.spec.ts` — "no email-address literals in app/package source files" + "no allowlist-override patterns in app/package source files" + 検出器 self-test 6 件（`EMAIL_LITERAL_RE` / `ALLOWLIST_OVERRIDE_RE` / コメント行フィルタ）✓ | **訂正（実装検証 2026-09-22）**: 旧記述「`packages/tools/src/email.ts` を例外リストから除去すると FAIL」は**成立していなかった**——除去しても 7/7 GREEN（同ファイルに正規表現に一致する行が 1 行も無い）。送信ツールを例外から外し、検出器の発火を直接固定する self-test を追加して再構築。現在の PROVE: `packages/tools/src/email.ts` に `const FALLBACK_RECIPIENT = "ops@internal.example";` を追加すると "no email-address literals" が FAIL（実測済み） | `020941a` + §9.2a fix |
 | REQ-010 (10.2) | DES-3.6 | T-11.1 | `tests/repo/egress-policy-bypass.spec.ts` — "scans at least 1 source file for email literals (non-vacuity)" + "scans at least 1 file for audit-firing-point check (non-vacuity)" ✓ | 非空アサート自体は scan 対象ディレクトリが実在することで担保。対象 dir を削除すると "scans at least 1 source file" が FAIL（走査 0 件経路） | `020941a` |
-| REQ-010 (10.3) | DES-3.6 | T-11.1 | `tests/repo/egress-policy-bypass.spec.ts` — "exception list is non-empty and every listed path exists" ✓ | 例外リストのパスを存在しないパスに書き換えると "every listed path exists" が FAIL（PDCA do.md T-11 PROVE） | `020941a` |
+| REQ-010 (10.3) | DES-3.6 | T-11.1 | `tests/repo/egress-policy-bypass.spec.ts` — "exception list is non-empty and every listed path exists" + "the external-send tool is NOT excepted from the scan" ✓ | 例外リストのパスを存在しないパスに書き換えると "every listed path exists" が FAIL。加えて（§9.2a）例外は `RECIPIENT_ALLOWLIST` を定義するモジュールに限ることをアサートし、`email.ts` を例外に戻すと "the external-send tool is NOT excepted" が FAIL | `020941a` + §9.2a fix |
 | REQ-010 (10.4) | DES-3.6 | T-11.3 | `tests/repo/egress-policy-bypass.spec.ts` — file-level comment cites `pydantic-ai-sandbox/patterns/hitl/tests/test_egress_policy.py` (code span) + CVE-2026-46678 ✓ | コードスパンの参照は `doc-links.spec.ts` のスコープ外（外部パス）。文書ソース閲覧で確認。 | `020941a` |
 | REQ-010 (10.5) | DES-3.6 | T-11.1 | `tests/repo/egress-policy-bypass.spec.ts` lives in `tests/repo/` project; no new workflow file added ✓ | REQ-004 (4.8) と同一ガード（新規 workflow 追加で `ci-workflows.spec.ts` が FAIL） | `020941a` |
 | REQ-011 (11.1) | DES-3.13 | T-12.2 | §1〜§7 無改変を `git diff` で確認 ✓（T-12 実施内容; PDCA do.md T-12） | `git diff docs/cross-repo-adoption-review.md` が ToC 3 行 + §8 のみであること。§1〜§7 を改変すると diff が増え確認が FAIL。 | `b894e19` |
@@ -85,12 +85,12 @@
 | REQ-011 (11.5) | DES-3.13 | T-12.3 | `docs/cross-repo-adoption-backlog.md` §5 の X-17〜X-20 を「解決済み」へ更新 ✓ | `doc-links.spec.ts` が `backlog.md` 内のリンクを解決可能な状態に保つ（リンク切れがあれば FAIL） | `b894e19` |
 | REQ-011 (11.6) | DES-3.5, DES-3.13 | T-1.1, T-1.2, T-3.1, T-12.3 | `tests/repo/cross-repo-reference-resolution.spec.ts` — "QUALIFIED_FORM regression" describe (3 tests: T-1.1 pin; T-1.2 fix verified by same tests) | T-1 PROVE: 修正を元に戻すと `../` を含む入力で QUALIFIED_FORM 偽陽性が復活し 3 テストが FAIL（PDCA do.md T-1 PROVE） | `4b5a849` / `b894e19` |
 | REQ-011 (11.7) | DES-3.13 | T-12.1 | §8 addendum §8.2 に D1〜D6 が `apps/web` の job/approval 経路にのみ適用されること、`/api/chat` と `services/api` を対象外としたことを明記 ✓ | 機械テストなし（§8 の散文内容は人間レビュー） | `b894e19` |
-| REQ-012 (12.1) | DES-3.14 | T-13.2 | `mise run check` → 69 test files, 793 passed / 1 skipped; lint clean; typecheck clean; audit clean; `lint:model-ids` clean ✓ (T-13.2 実証) | 任意のテストを壊すと `test:run` が FAIL し gate が FAIL。lint エラーを導入すると `lint` が FAIL。 | T-13 |
+| REQ-012 (12.1) | DES-3.14 | T-13.2 | `mise run check` → **70 test files, 821 passed / 1 skipped**（実装検証 2026-09-22 時点の HEAD。T-13.2 時点は 69 files / 793 passed だったが、その後 `5383d66` / `98926c4` / `bb952fa` / `b9edc46` と本検証の §9.2a〜§9.2c 修正がテストを追加した）; lint clean; typecheck clean; audit clean; `lint:model-ids` clean ✓ | 任意のテストを壊すと `test:run` が FAIL し gate が FAIL。lint エラーを導入すると `lint` が FAIL。 | T-13 |
 | REQ-012 (12.2) | DES-3.14 | T-13.2 | `.github/workflows/` に 7 ファイル（api.yml / eval-nightly.yml / eval-pr.yml / lint.yml / python.yml / security-daily.yml / tests.yml）が存在し新規追加なし ✓ (T-13.2 実証) | 8 本目のワークフローを追加すると `ci-workflows.spec.ts` の SHA-pinned / permissions テストが FAIL。 | T-13 |
 | REQ-012 (12.3) | DES-3.14 | T-13.2 | `scripts/forbid-model-ids.sh` → "No hardcoded model IDs found" ✓ (T-13.2 実証) | `apps/web/src/` にモデル ID 文字列を書くと `lint:model-ids` が FAIL し gate が FAIL。 | T-13 |
 | REQ-012 (12.4) | DES-3.14 | T-13.1 | 本表 Non-vacuity 列（タスク 2 / 5 / 6 / 7 / 8 / 9 / 10 / 11 の全テスト・ガードに非空虚性証拠あり）✓ | — | T-13 |
 | REQ-012 (12.5) | DES-3.14 | T-10.1, T-13.3 | `apps/web/tests/approvals.spec.ts` / `apps/web/tests/jobs-approve-route.spec.ts` — 実 LLM・実 Redis・実 DB 不要（`MockLanguageModelV4` / `vi.mock` / フェイク DB のみ）✓。本表下部「ネットワーク独立性」節に明記。 | ネットワーク依存なし: jest-dom 環境のみで全テストが GREEN。`DATABASE_URL` 未設定でも PASS（T-10 PROVE 内で確認済み）。 | `c495961` |
-| REQ-012 (12.6) | DES-3.8, DES-3.14 | T-13.2 | カバレッジ（`mise run test:coverage` で別途測定）: statements 90.96% / branches 82.19% / functions 92.08% / lines 91.03% — `vitest.config.ts` の設定閾値 `lines 80` / `functions 80` をいずれも上回る ✓ | 閾値は `--coverage` 実行時のみ適用される（`mise run check` は `test:run` = `--coverage` なしのため閾値を強制しない）。`mise run test:coverage` で閾値を下回ると当該コマンドが FAIL する。`branches` には閾値が設定されておらず、実測 82.19% が 4 指標の最低値。 | T-13 |
+| REQ-012 (12.6) | DES-3.8, DES-3.14 | T-13.2 | カバレッジ（`mise run test:coverage` で別途測定、実装検証 2026-09-22 に再測）: statements 91.03% / branches 82.26% / functions 92.14% / lines 91.09% — `vitest.config.ts` の設定閾値 `lines 80` / `functions 80` をいずれも上回る ✓ | 閾値は `--coverage` 実行時のみ適用される（`mise run check` は `test:run` = `--coverage` なしのため閾値を強制しない）。`mise run test:coverage` で閾値を下回ると当該コマンドが FAIL する。`branches` には閾値が設定されておらず、実測 82.19% が 4 指標の最低値。 | T-13 |
 | REQ-012 (12.7) | DES-3.14 | T-13.3 | 本ファイル（`traceability.md`）が完成形 ✓ | — | T-13 |
 
 ## 記録の是正（`/sdd-validate-impl` 2026-09-22）
@@ -104,6 +104,22 @@
 | 2 | REQ-004 (4.1)〜(4.8) の Commit 列 `b99912c` が git オブジェクトとして存在しなかった（8 行） | ガード実装 `1fa7146`（T-2）と文書移行 `85f1708`（T-4）へ訂正。本表の全 12 ハッシュが `git cat-file -t` で解決することを確認済み |
 | 3 | REQ-006 (6.1)(6.6) / REQ-007 (7.1)(7.5) / REQ-009 (9.2)(9.6) / REQ-011 (11.6) の Commit 列が、Task 列に挙げたタスクの実装コミットと一致していなかった（例: `packages/db` の実装は `bc8a841` だが `a707139` を記載） | 各行の Task 列に対応する実装コミットを列挙する形へ訂正 |
 | 4 | REQ-012 (12.6) がカバレッジ 4 指標のラベルを入れ替えて記載し、かつ「閾値を下回ると `test:run` が FAIL」と記していた（`mise run check` は `--coverage` なしのため閾値を強制しない） | 実測値を `mise run test:coverage` で再測定してラベルを訂正し、閾値の適用範囲を明記。`branches` に閾値が無い事実も記録 |
+
+## 記録の再度の是正（実装検証 2026-09-22、ブランチ HEAD に対する独立検証）
+
+Task 13 完了後に 4 コミット（`5383d66` / `98926c4` / `bb952fa` / `b9edc46`）が入ったため、
+本表と `docs/cross-repo-adoption-review.md` §8 の**記録**側が HEAD と乖離していた。さらに
+非空虚性証拠 1 件が実測で成立しないことが分かった。以下を同日是正した。
+
+| # | 不整合 | 是正 |
+|---|---|---|
+| 5 | REQ-010 (1) の非空虚性証拠「`packages/tools/src/email.ts` を例外リストから除去すると FAIL」が**事実と違った**（除去しても 7/7 GREEN）。両例外パスとも現状 `EMAIL_LITERAL_RE` / `ALLOWLIST_OVERRIDE_RE` のどちらにも一致しないため、例外リストは空虚だった | `email.ts` を例外から外し（送信ツール自体を走査対象に戻し）、検出器の発火を固定する self-test 6 件と「送信ツールは例外不可」の回帰ピンを追加。REQ-010 (1)(3) 行を実測済みの PROVE へ差し替え |
+| 6 | REQ-012 (12.1) のゲート実績「69 files / 793 passed」が HEAD と不一致 | 実測値「70 files / 821 passed / 1 skipped」へ更新し、差分の出所（Task 13 後の 4 コミット ➕ 本検証の修正）を明記 |
+| 7 | REQ-012 (12.6) のカバレッジが T-13.2 時点の値 | 再測して statements 91.03% / branches 82.26% / functions 92.14% / lines 91.09% へ更新（閾値 lines 80 / functions 80 を引き続き上回る） |
+| 8 | 正本 §8 の見出し日付が 2026-09-23（実コミットは 2026-09-22 15:48 JST）、§8.2 D5 の「DB 接触なしで 409」が `98926c4` 後の振る舞いと不一致、§8.3 のカバレッジが「確認予定」のまま | 正本は追記のみ規約のため §1〜§8 を改変せず、**§9 を追記**して 4 件を訂正（§9.1） |
+
+実装側の修正 3 件（D6 の非空虚性、`TOOL_APPROVAL_SECRET` の env 規約違反と無言の劣化、
+T6/LLM10 の過大申告と `MAX_PLAN_STEPS` 導入）は正本 §9.2 に記録した。
 
 境界（`_Boundary:_`）側の逸脱 2 件（Task 8 の付随テスト 2 本、Task 9 による
 `JobStepStore.claimPending` の port 契約拡張）は `tasks.md` の該当 `_Boundary:_` へ追記し、

@@ -76,9 +76,17 @@ async function fileExists(p: string): Promise<boolean> {
 // the allowlist implementation or its direct call site. Each entry must actually
 // exist - a stale exception is itself a guard failure.
 const ALLOWED_EXCEPTION_PATHS: readonly string[] = [
-	"packages/tools/src/allowlist.ts", // defines RECIPIENT_ALLOWLIST, isAllowedRecipient, assertAllowedRecipient
-	"packages/tools/src/email.ts", // uses assertAllowedRecipient - the correct call site
+	// The allow-list DEFINITION site: once RECIPIENT_ALLOWLIST is populated by a
+	// reviewed commit, its entries are email literals by construction and the
+	// array literal matches ALLOWLIST_OVERRIDE_RE. Nothing else may be excepted.
+	"packages/tools/src/allowlist.ts",
 ];
+
+// NOT excepted, deliberately: `packages/tools/src/email.ts`. It is the external-send
+// tool itself - the exact shape of CVE-2026-46678 (a recipient hardcoded inside the
+// agent's email tool). Excepting it would blind the scan at the one place the scan
+// exists for. It passes today because it takes its recipient as an argument and
+// delegates to assertAllowedRecipient; if it ever grows a literal, this scan must fail.
 
 // Email-address regex. Conservative: local-part@domain.tld pattern.
 // Excludes npm scoped identifiers like @carbon/react by requiring a word char
@@ -139,6 +147,48 @@ describe("egress policy bypass regression scan (D6, REQ-010, CVE-2026-46678)", (
 	// Pre-flight: exception list integrity
 	// -------------------------------------------------------------------------
 
+	// -------------------------------------------------------------------------
+	// Pre-flight: the detectors themselves must be able to detect (REQ-010.2)
+	// -------------------------------------------------------------------------
+	//
+	// "No violations found" is only evidence when a violation WOULD have been
+	// found. Every real source file legitimately passes this scan, so the
+	// green result above proves nothing about the regexes on its own - the
+	// mutation that matters (a hardcoded recipient appearing tomorrow) has no
+	// fixture in the tree today. These cases supply that fixture.
+
+	test("EMAIL_LITERAL_RE detects a hardcoded recipient", () => {
+		expect(EMAIL_LITERAL_RE.test('const to = "attacker@evil.example";')).toBe(true);
+		expect(EMAIL_LITERAL_RE.test("\tawait send({ to: 'ops@internal.corp.jp' });")).toBe(true);
+	});
+
+	test("EMAIL_LITERAL_RE does not fire on npm scoped identifiers", () => {
+		expect(EMAIL_LITERAL_RE.test('import { Tag } from "@carbon/react";')).toBe(false);
+		expect(EMAIL_LITERAL_RE.test('import { z } from "@vaz/schemas/env";')).toBe(false);
+	});
+
+	test("ALLOWLIST_OVERRIDE_RE detects a re-populated allow-list", () => {
+		expect(ALLOWLIST_OVERRIDE_RE.test('const RECIPIENT_ALLOWLIST = ["a@b.example"];')).toBe(true);
+		expect(
+			ALLOWLIST_OVERRIDE_RE.test('assertAllowedRecipient(to, allowlist: ["a@b.example"])'),
+		).toBe(true);
+	});
+
+	test("ALLOWLIST_OVERRIDE_RE does not fire on the empty committed allow-list", () => {
+		expect(
+			ALLOWLIST_OVERRIDE_RE.test("export const RECIPIENT_ALLOWLIST: readonly string[] = [];"),
+		).toBe(false);
+	});
+
+	test("the comment-line filter does not swallow a violation on a code line", () => {
+		// The scan skips lines starting with // or * so CVE references in prose do
+		// not trip it. A trailing comment on a CODE line must still be scanned.
+		const codeLineWithTrailingComment = '\tconst to = "attacker@evil.example"; // temporary';
+		const trimmed = codeLineWithTrailingComment.trimStart();
+		expect(trimmed.startsWith("//") || trimmed.startsWith("*")).toBe(false);
+		expect(EMAIL_LITERAL_RE.test(codeLineWithTrailingComment)).toBe(true);
+	});
+
 	test("exception list is non-empty and every listed path exists", async () => {
 		// The exception list MUST have at least one entry: a guard that silently
 		// allows everything (because the allowlist definition itself passes) only
@@ -151,7 +201,31 @@ describe("egress policy bypass regression scan (D6, REQ-010, CVE-2026-46678)", (
 				await fileExists(abs),
 				`Exception path "${rel}" does not exist - update ALLOWED_EXCEPTION_PATHS`,
 			).toBe(true);
+
+			// An exception is only justified for the allow-list DEFINITION module -
+			// the one file whose job is to hold recipient literals. Anything else
+			// (notably the send tool) must stay inside the scan.
+			const src = await readSrc(abs);
+			expect(
+				src.includes("RECIPIENT_ALLOWLIST"),
+				`Exception path "${rel}" is not the allow-list definition module. ` +
+					"Only the file that defines RECIPIENT_ALLOWLIST may be excepted - " +
+					"excepting a call site (e.g. the email tool) reintroduces the CVE-2026-46678 blind spot.",
+			).toBe(true);
 		}
+	});
+
+	test("the external-send tool is NOT excepted from the scan", async () => {
+		// Regression pin: packages/tools/src/email.ts was excepted in the original
+		// guard, which made the email-literal scan unable to fail at the one file
+		// whose CVE analogue the scan is named after.
+		const sendTool = "packages/tools/src/email.ts";
+		expect(await fileExists(resolve(ROOT, sendTool))).toBe(true);
+		expect(
+			ALLOWED_EXCEPTION_PATHS.includes(sendTool),
+			`${sendTool} must stay inside the scan - it is the external-send tool itself`,
+		).toBe(false);
+		expect((await collectAppPackageSrcFiles()).map((f) => relative(ROOT, f))).toContain(sendTool);
 	});
 
 	// -------------------------------------------------------------------------

@@ -113,12 +113,21 @@ Supervisor が承認拒否を検知した際は、続く specialist を呼び出
 
 Chat は `stopWhen: [isStepCount(MAX_STEPS), buildBudgetStopCondition(budget)]` で
 ステップ数・トークン予算の双方に上限を持つ（`docs/context-budget.md` Stage 0）。
-Supervisor 側にも specialist 呼び出しの構造的な段数制限があり、無限ループへ
-自律的に発散しない。
+Supervisor はプランを自分で生成せず固定の typed step 列をディスパッチするだけなので、
+エージェント自身が無限ループへ発散する経路はない。その step 列の長さは
+`MAX_PLAN_STEPS`（`supervisorPlanSchema` の `max()`）が縛る。
 
-- 状態: Mitigated
-- 実装: [`packages/agents/src/chat-agent.ts`](../packages/agents/src/chat-agent.ts)（`buildBudgetStopCondition`）
-- テスト: `packages/agents/tests/chat-agent.spec.ts`
+**残余リスク（受容）**: プランはクライアント供給であり、`POST /api/jobs` は未認証でも
+401 を返さない（auth は Phase 5。`apps/worker/src/main.ts` の `JobRequest.userId` が
+`string | null`）。1 リクエストあたりの step 数は縛られたが、リクエスト数自体は縛られていない。
+さらに `JOB_TOKEN_BUDGET`（ジョブ横断のトークン上限）は承認再開経路でしか参照されず、
+現状 `apps/worker/src/start.ts` は `requiresApprovalForKind: () => false` なので、
+本番のジョブはこの予算ゲートを一度も通らない。
+
+- 状態: Partial · accepted
+- 実装: [`packages/agents/src/chat-agent.ts`](../packages/agents/src/chat-agent.ts)（`buildBudgetStopCondition`）、[`packages/schemas/src/workflows.ts`](../packages/schemas/src/workflows.ts)（`MAX_PLAN_STEPS`）
+- テスト: `packages/agents/tests/chat-agent.spec.ts`、`packages/schemas/tests/workflows.spec.ts`（`MAX_PLAN_STEPS`）
+- 再評価トリガ: `POST /api/jobs` に認証を入れたとき（Phase 5）、または worker specialist に承認ゲートを配線して（`requiresApprovalForKind` が true を返すようになって）`JOB_TOKEN_BUDGET` が実効するようになったとき
 
 ## オーケストレーション/データレイヤ — Cascading Hallucination
 

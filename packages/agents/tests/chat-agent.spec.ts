@@ -1,4 +1,5 @@
 import type { AgentDeps } from "@vaz/schemas/deps";
+import { parseAiEnv } from "@vaz/schemas/env";
 import type { RetrievedChunk } from "@vaz/schemas/rag";
 import { simulateReadableStream, type ToolSet } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
@@ -536,6 +537,34 @@ describe("buildStreamTextOptions — system prompt / stopWhen / onEnd (Req 1.2/1
 			vi.stubEnv("TOOL_APPROVAL_SECRET", "");
 			const opts = buildStreamTextOptions(makeDeps(new Date()), {}, {}, []);
 			expect(opts.experimental_toolApprovalSecret).toBeUndefined();
+		});
+
+		test("is resolved through the validated env schema, not a bare process.env read", () => {
+			// `@vaz/schemas/env` is the single validated env surface for packages/*;
+			// a whitespace-only value must normalise to undefined (min(1) + emptyToUndefined)
+			// rather than being handed to the SDK as a signing key.
+			vi.stubEnv("TOOL_APPROVAL_SECRET", "   ");
+			expect(parseAiEnv().TOOL_APPROVAL_SECRET).toBe("   ");
+			vi.stubEnv("TOOL_APPROVAL_SECRET", "");
+			expect(parseAiEnv().TOOL_APPROVAL_SECRET).toBeUndefined();
+		});
+
+		test("warns exactly once when unset — the degradation is otherwise invisible", () => {
+			vi.stubEnv("TOOL_APPROVAL_SECRET", "");
+			const warn = vi.fn();
+			const deps = { ...makeDeps(new Date()), logger: { debug() {}, info() {}, warn, error() {} } };
+			buildStreamTextOptions(deps, {}, {}, []);
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(warn.mock.calls[0]?.[0]).toContain("TOOL_APPROVAL_SECRET is unset");
+		});
+
+		test("does NOT warn when the secret is set, and never logs its value", () => {
+			vi.stubEnv("TOOL_APPROVAL_SECRET", "s3cret-value");
+			const warn = vi.fn();
+			const deps = { ...makeDeps(new Date()), logger: { debug() {}, info() {}, warn, error() {} } };
+			buildStreamTextOptions(deps, {}, {}, []);
+			expect(warn).not.toHaveBeenCalled();
+			expect(JSON.stringify(warn.mock.calls)).not.toContain("s3cret-value");
 		});
 	});
 });
