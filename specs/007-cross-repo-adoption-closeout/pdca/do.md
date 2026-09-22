@@ -183,3 +183,39 @@ mise run check  →  lint ✓ | audit ✓ | typecheck ✓ | test:run 686 passed 
 ```
 mise run check  →  lint ✓ | audit ✓ | typecheck ✓ | test:run 702 passed / 1 skipped ✓
 ```
+
+---
+
+## Task 6: `job_step` テーブルと migration（2026-09-22）
+
+### 実施内容
+
+**6.1 — `packages/db/tests/schema.spec.ts` へのテスト先行作成**
+
+- [`packages/db/tests/schema.spec.ts`](../../../packages/db/tests/schema.spec.ts) に `job_step` テーブル、`approvalStateEnum`、`jobStepInsertSchema` / `jobStepSelectSchema`、複合主キー `(job_id, step_id)`、および FK cascade のテストを追加。
+- 意図通り RED（未定義エラー）となることを確認。
+
+**6.2 — `packages/db/src/schema.ts` へのスキーマ追加**
+
+- [`packages/db/src/schema.ts`](../../../packages/db/src/schema.ts) に `approvalStateEnum` (`"pending"`, `"consumed"`)、`jobStep` テーブル（複合 PK `(jobId, stepId)`、FK `jobId` → `job.id` ON DELETE cascade、`totalTokens` NOT NULL DEFAULT 0）、および drizzle-zod の `jobStepInsertSchema` / `jobStepSelectSchema` を実装。
+- 既存の 6 テーブル（`document`, `chunk`, `embedding`, `job`, `jobEvent`, `auditLog`）および `jobEventTypeEnum` に変更を加えないことを保証。
+
+**6.3 — `0002_add_job_step.sql` 手書き SQL 作成と DDL ドリフト検査**
+
+- [`packages/db/drizzle/0002_add_job_step.sql`](../../../packages/db/drizzle/0002_add_job_step.sql) を作成し、`approval_state` ENUM と `job_step` テーブル（FK cascade、複合 PK）の DDL を定義。
+- [`packages/db/tests/schema-ddl.spec.ts`](../../../packages/db/tests/schema-ddl.spec.ts) に `jobStep` / `approvalStateEnum` をインポート・登録し、テーブルパーサーに `CONSTRAINT ... PRIMARY KEY` のサポートを追加。
+- DDL ドリフト検査および既存のマイグレーション順序検査を GREEN に導いた。
+
+### PROVE 証拠
+
+1. **`approvalStateEnum` 順序チェックの非空虚性**: `approvalStateEnum` の定義値を意図的に `["consumed", "pending"]` に反転させると、`schema.spec.ts` および `schema-ddl.spec.ts` の双方が `expected [ 'consumed', 'pending' ] to deeply equal [ 'pending', 'consumed' ]` で FAIL することを確認。
+2. **`schema-ddl.spec.ts` ドリフト検知の非空虚性**: `0002_add_job_step.sql` と `schema.ts` 間の enum 順序不整合を確実に検知して FAIL することを確認。
+
+### Verification Gate
+
+```
+pnpm exec vitest run  →  66 test files passed, 710 passed / 1 skipped
+pnpm exec biome check .  →  Checked 164 files in 63ms. No fixes applied.
+pnpm -r run typecheck  →  All packages typechecked successfully.
+bash scripts/forbid-model-ids.sh  →  No hardcoded model IDs found.
+```

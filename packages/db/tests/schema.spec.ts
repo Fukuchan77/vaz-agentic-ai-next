@@ -1,4 +1,5 @@
 import {
+	approvalStateEnum,
 	auditLog,
 	auditLogInsertSchema,
 	chunk,
@@ -12,6 +13,9 @@ import {
 	jobEventTypeEnum,
 	jobInsertSchema,
 	jobStatusEnum,
+	jobStep,
+	jobStepInsertSchema,
+	jobStepSelectSchema,
 } from "@vaz/db/schema";
 import { jobEventTypeSchema } from "@vaz/schemas/workflows";
 import { getTableColumns } from "drizzle-orm";
@@ -85,6 +89,55 @@ describe("audit_log table (R5.5 record every tool execution)", () => {
 			}).success,
 		).toBe(true);
 		expect(auditLogInsertSchema.safeParse({ jobId: null }).success).toBe(false); // tool required
+	});
+});
+
+describe("job_step table (R7.1/R7.5 step state & usage persistence)", () => {
+	const jobId = "11111111-1111-4111-8111-111111111111";
+	const stepId = "22222222-2222-4222-8222-222222222222";
+
+	test("has the plan's columns: jobId / stepId / approvalState / consumedAt / totalTokens / createdAt", () => {
+		expect(Object.keys(getTableColumns(jobStep)).sort()).toEqual(
+			["approvalState", "consumedAt", "createdAt", "jobId", "stepId", "totalTokens"].sort(),
+		);
+	});
+
+	test("approvalStateEnum has values 'pending' and 'consumed' in order", () => {
+		expect(approvalStateEnum.enumValues).toEqual(["pending", "consumed"]);
+	});
+
+	test("jobStepInsertSchema requires jobId and stepId, defaults totalTokens to 0, accepts null approvalState and consumedAt", () => {
+		expect(jobStepInsertSchema.safeParse({ jobId, stepId }).success).toBe(true);
+		expect(
+			jobStepInsertSchema.safeParse({
+				jobId,
+				stepId,
+				approvalState: "pending",
+				totalTokens: 100,
+			}).success,
+		).toBe(true);
+		expect(
+			jobStepInsertSchema.safeParse({
+				jobId,
+				stepId,
+				approvalState: null,
+				consumedAt: null,
+			}).success,
+		).toBe(true);
+		expect(jobStepInsertSchema.safeParse({ jobId }).success).toBe(false); // stepId required
+		expect(jobStepInsertSchema.safeParse({ stepId }).success).toBe(false); // jobId required
+	});
+
+	test("jobStepSelectSchema validates full row data", () => {
+		const row = {
+			jobId,
+			stepId,
+			approvalState: "consumed" as const,
+			consumedAt: new Date(),
+			totalTokens: 250,
+			createdAt: new Date(),
+		};
+		expect(jobStepSelectSchema.safeParse(row).success).toBe(true);
 	});
 });
 
@@ -166,6 +219,17 @@ describe("DDL drift guard (indexes / FKs / CHECK)", () => {
 			"job",
 		);
 		expect(config.indexes.map((idx) => idx.config.name)).toEqual(["job_event_job_id_ts_idx"]);
+	});
+
+	test("job_step: FK cascade to job + composite PK (job_id, step_id)", () => {
+		const config = getTableConfig(jobStep);
+		expect(config.foreignKeys).toHaveLength(1);
+		expect(config.foreignKeys[0]?.onDelete).toBe("cascade");
+		expect(getTableConfig(config.foreignKeys[0]?.reference().foreignTable ?? document).name).toBe(
+			"job",
+		);
+		const pkColumns = config.primaryKeys[0]?.columns.map((c) => c.name);
+		expect(pkColumns?.sort()).toEqual(["job_id", "step_id"].sort());
 	});
 
 	test("audit_log: FK is `set null` so the compliance record survives job deletion (R5.5)", () => {
