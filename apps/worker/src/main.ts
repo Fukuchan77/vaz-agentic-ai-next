@@ -12,7 +12,7 @@ import {
 	supervisorPlanSchema,
 	type WorkflowStepResult,
 } from "@vaz/schemas/workflows";
-import type { JobStore } from "./stores";
+import type { JobStepStore, JobStore } from "./stores";
 
 /**
  * `apps/worker` — the long-running Node 24 worker entry (R3.1/3.2/4.2).
@@ -204,6 +204,20 @@ export interface CreateDurableStepRunnerOptions {
 	approvalGate?: ApprovalGate;
 	/** Approval-wait window (default {@link DEFAULT_APPROVAL_TIMEOUT}). */
 	approvalTimeout?: string;
+	/**
+	 * Optional pending-set store (D5 / C-9, Task 8). When injected, the runner
+	 * calls {@link JobStepStore.registerPending} immediately before awaiting the
+	 * approval gate (INV-1 order guarantee). Idempotency is the port's
+	 * responsibility (`ON CONFLICT DO NOTHING`); main.ts never guards the call.
+	 * Omitting this option is a no-op — existing callers are unaffected.
+	 */
+	jobStepStore?: JobStepStore;
+	/**
+	 * Clock for the `at` timestamp passed to {@link JobStepStore.registerPending}
+	 * (ADR-3: never `new Date()` inside a tool/agent/worker path).
+	 * Required when `jobStepStore` is injected; ignored otherwise.
+	 */
+	now?: () => Date;
 }
 
 /**
@@ -238,12 +252,19 @@ export function createDurableStepRunner(
 		requiresApproval,
 		approvalGate,
 		approvalTimeout = DEFAULT_APPROVAL_TIMEOUT,
+		jobStepStore,
+		now,
 	} = options;
 
 	return {
 		async run<T>(stepId: string, fn: (approvedArgs?: unknown) => Promise<T>): Promise<T> {
 			if (requiresApproval?.(stepId)) {
 				if (!approvalGate) throw new ApprovalDeniedError(stepId, "misconfigured");
+				// INV-1: registerPending is called in the same synchronous path,
+				// immediately before approvalGate is awaited — no intervening await.
+				// Idempotency is the store's responsibility (`ON CONFLICT DO NOTHING`);
+				// this call is unconditional so Inngest function-body replays work safely.
+				await jobStepStore?.registerPending(jobId, stepId, now?.() ?? new Date());
 				const decision = await approvalGate({ jobId, stepId, timeout: approvalTimeout });
 				if (decision === null) throw new ApprovalDeniedError(stepId, "expired");
 				if (!decision.approved) throw new ApprovalDeniedError(stepId, "rejected");
@@ -318,6 +339,15 @@ export interface RunJobOptions extends CreateSupervisorWorkflowOptions {
 	 * propagates and the plan is never dispatched (fail-loud).
 	 */
 	jobStore?: JobStore;
+	/**
+	 * Optional pending-set + usage store (D5 / C-9, C-11, Task 8). When injected:
+	 * - `registerPending` is called in `createDurableStepRunner` immediately before
+	 *   each approval-gated step is suspended (INV-1, R6.1, R6.6).
+	 * - `recordStepUsage` is called from the instrumented emit on each `completion`
+	 *   event that carries a result with a `usage` field (R7.1, R7.6).
+	 * Omitting is a no-op — existing callers and tests are unaffected.
+	 */
+	jobStepStore?: JobStepStore;
 }
 
 /**
@@ -342,12 +372,19 @@ function parseJobRequest(request: JobRequest): JobRequest {
  * agent name (R4.2). `step-start` (which alone carries the specialist `kind`)
  * opens the span; the matching `completion` / `error` closes it. Every event is
  * forwarded to `userEmit` unchanged — instrumentation is additive.
+ *
+ * D3 / R7.1: on a step-level `completion` event whose `result` carries a `usage`
+ * field (document-generation specialists only in the current schema), the
+ * observed `totalTokens` is recorded via `jobStepStore.recordStepUsage` as an
+ * absolute value (server-observed, R7.6). The read is structural — no Zod parse —
+ * because the event was already validated upstream by the supervisor.
  */
 function instrumentEmit(
 	tracer: WorkerTracer,
 	jobId: string,
 	userId: string,
 	userEmit: JobEventSink | undefined,
+	jobStepStore?: JobStepStore,
 ): JobEventSink {
 	const stepSpans = new Map<string, WorkerSpan>();
 	return async (event) => {
@@ -364,6 +401,13 @@ function instrumentEmit(
 			}
 			case "completion": {
 				if (event.stepId) {
+					// R7.1 / R7.6: record observed usage before closing the span so
+					// the cumulative count is up to date by the time the route reads it.
+					const totalTokens = (event.result as { usage?: { totalTokens?: unknown } } | undefined)
+						?.usage?.totalTokens;
+					if (typeof totalTokens === "number" && jobStepStore) {
+						await jobStepStore.recordStepUsage(jobId, event.stepId, totalTokens);
+					}
 					stepSpans.get(event.stepId)?.end();
 					stepSpans.delete(event.stepId);
 				}
@@ -410,6 +454,7 @@ export async function runJob(
 		approvalGate,
 		approvalTimeout,
 		jobStore,
+		jobStepStore,
 		...supervisorRest
 	} = options;
 	const userLabel = userId ?? "anonymous";
@@ -437,7 +482,8 @@ export async function runJob(
 	await jobStore?.insert({ id: jobId, userId, workflow: "supervisor-plan" });
 
 	const jobSpan = tracer.startSpan("worker.job", { jobId, userId: userLabel });
-	const emit = instrumentEmit(tracer, jobId, userLabel, userEmit);
+	// D3/R7.1: pass jobStepStore so instrumentEmit can record step-level usage.
+	const emit = instrumentEmit(tracer, jobId, userLabel, userEmit, jobStepStore);
 
 	// When any step needs HITL approval, wrap the durable-step port so it
 	// suspends for approval before the checkpointed step (R3.4/3.5); otherwise
@@ -449,6 +495,8 @@ export async function runJob(
 				requiresApproval: effectiveRequiresApproval,
 				approvalGate,
 				approvalTimeout,
+				jobStepStore,
+				now: deps.now,
 			})
 		: engineStep;
 	const workflow = createSupervisorWorkflow(deps, {
@@ -530,10 +578,18 @@ export function submitJob(engine: DurableEngine, request: JobRequest): Promise<u
  * workflow suspended awaiting approval (R3.5). Fires an {@link APPROVAL_EVENT}
  * the engine matches (by `jobId`) to the suspended `waitForApproval`, which then
  * resumes from its checkpoint — reject/edit-args carried on the signal.
+ *
+ * Idempotent on `"<jobId>:<stepId>"` (R6.1 / D5): a retried or duplicated
+ * submission for the same step collapses to one resume rather than triggering
+ * multiple resumes for the same suspended wait — symmetric with {@link submitJob}.
  */
 export function submitApproval(
 	engine: DurableEngine,
 	signal: ApprovalSignal,
 ): Promise<unknown> | unknown {
-	return engine.send({ name: APPROVAL_EVENT, data: signal });
+	return engine.send({
+		name: APPROVAL_EVENT,
+		data: signal,
+		id: `${signal.jobId}:${signal.stepId}`,
+	});
 }
