@@ -219,3 +219,72 @@ pnpm exec biome check .  →  Checked 164 files in 63ms. No fixes applied.
 pnpm -r run typecheck  →  All packages typechecked successfully.
 bash scripts/forbid-model-ids.sh  →  No hardcoded model IDs found.
 ```
+
+---
+
+## Task 7: `JobStepStore` port（C-9 ストア部）（2026-09-23）
+
+### 実施内容
+
+**7.1 — `apps/worker/tests/stores-job-step.spec.ts` 新規作成（テスト先行）**
+
+- 3 つの describe ブロックに 11 テストを作成。すべて `createJobStepStore is not a function` で RED であることを確認してから実装へ進んだ。
+- `fakeInsertDb`: INSERT-path 専用フェイク。`onConflictDoNothing` / `onConflictDoUpdateSet` の両フラグをレコードに持ち、呼び出し後に検査可能。
+- `fakeTransactionDb`: `db.transaction(fn)` を捉えて制御された tx オブジェクト（select / update チェーン）を供給。UPDATE の `setConsumedAt` / `setApprovalState` を後から検査できる。
+- `registerPending`: `onConflictDoNothing: true` かつ `onConflictDoUpdateSet: null` を両立することをアサート。
+- `recordStepUsage`: `onConflictDoUpdateSet: { totalTokens }` で絶対値 SET かつ `onConflictDoNothing: false` をアサート。
+- `claimPending`: 1 transaction コール、`consumed_at = AT`（注入値）、`approvalState = 'consumed'`、戻り値 = rowCount (0 / 1 / 3) の 5 ケース。
+
+**7.2 — `apps/worker/src/stores.ts` へ実装**
+
+- `jobStep` / `and` / `sql` を import に追加。
+- `JobStepStore` interface と `createJobStepStore` factory を `JobStore` の直前に配置。
+- `registerPending`: `db.insert(jobStep).values({...}).onConflictDoNothing()`
+- `recordStepUsage`: `db.insert(jobStep).values({...}).onConflictDoUpdate({ target: [jobStep.jobId, jobStep.stepId], set: { totalTokens } })`
+- `claimPending`: `db.transaction` 内で select（sum）→ update（WHERE pending）→ `rowCount ?? 0` 返却。`consumed` → `pending` 逆向き API は意図的に提供しない。
+
+### PROVE 証拠（非空虚性）
+
+全 11 テストが実装前に `TypeError: createJobStepStore is not a function` で FAIL:
+
+```
+FAIL  worker  tests/stores-job-step.spec.ts
+  createJobStepStore.registerPending …
+  × inserts into the job_step table with approval_state = 'pending'
+  × uses ON CONFLICT DO NOTHING …
+  × does NOT use onConflictDoUpdate …
+  createJobStepStore.recordStepUsage …
+  × inserts into the job_step table with the supplied totalTokens
+  × uses onConflictDoUpdate to SET total_tokens …
+  × does NOT use onConflictDoNothing …
+  createJobStepStore.claimPending …
+  × runs inside a single transaction
+  × sets consumed_at to the injected at timestamp …
+  × sets approval_state to 'consumed' on the updated rows
+  × returns the number of rows updated …
+  × returns 0 when no pending rows exist …
+  Tests  11 failed (11)
+```
+
+実装後に全 11 GREEN:
+
+```
+✓ worker  tests/stores-job-step.spec.ts (11 tests)  6ms
+```
+
+### Verification Gate
+
+```
+pnpm exec vitest run --project worker
+  Test Files  9 passed (9)
+  Tests       83 passed (83)
+
+mise run lint
+  Checked 165 files in 66ms. No fixes applied.
+
+mise run typecheck
+  apps/worker typecheck: Done (tsc --noEmit, 0 errors)
+  apps/web typecheck: Done
+```
+
+Worker test count delta: 72 → 83（+11 新規テスト、全件 stores-job-step.spec.ts）
