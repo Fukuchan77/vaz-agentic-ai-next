@@ -19,23 +19,23 @@
 
 | Requirement | Design | Task | Test | Commit |
 |-------------|--------|------|------|--------|
-| REQ-001 (1.1) | DES-3.1, DES-3.4 | T-2.3, T-3.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "Agentic document threat index has exactly 15 rows" (T-2.3 portion; full GREEN blocked on T-3.4) | |
-| REQ-001 (1.2) | DES-3.1, DES-3.3 | T-3.4 | | |
-| REQ-001 (1.3) | DES-3.1 | T-3.4 | | |
-| REQ-001 (1.4) | DES-3.1, DES-3.4 | T-3.4 | | |
-| REQ-001 (1.5) | DES-3.1, DES-3.4 | T-3.3, T-3.4 | | |
-| REQ-001 (1.6) | DES-3.1, DES-3.4, DES-5.4 | T-2.3, T-3.2, T-3.5, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "index has 15 rows" + "every threat section is listed exactly once" (T-2.3 guard; full GREEN on T-4.4 document) | |
-| REQ-002 (2.1) | DES-3.1, DES-3.2, DES-3.3, DES-3.4 | T-2.3, T-3.2, T-3.3, T-4.2 | `tests/repo/owasp-mapping-citations.spec.ts` — "each threat section has exactly one status line" (T-2.3 guard; full GREEN on T-3/T-4 docs) | |
-| REQ-002 (2.2) | DES-3.1, DES-3.2, DES-3.4 | T-3.3, T-4.2 | | |
-| REQ-002 (2.3) | DES-3.1, DES-3.2, DES-3.4 | T-2.3, T-3.3, T-4.2 | `tests/repo/owasp-mapping-citations.spec.ts` — "acceptance-status sections carry a re-evaluation trigger" (T-2.3 guard; full GREEN on T-3/T-4 docs) | |
-| REQ-002 (2.4) | DES-3.1, DES-3.2 | T-3.3, T-4.2 | | |
-| REQ-002 (2.5) | DES-3.3 | T-3.2, T-4.1 | | |
-| REQ-002 (2.6) | DES-3.1, DES-3.2 | T-3.3, T-4.3 | | |
-| REQ-003 (3.1) | DES-3.1 | T-3.1 | | |
-| REQ-003 (3.2) | DES-3.1 | T-3.1 | | |
-| REQ-003 (3.3) | DES-3.1, DES-3.2, DES-3.4 | T-3.2, T-4.1, T-4.4 | | |
-| REQ-003 (3.4) | DES-3.1, DES-3.2, DES-3.13 | T-3.1, T-4.3 | | |
-| REQ-003 (3.5) | DES-3.1, DES-3.2 | T-3.1, T-4.3 | | |
+| REQ-001 (1.1) | DES-3.1, DES-3.4 | T-2.3, T-3.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "Agentic document threat index has exactly 15 rows" ✓ (guard + doc both green) | `4c4e0b8` |
+| REQ-001 (1.2) | DES-3.1, DES-3.3 | T-3.4 | `tests/repo/owasp-mapping-citations.spec.ts` — T11-T15 sections present, each with status token | `4c4e0b8` |
+| REQ-001 (1.3) | DES-3.1 | T-3.4 | `tests/repo/owasp-mapping-citations.spec.ts` — symbol citations for WorkflowStepRunner/SpecialistUnavailableError resolve in supervisor.ts | `4c4e0b8` |
+| REQ-001 (1.4) | DES-3.1, DES-3.4 | T-3.4 | `tests/repo/owasp-mapping-citations.spec.ts` — T11-T15 each have Accepted/Partial · accepted + 再評価トリガ | `4c4e0b8` |
+| REQ-001 (1.5) | DES-3.1, DES-3.4 | T-3.3, T-3.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all path citations" + "all symbol citations" green (Agentic doc) | `4c4e0b8` |
+| REQ-001 (1.6) | DES-3.1, DES-3.4, DES-5.4 | T-2.3, T-3.2, T-3.5, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "index has 15 rows" + "every threat section is listed exactly once" ✓ | `4c4e0b8` |
+| REQ-002 (2.1) | DES-3.1, DES-3.2, DES-3.3, DES-3.4 | T-2.3, T-3.2, T-3.3, T-4.2 | `tests/repo/owasp-mapping-citations.spec.ts` — "status-line count … exactly 1 per section" green (Agentic doc) | `4c4e0b8` |
+| REQ-002 (2.2) | DES-3.1, DES-3.2, DES-3.4 | T-3.3, T-4.2 | `tests/repo/owasp-mapping-citations.spec.ts` — no旧2値 markers in Agentic doc (guard passes) | `4c4e0b8` |
+| REQ-002 (2.3) | DES-3.1, DES-3.2, DES-3.4 | T-2.3, T-3.3, T-4.2 | `tests/repo/owasp-mapping-citations.spec.ts` — "all accepted sections … have re-evaluation triggers" green (Agentic doc) | `4c4e0b8` |
+| REQ-002 (2.4) | DES-3.1, DES-3.2 | T-3.3, T-4.2 | 再評価トリガ are concrete future events (human review; not verified mechanically — per plan) | `4c4e0b8` |
+| REQ-002 (2.5) | DES-3.3 | T-3.2, T-4.1 | `tests/repo/owasp-mapping-citations.spec.ts` — "preamble contains an ISO-8601 taxonomy version date" green (Agentic doc) | `4c4e0b8` |
+| REQ-002 (2.6) | DES-3.1, DES-3.2 | T-3.3, T-4.3 | Overwhelming HITL → Partial · accepted; Misaligned → Accepted; both have 再評価トリガ | `4c4e0b8` |
+| REQ-003 (3.1) | DES-3.1 | T-3.1 | `tests/repo/doc-links.spec.ts` — new filename resolves; `cross-repo-reference-resolution.spec.ts` green | `4c4e0b8` |
+| REQ-003 (3.2) | DES-3.1 | T-3.1 | Agentic doc has no ASI mention (grep confirms); filename now matches content | `4c4e0b8` |
+| REQ-003 (3.3) | DES-3.1, DES-3.2, DES-3.4 | T-3.2, T-4.1, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "preamble … ISO-8601 date" green (Agentic doc); LLM doc pending T-4 | `4c4e0b8` |
+| REQ-003 (3.4) | DES-3.1, DES-3.2, DES-3.13 | T-3.1, T-4.3 | `tests/repo/doc-links.spec.ts` ✓ all 6 reference files updated | `4c4e0b8` |
+| REQ-003 (3.5) | DES-3.1, DES-3.2 | T-3.1, T-4.3 | cross-ref docs/owasp-llm-top10-mapping.md:12 updated to new filename | `4c4e0b8` |
 | REQ-004 (4.1) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all path citations in … exist" (T-2.2 guard; full GREEN on T-4.4 documents) | |
 | REQ-004 (4.2) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all symbol citations in … are resolvable" (T-2.2 guard; full GREEN on T-4.4 documents) | |
 | REQ-004 (4.3) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all CI citations in … are valid" (T-2.2 guard; full GREEN on T-4.4 documents) | |
@@ -81,7 +81,7 @@
 | REQ-011 (11.1) | DES-3.13 | T-12.2 | | |
 | REQ-011 (11.2) | DES-3.13 | T-12.1 | | |
 | REQ-011 (11.3) | DES-3.13 | T-12.1 | | |
-| REQ-011 (11.4) | DES-3.13 | T-3.1, T-12.1 | | |
+| REQ-011 (11.4) | DES-3.13 | T-3.1, T-12.1 | `tests/repo/doc-links.spec.ts` ✓ — link-only corrections in review.md §7.6 and specs/review/… (T-3.1 done; §8 addendum pending T-12) | `4c4e0b8` |
 | REQ-011 (11.5) | DES-3.13 | T-12.3 | | |
 | REQ-011 (11.6) | DES-3.5, DES-3.13 | T-1.1, T-1.2, T-3.1, T-12.3 | `tests/repo/cross-repo-reference-resolution.spec.ts` — "QUALIFIED_FORM regression" describe (3 tests: T-1.1 pin; T-1.2 fix verified by same tests) | |
 | REQ-011 (11.7) | DES-3.13 | T-12.1 | | |
