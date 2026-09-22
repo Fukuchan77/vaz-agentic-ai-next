@@ -32,14 +32,14 @@ _Depends:_ none
 _Requirements:_ 11.6
 _Traces:_ REQ-011, DES-3.5
 
-- [ ] 1.1 相対リンク形（2 階層上を指す `../` 付きの正本レビュー参照）を含む入力に対して、
+- [x] 1.1 相対リンク形（2 階層上を指す `../` 付きの正本レビュー参照）を含む入力に対して、
       現行の `QUALIFIED_FORM` が `..` をリポジトリ名として捕捉し stale 判定に落ちることを
       回帰ケースとして先に固定する（実測 I-8 をテストの形にする。この時点で赤）
   _Boundary:_ `tests/repo/cross-repo-reference-resolution.spec.ts`
   _Depends:_ none
   _Requirements:_ 11.6
   _Traces:_ REQ-011, DES-3.5
-- [ ] 1.2 `QUALIFIED_FORM` が捕捉した候補名のうち相対パス断片（`.` / `..`）を stale 判定の
+- [x] 1.2 `QUALIFIED_FORM` が捕捉した候補名のうち相対パス断片（`.` / `..`）を stale 判定の
       対象外にし、既存 4 テストの意図とアサーション文言を変えずに `repo` プロジェクトを
       緑へ戻す。コードスパン内の言及（`stripCode` 不在）は本タスクでは塞がず、既知の限界として残す
   _Boundary:_ `tests/repo/cross-repo-reference-resolution.spec.ts`
@@ -49,8 +49,12 @@ _Traces:_ REQ-011, DES-3.5
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- `QUALIFIED_FORM` をモジュール先頭定数へ昇格（`[A-Za-z0-9_-]+`、ドット除外）することで、
+  回帰テストと既存テストが同一の regex を共有し、戻し変更が即座に両スイートを赤にする
+- 修正 1 行（ドット除外）で 3 つの回帰テストが GREEN、既存 4 テストの意図・文言は無変更
+- コードスパン内言及の偽陽性（第 2 クラス）は plan.md C-5 の既知限界として残す。既存の
+  `findReferencingFiles` が `text.includes("cross-repo-adoption-review")` で全行を拾う限り
+  この限界は構造的に存在するが、現在の `repo` 走査範囲内では実害がない
 
 ---
 

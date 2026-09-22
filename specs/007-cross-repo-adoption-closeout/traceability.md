@@ -83,7 +83,7 @@
 | REQ-011 (11.3) | DES-3.13 | T-12.1 | | |
 | REQ-011 (11.4) | DES-3.13 | T-3.1, T-12.1 | | |
 | REQ-011 (11.5) | DES-3.13 | T-12.3 | | |
-| REQ-011 (11.6) | DES-3.5, DES-3.13 | T-1.1, T-1.2, T-3.1, T-12.3 | | |
+| REQ-011 (11.6) | DES-3.5, DES-3.13 | T-1.1, T-1.2, T-3.1, T-12.3 | `tests/repo/cross-repo-reference-resolution.spec.ts` — "QUALIFIED_FORM regression" describe (3 tests: T-1.1 pin; T-1.2 fix verified by same tests) | |
 | REQ-011 (11.7) | DES-3.13 | T-12.1 | | |
 | REQ-012 (12.1) | DES-3.14 | T-13.2 | | |
 | REQ-012 (12.2) | DES-3.14 | T-13.2 | | |
