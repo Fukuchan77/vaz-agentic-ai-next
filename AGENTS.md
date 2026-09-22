@@ -21,6 +21,9 @@ Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnp
 | Type check | `mise run typecheck` | `pnpm -r run typecheck` (standalone: `pnpm --filter @vaz/evals run typecheck`) |
 | DB baseline migrations | `mise run db:migrate` | `pnpm --filter @vaz/db run migrate` |
 | Aggregate gate (pre-commit) | `mise run check` | Runs `lint`, `typecheck`, `test:run`, `audit`, `lint:model-ids` |
+| Secret scan (full history) | `mise run secret-scan` | `gitleaks git --redact .` (baseline: `.gitleaksignore`) |
+| Secret scan (staged diff) | `mise run secret-scan:staged` | `gitleaks git --staged --redact .` (pre-commit leg) |
+| Secret scan report (triage) | `mise run secret-scan:report` | Unredacted JSON to `/tmp/gitleaks-report.json`, for baseline regeneration |
 | Python sidecar (`services/agent`) | `mise run py:check` | `cd services/agent && uv sync && uv run ruff check . && uv run pyright && uv run pytest` |
 | Python API lane (`services/api`) | `mise run api:check` | `cd services/api && uv sync && uv run ruff check app/ evals/ tests/ && uv run ty check app/ evals/ && uv run pytest tests/unit/ tests/integration/ tests/e2e/ -v` |
 | Single Python test (`services/agent`) | — | `cd services/agent && uv run pytest tests/test_eval.py::test_name -v` |
