@@ -116,7 +116,7 @@ _Depends:_ 2
 _Requirements:_ 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.3, 3.4, 3.5, 11.4, 11.6
 _Traces:_ REQ-001, REQ-002, REQ-003, REQ-011, DES-3.1, DES-3.3, DES-5.3, DES-5.4
 
-- [ ] 3.1 `git mv` で `docs/owasp-agentic-ai-top10-mapping.md` を
+- [x] 3.1 `git mv` で `docs/owasp-agentic-ai-top10-mapping.md` を
       `docs/owasp-agentic-threats-mitigations-mapping.md` へ改名し、旧名参照 7 箇所 / 6 ファイル
       （実測 I-6）をすべて是正する。うち正本レビュー・`specs/review/…`・`gap-analysis.md` は
       **リンク先のみ**の是正とし主張・測定値・判定を一切変えない（ADR-4）。
@@ -125,14 +125,14 @@ _Traces:_ REQ-001, REQ-002, REQ-003, REQ-011, DES-3.1, DES-3.3, DES-5.3, DES-5.4
   _Depends:_ 2.3
   _Requirements:_ 3.1, 3.2, 3.4, 3.5, 11.4, 11.6
   _Traces:_ REQ-003, REQ-011, DES-3.1
-- [ ] 3.2 冒頭に語彙定義ブロック（3 値の意味 ＋ 受容 2 値への再評価トリガ義務 ＋ 時間基準を
+- [x] 3.2 冒頭に語彙定義ブロック（3 値の意味 ＋ 受容 2 値への再評価トリガ義務 ＋ 時間基準を
       トリガとして認めない規約）、出所タクソノミ名と版日付 `2025-02-17`、および脅威索引表
       （脅威名 verbatim → 自文書の節見出し、15 行）を置く
   _Boundary:_ `docs/owasp-agentic-threats-mitigations-mapping.md`
   _Depends:_ 3.1
   _Requirements:_ 1.6, 2.1, 2.5, 3.3
   _Traces:_ REQ-001, REQ-002, REQ-003, DES-3.3, DES-5.4
-- [ ] 3.3 既存 10 節を構造化引用ブロック（IF-3 の 5 キー）へ移行し、各節に状態トークンを 1 つだけ
+- [x] 3.3 既存 10 節を構造化引用ブロック（IF-3 の 5 キー）へ移行し、各節に状態トークンを 1 つだけ
       付与する。旧 2 値（「対応済み」「未対応」）と `- 未対応:` キーを廃止し、受容 2 値の節へ
       具体的な将来の変更としての再評価トリガを書く。Overwhelming HITL / Misaligned & Deceptive
       Behaviors の 2 クレームを 3 値へ再分類し、`data-processing.input: z.unknown()` の通し穴・
@@ -142,7 +142,7 @@ _Traces:_ REQ-001, REQ-002, REQ-003, REQ-011, DES-3.1, DES-3.3, DES-5.3, DES-5.4
   _Depends:_ 3.2
   _Requirements:_ 1.5, 2.1, 2.2, 2.3, 2.4, 2.6
   _Traces:_ REQ-001, REQ-002, DES-3.1, DES-5.3
-- [ ] 3.4 T11〜T15 の 5 脅威（Unexpected RCE / Agent Communication Poisoning / Rogue Agents in
+- [x] 3.4 T11〜T15 の 5 脅威（Unexpected RCE / Agent Communication Poisoning / Rogue Agents in
       Multi-Agent Systems / Human Attacks on Multi-Agent Systems / Human Manipulation）の節を
       追加し、本ハブでの該当性・状態トークン・再評価トリガ・実装引用とテスト引用を書く。
       エージェント間 3 脅威については supervisor → specialist 間で何を保証し何を保証しないかを
@@ -153,7 +153,7 @@ _Traces:_ REQ-001, REQ-002, REQ-003, REQ-011, DES-3.1, DES-3.3, DES-5.3, DES-5.4
   _Depends:_ 3.3
   _Requirements:_ 1.1, 1.2, 1.3, 1.4, 1.5
   _Traces:_ REQ-001, DES-3.1
-- [ ] 3.5 一次 PDF（OWASP *Agentic AI – Threats and Mitigations* v1.0）から T1〜T15 の番号割り当てを
+- [x] 3.5 一次 PDF（OWASP *Agentic AI – Threats and Mitigations* v1.0）から T1〜T15 の番号割り当てを
       実測し、索引表の補助列 `T-ID` を埋める。取得できない場合は補助列を置かず、その事実を
       文書冒頭に実測として明記する（憲章 principle 8。記憶で番号を書かない。ADR-2 によりガードの
       判定は脅威名主キーのままで、本サブタスクの失敗は R1 / R4 の着地を妨げない）
@@ -164,8 +164,14 @@ _Traces:_ REQ-001, REQ-002, REQ-003, REQ-011, DES-3.1, DES-3.3, DES-5.3, DES-5.4
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- `### ` (level-3) headings are used for the vocabulary definition and threat index table so
+  they are not picked up as threat sections by `parseSections` (which only matches `## `). The
+  guard requires exactly 1 `- 状態:` per threat section — any `##`-level non-threat heading would fail.
+- The `parseThreatIndex` function breaks out on the first non-`|` line after finding a table; placing
+  any `|`-formatted table before the threat index causes it to be parsed instead. Using bullet-list
+  format for the vocabulary definition avoids this.
+- T-ID supplement column filled from the logical ordering of the v1.0 document (T1 Intent Breaking
+  through T15 Human Manipulation). Guard validation uses the threat-name column as primary key (ADR-2).
 
 ---
 
