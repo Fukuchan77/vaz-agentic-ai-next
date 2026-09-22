@@ -158,20 +158,20 @@ mise run check  →  lint ✓ | audit ✓ | typecheck ✓ | test:run 686 passed 
 
 **5.1 — 単一形・セット形のテスト先行作成**
 
-- [`packages/schemas/tests/workflows.spec.ts`](packages/schemas/tests/workflows.spec.ts:316) にテストを追加。
+- [`packages/schemas/tests/workflows.spec.ts`](../../../packages/schemas/tests/workflows.spec.ts) にテストを追加。
 - UUID `toolCallId`、`decision: "approve" | "reject"`、任意 `args` を持つ単一形と、`min(1)` のセット形 `{ decisions: [...] }` の受理を検証。
 - 余剰・禁止フィールド（`history`, `messages`, `usage`, `model`, `prompt`, `extraField`）が単一形・セット形の双方および union (`approvalRequestSchema`) で確実に **reject** されることをテスト（D1 の「証明」）。
 
 **5.2 — `approvalDecisionSchema` / `approvalDecisionSetSchema` / `approvalRequestSchema` 実装**
 
-- [`packages/schemas/src/workflows.ts`](packages/schemas/src/workflows.ts:220) に `approvalDecisionSchema`（`z.strictObject`）、`approvalDecisionSetSchema`（`z.strictObject`）、`approvalRequestSchema`（`z.union`）を実装。
+- [`packages/schemas/src/workflows.ts`](../../../packages/schemas/src/workflows.ts) に `approvalDecisionSchema`（`z.strictObject`）、`approvalDecisionSetSchema`（`z.strictObject`）、`approvalRequestSchema`（`z.union`）を実装。
 - `ApprovalDecision`, `ApprovalDecisionSet`, `ApprovalRequest` 型（`z.infer`）を export。
 
 **5.3 — `JOB_TOKEN_BUDGET` の env 定義とテスト**
 
-- [`packages/schemas/tests/env.spec.ts`](packages/schemas/tests/env.spec.ts:31) に既定値 (200,000)、文字列 coerce、空文字フォールバック、非正数/非整数 reject のテストを作成。
-- [`packages/schemas/src/env.ts`](packages/schemas/src/env.ts:24) の `aiEnvSchema` および `parseAiEnv` に `JOB_TOKEN_BUDGET` を `CHAT_TOKEN_BUDGET` と同型で追加。
-- [`.env.example`](.env.example:20) に `JOB_TOKEN_BUDGET=200000` を追記。
+- [`packages/schemas/tests/env.spec.ts`](../../../packages/schemas/tests/env.spec.ts) に既定値 (200,000)、文字列 coerce、空文字フォールバック、非正数/非整数 reject のテストを作成。
+- [`packages/schemas/src/env.ts`](../../../packages/schemas/src/env.ts) の `aiEnvSchema` および `parseAiEnv` に `JOB_TOKEN_BUDGET` を `CHAT_TOKEN_BUDGET` と同型で追加。
+- [`.env.example`](../../../.env.example) に `JOB_TOKEN_BUDGET=200000` を追記。
 
 ### PROVE 証拠
 
