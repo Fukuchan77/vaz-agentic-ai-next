@@ -272,21 +272,21 @@ _Depends:_ 4
 _Requirements:_ 6.6, 7.1, 7.5
 _Traces:_ REQ-006, REQ-007, DES-3.9, DES-4
 
-- [ ] 6.1 `packages/db/tests/schema.spec.ts` に先にテストを書く: `jobStep` の列・複合 PK
+- [x] 6.1 `packages/db/tests/schema.spec.ts` に先にテストを書く: `jobStep` の列・複合 PK
       `(job_id, step_id)`・`job.id` への FK cascade・`approvalStateEnum` の値順
       （`pending` / `consumed`）・`total_tokens` の NOT NULL DEFAULT 0
   _Boundary:_ `packages/db/tests/schema.spec.ts`
   _Depends:_ 4.4
   _Requirements:_ 6.6, 7.1
   _Traces:_ REQ-006, REQ-007, DES-4
-- [ ] 6.2 `packages/db/src/schema.ts` に `approvalStateEnum` と `jobStep`（`approval_state` は
+- [x] 6.2 `packages/db/src/schema.ts` に `approvalStateEnum` と `jobStep`（`approval_state` は
       NULL 可 = 承認を要しない step）＋ `drizzle-zod` の insert / select 契約を追加する。
       既存 6 テーブルは無改変で、とくに `jobEventTypeEnum` に値を足さない
   _Boundary:_ `packages/db/src/schema.ts`
   _Depends:_ 6.1
   _Requirements:_ 6.6, 7.1, 7.5
   _Traces:_ REQ-006, REQ-007, DES-3.9, DES-4
-- [ ] 6.3 `packages/db/drizzle/0002_add_job_step.sql` を手書き SQL で作成し（lexical order で
+- [x] 6.3 `packages/db/drizzle/0002_add_job_step.sql` を手書き SQL で作成し（lexical order で
       冪等適用、`mise run db:migrate`）、`packages/db/tests/schema-ddl.spec.ts` の import 一覧へ
       `jobStep` / `approvalStateEnum` を追加してドリフト検査の対象に含める。追加インデックスは
       置かない（複合 PK が `sum` と条件付き UPDATE の双方を賄う）
@@ -297,8 +297,9 @@ _Traces:_ REQ-006, REQ-007, DES-3.9, DES-4
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- `job_step` テーブルおよび `approval_state` pg enum を追加し、drizzle-zod 契約（insert / select）を定義した。
+- `0002_add_job_step.sql` の DDL マイグレーションを作成し、`schema-ddl.spec.ts` のパーサーに複合主キー `CONSTRAINT ... PRIMARY KEY` の解釈サポートを追加して DDL ドリフト検査を完全通過させた。
+- 既存の 6 テーブルおよび `jobEventTypeEnum` に変更を加えず、SSE 公開契約への影響を与えない後方互換性を維持した。
 
 ---
 

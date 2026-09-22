@@ -54,12 +54,12 @@
 | REQ-006 (6.3) | DES-3.8, DES-3.12, DES-5.1 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-006 (6.4) | DES-3.8, DES-3.12, DES-5.1 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-006 (6.5) | DES-3.12 | T-10.3 | | |
-| REQ-006 (6.6) | DES-3.9, DES-4 | T-6.1, T-6.2, T-6.3, T-7.2, T-8.1, T-8.2 | | |
-| REQ-007 (7.1) | DES-3.9, DES-3.11, DES-4 | T-6.1, T-6.2, T-7.1, T-7.2, T-8.1, T-8.2 | | |
+| REQ-006 (6.6) | DES-3.9, DES-4 | T-6.1, T-6.2, T-6.3, T-7.2, T-8.1, T-8.2 | `packages/db/tests/schema.spec.ts` (`job_step` columns, composite PK, FK cascade) + `packages/db/tests/schema-ddl.spec.ts` (`0002_add_job_step.sql` drift guard) | `18d7330` |
+| REQ-007 (7.1) | DES-3.9, DES-3.11, DES-4 | T-6.1, T-6.2, T-7.1, T-7.2, T-8.1, T-8.2 | `packages/db/tests/schema.spec.ts` (`approvalStateEnum`, `total_tokens` default 0) | `18d7330` |
 | REQ-007 (7.2) | DES-3.8, DES-3.12 | T-9.1, T-9.3, T-10.1, T-10.2 | | |
 | REQ-007 (7.3) | DES-3.8, DES-3.12 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-007 (7.4) | DES-3.10, DES-5.5 | T-5.3 | `packages/schemas/tests/env.spec.ts` — `aiEnvSchema JOB_TOKEN_BUDGET` (default 200_000, coerce, positive/int constraints) | `4d60458` |
-| REQ-007 (7.5) | DES-3.9, DES-4 | T-6.2, T-13.2 | | |
+| REQ-007 (7.5) | DES-3.9, DES-4 | T-6.2, T-13.2 | `packages/db/tests/schema.spec.ts` (existing 6 tables & `jobEventTypeEnum` unchanged) | `18d7330` |
 | REQ-007 (7.6) | DES-3.8, DES-3.11 | T-8.1, T-8.2, T-9.3 | | |
 | REQ-008 (8.1) | DES-3.8 | T-9.1, T-9.2, T-9.4 | | |
 | REQ-008 (8.2) | DES-3.6, DES-3.8 | T-9.4, T-11.2 | | |

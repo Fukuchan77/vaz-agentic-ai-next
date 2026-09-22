@@ -6,6 +6,7 @@ import {
 	jsonb,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	text,
 	timestamp,
 	uniqueIndex,
@@ -197,6 +198,33 @@ export const auditLog = pgTable(
 	(table) => [index("audit_log_job_id_idx").on(table.jobId)],
 );
 
+/**
+ * Step approval states (R7.1). Nullable in `job_step` — a null value denotes
+ * a step that does not require HITL approval. Transitions from pending to consumed
+ * only; never transitioned back to pending.
+ */
+export const approvalStateEnum = pgEnum("approval_state", ["pending", "consumed"]);
+
+/**
+ * Per-step state and observed usage persistence (R7.1 / R7.5).
+ * Composite PK (job_id, step_id) backs single-transaction usage aggregation
+ * and conditional pending→consumed updates without extra indexes.
+ */
+export const jobStep = pgTable(
+	"job_step",
+	{
+		jobId: uuid("job_id")
+			.notNull()
+			.references(() => job.id, { onDelete: "cascade" }),
+		stepId: uuid("step_id").notNull(),
+		approvalState: approvalStateEnum("approval_state"),
+		consumedAt: timestamp("consumed_at", { withTimezone: true }),
+		totalTokens: integer("total_tokens").notNull().default(0),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [primaryKey({ columns: [table.jobId, table.stepId] })],
+);
+
 // drizzle-zod contracts — single-sourced from the tables (mirrors the RAG set).
 export const jobInsertSchema = createInsertSchema(job);
 export const jobSelectSchema = createSelectSchema(job);
@@ -204,3 +232,5 @@ export const jobEventInsertSchema = createInsertSchema(jobEvent);
 export const jobEventSelectSchema = createSelectSchema(jobEvent);
 export const auditLogInsertSchema = createInsertSchema(auditLog);
 export const auditLogSelectSchema = createSelectSchema(auditLog);
+export const jobStepInsertSchema = createInsertSchema(jobStep);
+export const jobStepSelectSchema = createSelectSchema(jobStep);
