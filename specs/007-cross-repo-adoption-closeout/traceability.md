@@ -19,15 +19,15 @@
 
 | Requirement | Design | Task | Test | Commit |
 |-------------|--------|------|------|--------|
-| REQ-001 (1.1) | DES-3.1, DES-3.4 | T-2.3, T-3.4 | | |
+| REQ-001 (1.1) | DES-3.1, DES-3.4 | T-2.3, T-3.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "Agentic document threat index has exactly 15 rows" (T-2.3 portion; full GREEN blocked on T-3.4) | |
 | REQ-001 (1.2) | DES-3.1, DES-3.3 | T-3.4 | | |
 | REQ-001 (1.3) | DES-3.1 | T-3.4 | | |
 | REQ-001 (1.4) | DES-3.1, DES-3.4 | T-3.4 | | |
 | REQ-001 (1.5) | DES-3.1, DES-3.4 | T-3.3, T-3.4 | | |
-| REQ-001 (1.6) | DES-3.1, DES-3.4, DES-5.4 | T-2.3, T-3.2, T-3.5, T-4.4 | | |
-| REQ-002 (2.1) | DES-3.1, DES-3.2, DES-3.3, DES-3.4 | T-2.3, T-3.2, T-3.3, T-4.2 | | |
+| REQ-001 (1.6) | DES-3.1, DES-3.4, DES-5.4 | T-2.3, T-3.2, T-3.5, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "index has 15 rows" + "every threat section is listed exactly once" (T-2.3 guard; full GREEN on T-4.4 document) | |
+| REQ-002 (2.1) | DES-3.1, DES-3.2, DES-3.3, DES-3.4 | T-2.3, T-3.2, T-3.3, T-4.2 | `tests/repo/owasp-mapping-citations.spec.ts` — "each threat section has exactly one status line" (T-2.3 guard; full GREEN on T-3/T-4 docs) | |
 | REQ-002 (2.2) | DES-3.1, DES-3.2, DES-3.4 | T-3.3, T-4.2 | | |
-| REQ-002 (2.3) | DES-3.1, DES-3.2, DES-3.4 | T-2.3, T-3.3, T-4.2 | | |
+| REQ-002 (2.3) | DES-3.1, DES-3.2, DES-3.4 | T-2.3, T-3.3, T-4.2 | `tests/repo/owasp-mapping-citations.spec.ts` — "acceptance-status sections carry a re-evaluation trigger" (T-2.3 guard; full GREEN on T-3/T-4 docs) | |
 | REQ-002 (2.4) | DES-3.1, DES-3.2 | T-3.3, T-4.2 | | |
 | REQ-002 (2.5) | DES-3.3 | T-3.2, T-4.1 | | |
 | REQ-002 (2.6) | DES-3.1, DES-3.2 | T-3.3, T-4.3 | | |
@@ -36,14 +36,14 @@
 | REQ-003 (3.3) | DES-3.1, DES-3.2, DES-3.4 | T-3.2, T-4.1, T-4.4 | | |
 | REQ-003 (3.4) | DES-3.1, DES-3.2, DES-3.13 | T-3.1, T-4.3 | | |
 | REQ-003 (3.5) | DES-3.1, DES-3.2 | T-3.1, T-4.3 | | |
-| REQ-004 (4.1) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | | |
-| REQ-004 (4.2) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | | |
-| REQ-004 (4.3) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | | |
-| REQ-004 (4.4) | DES-3.4 | T-2.3, T-4.4 | | |
-| REQ-004 (4.5) | DES-3.4 | T-2.3, T-4.4 | | |
-| REQ-004 (4.6) | DES-3.4 | T-2.1 | | |
-| REQ-004 (4.7) | DES-3.4 | T-2.1 | | |
-| REQ-004 (4.8) | DES-3.4 | T-2.1 | | |
+| REQ-004 (4.1) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all path citations in … exist" (T-2.2 guard; full GREEN on T-4.4 documents) | |
+| REQ-004 (4.2) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all symbol citations in … are resolvable" (T-2.2 guard; full GREEN on T-4.4 documents) | |
+| REQ-004 (4.3) | DES-3.4, DES-5.3 | T-2.2, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all CI citations in … are valid" (T-2.2 guard; full GREEN on T-4.4 documents) | |
+| REQ-004 (4.4) | DES-3.4 | T-2.3, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "all status tokens in … are valid" (T-2.3 guard; full GREEN on T-4.4 documents) | |
+| REQ-004 (4.5) | DES-3.4 | T-2.3, T-4.4 | `tests/repo/owasp-mapping-citations.spec.ts` — "preamble contains an ISO-8601 taxonomy version date" (T-2.3 guard; full GREEN on T-4.4 documents) | |
+| REQ-004 (4.6) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` — "exactly 2 mapping documents are declared" + per-doc "document exists" + "> 0" non-empty asserts (T-2.1 ✓) | |
+| REQ-004 (4.7) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` — "document exists: docs/owasp-*.md" asserts (T-2.1 ✓) | |
+| REQ-004 (4.8) | DES-3.4 | T-2.1 | `tests/repo/owasp-mapping-citations.spec.ts` lives in `tests/repo/` project, no new workflow file added (T-2.1 ✓) | |
 | REQ-005 (5.1) | DES-3.7 | T-5.1, T-5.2 | | |
 | REQ-005 (5.2) | DES-3.7, DES-3.8, DES-3.12, DES-5.1 | T-5.1, T-5.2, T-10.1, T-10.2 | | |
 | REQ-005 (5.3) | DES-3.12, DES-7 | T-10.1, T-10.2 | | |
