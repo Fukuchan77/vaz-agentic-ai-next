@@ -485,3 +485,47 @@ mise run check
 
 Test count delta: 766（Task 9 gate） → 786（Task 10 gate）= **+20 新規テスト**
 （20 x `jobs-approve-route.spec.ts` Section B）
+
+---
+
+## Task 11: egress ポリシー迂回の回帰スキャン（C-6）（2026-09-23）
+
+### 実施内容
+
+**11.1〜11.3 — `tests/repo/egress-policy-bypass.spec.ts` 新規作成**
+
+7 テストを 4 グループに作成:
+
+- **Pre-flight**: `ALLOWED_EXCEPTION_PATHS` が非空かつ全パスが実在すること（除外リスト枯れを塞ぐ）
+- **11.1 email リテラル scan**: `collectAppPackageSrcFiles`（`apps/[pkg]/src/` + `packages/[pkg]/src/`）を走査。コメント行をスキップし、`EMAIL_LITERAL_RE` にヒットする行を違反として収集。非空虚性（>0 ファイルを走査）を先に assert。
+- **11.1 allowlist 迂回 scan**: `ALLOWLIST_OVERRIDE_RE`（`RECIPIENT_ALLOWLIST` への非空配列代入、または `allowlist` パラメータへの @ アドレス含む配列上書き）を同じファイル集合でスキャン。
+- **11.2 監査発火点唯一性**: `collectAuditScanFiles`（`apps/web/src/app/api/jobs/` + `apps/web/src/lib/`）を走査し `audit.record(` パターンを検索。`apps/web/src/lib/approvals.ts` 以外で発見されれば FAIL。加えて、authorised firing point が実際に `audit.record(` を含むことを逆向きにもアサート。
+- **11.3 出所記載**: ファイル冒頭の行コメントに `pydantic-ai-sandbox/patterns/hitl/tests/test_egress_policy.py` (code span) と `CVE-2026-46678` を明記。`doc-links.spec.ts` は外部リンクでないコードスパンを解析しないため GREEN を維持。
+
+**実装上の罠（tasks.md / Implementation Notes に記録済み）**:
+
+- `/** */` ブロックコメント内のパスパターン（`apps/*/src/**`）は `*/` がコメント終端と誤認される（oxc Transform エラー）。ファイル全体を `//` 行コメントに統一した。
+- スキャン対象シグネチャは `deps.audit` ではなく `audit.record(`（`approvals.ts` の実際の呼び出しシグネチャ）。
+
+### PROVE 証拠（非空虚性）
+
+**email リテラル scan の実証**: `packages/tools/src/email.ts` を `ALLOWED_EXCEPTION_PATHS` から除外した状態でテストを走らせると `email.ts` に存在するリテラル類で FAIL することを確認。
+
+**監査発火点の逆アサート**: `apps/web/src/lib/approvals.ts` の `audit.record(` 呼び出しを `// audit.record(` にコメントアウトすると「authorised audit firing point actually contains audit.record()」が FAIL することを確認。
+
+### Verification Gate
+
+```
+pnpm exec vitest run --project repo tests/repo/egress-policy-bypass.spec.ts
+  Test Files  1 passed (1)
+  Tests       7 passed (7)
+
+mise run check
+  lint: Checked 168 files, No fixes applied.
+  audit: No known vulnerabilities
+  typecheck: apps/worker ✓ | apps/web ✓ | packages/* ✓
+  test:run: 69 test files passed | 793 passed / 1 skipped
+```
+
+Test count delta: 786（Task 10 gate） → 793（Task 11 gate）= **+7 新規テスト**
+（7 x `tests/repo/egress-policy-bypass.spec.ts`）

@@ -492,7 +492,7 @@ _Depends:_ 10
 _Requirements:_ 8.2, 8.5, 10.1, 10.2, 10.3, 10.4, 10.5
 _Traces:_ REQ-008, REQ-010, DES-3.6
 
-- [ ] 11.1 `tests/repo/egress-policy-bypass.spec.ts` を新規作成し、`apps/*/src/**` ＋
+- [x] 11.1 `tests/repo/egress-policy-bypass.spec.ts` を新規作成し、`apps/*/src/**` ＋
       `packages/*/src/**` を 1 回走査して 2 クラスを検出する: メールアドレス形リテラル、
       および許可リスト判定の短絡（`isAllowedRecipient` / `assertAllowedRecipient` を伴わない
       宛先決定、許可リストを非空リテラルで上書きする記述）。走査ファイル数の非空アサートを
@@ -502,7 +502,7 @@ _Traces:_ REQ-008, REQ-010, DES-3.6
   _Depends:_ 10.3
   _Requirements:_ 10.1, 10.2, 10.3, 10.5
   _Traces:_ REQ-010, DES-3.6
-- [ ] 11.2 同じ走査に監査発火点の唯一性アサートを相乗りさせる: `apps/web/src/app/api/jobs/**` ＋
+- [x] 11.2 同じ走査に監査発火点の唯一性アサートを相乗りさせる: `apps/web/src/app/api/jobs/**` ＋
       `apps/web/src/lib/**` のうち `deps.audit` を呼ぶファイルが `apps/web/src/lib/approvals.ts`
       の 1 本だけであること。走査範囲に `packages/agents/**` を含めず、ツール実行監査
       （`audit-hook.ts` を発火点とする fail-loud 経路）の方針を変更しないことを明示する
@@ -510,7 +510,7 @@ _Traces:_ REQ-008, REQ-010, DES-3.6
   _Depends:_ 11.1
   _Requirements:_ 8.2, 8.5
   _Traces:_ REQ-008, DES-3.6
-- [ ] 11.3 ドックコメントに出所（`pydantic-ai-sandbox` の対応テストを**コードスパン**で書き
+- [x] 11.3 ドックコメントに出所（`pydantic-ai-sandbox` の対応テストを**コードスパン**で書き
       `doc-links.spec.ts` を壊さない）と `CVE-2026-46678` を明記する
   _Boundary:_ `tests/repo/egress-policy-bypass.spec.ts`
   _Depends:_ 11.2
@@ -519,8 +519,12 @@ _Traces:_ REQ-008, REQ-010, DES-3.6
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- `/** */` ブロックコメント内に `apps/*/src/**` のような glob パターン（`*/` が入る）を書くと oxc
+  パーサがブロックコメントの終端と誤認する。ファイル全体を `//` 行コメントに切り替えることで解決した。
+- 監査発火点スキャンのターゲットが `deps.audit` ではなく `audit.record(` であることに注意。
+  `approvals.ts` 内では `audit.record(` で呼ぶため、そのシグネチャでグレップする。
+- RECIPIENT_ALLOWLIST の定義ファイル（`allowlist.ts`）と唯一の正規呼び出し元（`email.ts`）を
+  除外リストに明示し、除外リストの非空性・実在を先頭テストで保証することで偽陽性緑を封じた。
 
 ---
 
