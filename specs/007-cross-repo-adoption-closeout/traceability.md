@@ -49,18 +49,18 @@
 | REQ-005 (5.3) | DES-3.12, DES-7 | T-10.1, T-10.2 | | |
 | REQ-005 (5.4) | DES-3.12 | T-10.1 | | |
 | REQ-005 (5.5) | DES-3.8, DES-3.12 | T-9.2, T-10.2 | | |
-| REQ-006 (6.1) | DES-3.9, DES-3.11, DES-5.2 | T-7.1, T-7.2, T-8.1, T-8.2, T-8.3, T-9.3 | `apps/worker/tests/stores-job-step.spec.ts` — registerPending ON CONFLICT DO NOTHING; claimPending returns affected row count | pending |
+| REQ-006 (6.1) | DES-3.9, DES-3.11, DES-5.2 | T-7.1, T-7.2, T-8.1, T-8.2, T-8.3, T-9.3 | `apps/worker/tests/stores-job-step.spec.ts` — registerPending ON CONFLICT DO NOTHING; claimPending returns affected row count; `apps/worker/tests/main.spec.ts` — "INV-1: registerPending is called … before approvalGate"; "re-executing same stepId calls registerPending again"; `apps/worker/tests/durability.spec.ts` — submitApproval id field ✓ | pending |
 | REQ-006 (6.2) | DES-3.8, DES-3.12, DES-5.1 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-006 (6.3) | DES-3.8, DES-3.12, DES-5.1 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-006 (6.4) | DES-3.8, DES-3.12, DES-5.1 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-006 (6.5) | DES-3.12 | T-10.3 | | |
-| REQ-006 (6.6) | DES-3.9, DES-4 | T-6.1, T-6.2, T-6.3, T-7.2, T-8.1, T-8.2 | `packages/db/tests/schema.spec.ts` (`job_step` columns, composite PK, FK cascade) + `packages/db/tests/schema-ddl.spec.ts` (`0002_add_job_step.sql` drift guard) | `18d7330` |
-| REQ-007 (7.1) | DES-3.9, DES-3.11, DES-4 | T-6.1, T-6.2, T-7.1, T-7.2, T-8.1, T-8.2 | `packages/db/tests/schema.spec.ts` (`approvalStateEnum`, `total_tokens` default 0) + `apps/worker/tests/stores-job-step.spec.ts` — registerPending / recordStepUsage / claimPending | `18d7330` |
+| REQ-006 (6.6) | DES-3.9, DES-4 | T-6.1, T-6.2, T-6.3, T-7.2, T-8.1, T-8.2 | `packages/db/tests/schema.spec.ts` (`job_step` columns, composite PK, FK cascade) + `packages/db/tests/schema-ddl.spec.ts` (`0002_add_job_step.sql` drift guard) + `apps/worker/tests/main.spec.ts` — "omitting jobStepStore is a no-op" ✓ | `18d7330` |
+| REQ-007 (7.1) | DES-3.9, DES-3.11, DES-4 | T-6.1, T-6.2, T-7.1, T-7.2, T-8.1, T-8.2 | `packages/db/tests/schema.spec.ts` (`approvalStateEnum`, `total_tokens` default 0) + `apps/worker/tests/stores-job-step.spec.ts` — registerPending / recordStepUsage / claimPending + `apps/worker/tests/main.spec.ts` — "recordStepUsage is called with totalTokens from the specialist's completion event" ✓ | `18d7330` |
 | REQ-007 (7.2) | DES-3.8, DES-3.12 | T-9.1, T-9.3, T-10.1, T-10.2 | | |
 | REQ-007 (7.3) | DES-3.8, DES-3.12 | T-9.3, T-10.1, T-10.2 | | |
 | REQ-007 (7.4) | DES-3.10, DES-5.5 | T-5.3 | `packages/schemas/tests/env.spec.ts` — `aiEnvSchema JOB_TOKEN_BUDGET` (default 200_000, coerce, positive/int constraints) | `4d60458` |
 | REQ-007 (7.5) | DES-3.9, DES-4 | T-6.2, T-13.2 | `packages/db/tests/schema.spec.ts` (existing 6 tables & `jobEventTypeEnum` unchanged) | `18d7330` |
-| REQ-007 (7.6) | DES-3.8, DES-3.11 | T-8.1, T-8.2, T-9.3 | | |
+| REQ-007 (7.6) | DES-3.8, DES-3.11 | T-8.1, T-8.2, T-9.3 | `apps/worker/tests/main.spec.ts` — "recordStepUsage is called with totalTokens from the specialist's completion event" (server-observed absolute value, R7.6) | pending |
 | REQ-008 (8.1) | DES-3.8 | T-9.1, T-9.2, T-9.4 | | |
 | REQ-008 (8.2) | DES-3.6, DES-3.8 | T-9.4, T-11.2 | | |
 | REQ-008 (8.3) | DES-3.8 | T-9.1, T-9.4 | | |
@@ -68,11 +68,11 @@
 | REQ-008 (8.5) | DES-3.6 | T-11.2, T-13.2 | | |
 | REQ-008 (8.6) | DES-3.8 | T-9.4 | | |
 | REQ-009 (9.1) | DES-3.7, DES-3.12 | T-5.1, T-5.2, T-10.1, T-10.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalDecisionSchema` accepts valid single decision | `4d60458` |
-| REQ-009 (9.2) | DES-3.8, DES-3.9, DES-5.2 | T-7.1, T-7.2, T-9.3, T-10.1 | `apps/worker/tests/stores-job-step.spec.ts` — claimPending single-transaction, conditional UPDATE WHERE pending (T-7.1/7.2 ✓; T-9.3/T-10.1 pending) | pending |
+| REQ-009 (9.2) | DES-3.8, DES-3.9, DES-5.2 | T-7.1, T-7.2, T-9.3, T-10.1 | `apps/worker/tests/stores-job-step.spec.ts` — claimPending single-transaction, conditional UPDATE WHERE pending (T-7.1/7.2 ✓; T-9.3/T-10.1 pending); `apps/worker/tests/main.spec.ts` — registerPending idempotency confirmed | pending |
 | REQ-009 (9.3) | DES-3.7, DES-3.8 | T-5.2, T-9.1, T-9.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalDecisionSetSchema` min(1) and strictObject | `4d60458` |
 | REQ-009 (9.4) | DES-3.7, DES-3.12 | T-5.1, T-5.2, T-10.1, T-10.2 | `packages/schemas/tests/workflows.spec.ts` — `approvalRequestSchema` discriminated union | `4d60458` |
 | REQ-009 (9.5) | DES-3.8, DES-3.12 | T-9.3, T-10.1, T-10.2 | | |
-| REQ-009 (9.6) | DES-3.8, DES-3.9 | T-7.1, T-7.2, T-9.3 | `apps/worker/tests/stores-job-step.spec.ts` — recordStepUsage absolute upsert (no increment, T-7.1/7.2 ✓; T-9.3 pending) | pending |
+| REQ-009 (9.6) | DES-3.8, DES-3.9 | T-7.1, T-7.2, T-9.3 | `apps/worker/tests/stores-job-step.spec.ts` — recordStepUsage absolute upsert (no increment, T-7.1/7.2 ✓; T-9.3 pending); `apps/worker/tests/main.spec.ts` — recordStepUsage called with absolute totalTokens ✓ | pending |
 | REQ-010 (10.1) | DES-3.6 | T-11.1 | | |
 | REQ-010 (10.2) | DES-3.6 | T-11.1 | | |
 | REQ-010 (10.3) | DES-3.6 | T-11.1 | | |
