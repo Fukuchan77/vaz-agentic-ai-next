@@ -156,27 +156,40 @@ export interface ClaimApprovalTargetsOptions {
  * Atomically consume the pending approval targets for `jobId` and return the
  * outcome (D2 / D3 / D5).
  *
- * A single `store.claimPending` call performs both:
- *   1. the cumulative-token read (budget gate — D3, R7.1–R7.3), and
- *   2. the conditional UPDATE from `pending` → `consumed` (consume-once — D2, R6.1).
+ * A single `store.claimPending` call, given the requested `stepIds`
+ * (`decisions.map(d => d.toolCallId)`), performs all three of:
+ *   1. the cumulative-token read (budget gate — D3, R7.1–R7.3),
+ *   2. the conditional, all-or-nothing UPDATE from `pending` → `consumed`
+ *      across the whole requested set (consume-once + pending-set atomicity
+ *      — D2/D5, R6.1/9.2/9.6), and
+ *   3. the mismatch check ("did every requested stepId match a pending row").
  *
  * Decision tree:
- *   - `rowCount === 0` → `not-claimable` (existence concealed — R6.2/6.4).
+ *   - `rowCount !== decisions.length` → `not-claimable` (existence concealed
+ *     — R6.2/6.4; covers "zero pending" AND "some but not all pending" alike,
+ *     so a caller can never learn *which* target in a mixed set was invalid).
  *   - `totalTokens >= budget` → `budget-exceeded`; rows remain consumed (R7.3).
  *   - Otherwise → `claimed`.
  *
- * IMPORTANT: the rows are ALWAYS consumed when `rowCount > 0`, even when the
- * budget is exceeded. This prevents a caller from circumventing the budget by
- * resending the same approval after a 429 response.
+ * IMPORTANT: the rows are ALWAYS consumed when the full set matched, even
+ * when the budget is exceeded. This prevents a caller from circumventing the
+ * budget by resending the same approval after a 429 response.
+ *
+ * The `rowCount !== decisions.length` comparison (rather than `rowCount ===
+ * 0`) is deliberate defense-in-depth: `store.claimPending` itself already
+ * rolls back to a partial `rowCount` on any mismatch (never silently reports
+ * a full claim), but this pure function does not assume that guarantee holds
+ * — it re-derives "fully claimed" from first principles.
  */
 export async function claimApprovalTargets(
 	options: ClaimApprovalTargetsOptions,
 ): Promise<ClaimOutcome> {
 	const { jobId, decisions, submittedAs, store, budget, at } = options;
 
-	const { rowCount, totalTokens } = await store.claimPending(jobId, at);
+	const stepIds = decisions.map((d) => d.toolCallId);
+	const { rowCount, totalTokens } = await store.claimPending(jobId, stepIds, at);
 
-	if (rowCount === 0) {
+	if (rowCount !== decisions.length) {
 		return { kind: "not-claimable", submittedAs };
 	}
 

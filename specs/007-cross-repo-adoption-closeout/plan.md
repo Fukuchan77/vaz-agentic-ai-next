@@ -440,15 +440,29 @@ recordStepUsage({ jobId, stepId, totalTokens }): Promise<void>
   INSERT … ON CONFLICT (job_id, step_id) DO UPDATE SET total_tokens = EXCLUDED.total_tokens
   → 絶対値の upsert。approval_state は触らない。
 
-claimPending({ jobId, stepIds, at }): Promise<{ claimed: number; cumulativeTokens: number }>
+claimPending(jobId, stepIds, at): Promise<{ rowCount: number; totalTokens: number }>
+  （as-built: 位置引数 3 つ。フィールド名は port 実装 `apps/worker/src/stores.ts` に合わせて
+   claimed → rowCount, cumulativeTokens → totalTokens。意味は変わらない）
   1 トランザクション:
-    cumulativeTokens ← SELECT COALESCE(sum(total_tokens),0) WHERE job_id = $1
-    claimed          ← UPDATE … SET approval_state='consumed', consumed_at=$at
-                         WHERE job_id=$1 AND step_id = ANY($2) AND approval_state='pending'
-                         の影響行数
-  → claimed === stepIds.length のときだけ「消費成功」。
-    それ以外は全体をロールバックし claimed を返す（R9.2 / R9.6「いずれも消費しない」）。
+    totalTokens ← SELECT COALESCE(sum(total_tokens),0) WHERE job_id = $1
+    rowCount    ← UPDATE … SET approval_state='consumed', consumed_at=$at
+                    WHERE job_id=$1 AND step_id = ANY($2) AND approval_state='pending'
+                    の影響行数
+  → rowCount === stepIds.length のときだけ「消費成功」。
+    それ以外は例外を投げてトランザクション全体をロールバックし（`ClaimMismatchError` を
+    `claimPending` 内で捕捉）、実際の不一致した rowCount を返す（R9.2 / R9.6
+    「いずれも消費しない」）。呼び出し側（`claimApprovalTargets`）はこれを
+    `rowCount !== decisions.length` で再確認する（多層防御）。
 ```
+
+**adversarial-review fix（2026-09-23 追記）**: `/sdd-validate-impl` の初回検証で、上記の
+`stepIds` 引数と原子性チェックが実装から欠落していたことが判明した（`claimPending(jobId,
+at)` のみで、ジョブの pending 行を無条件に全件消費していた）。混在セット（pending 1 件 ＋
+未登録 1 件など）を送ると、未登録側の存在にかかわらず pending 側だけ消費されて `claimed`
+が返り、R9.2 / R9.6 の要求（1 件でも不正なら全体を拒否・無消費）に反していた。上記の
+as-built 契約へ修正し、`apps/worker/tests/stores-job-step.spec.ts` /
+`apps/web/tests/approvals.spec.ts` に回帰テストを追加、非空虚性を意図的な breakage で確認
+済み（`specs/007-cross-repo-adoption-closeout/traceability.md` の REQ-009 (9.2)/(9.6) 参照）。
 
 **原子性の所在**: 「1 件でも不正なら 1 つも消費しない」は**このトランザクションが担保**する。
 `engine.send` は消費コミット後に at-least-once で行い、`id: "<jobId>:<stepId>"` で冪等化する。

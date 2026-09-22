@@ -343,7 +343,7 @@ _Traces:_ REQ-006, REQ-007, REQ-009, DES-3.9, DES-5.2
 ADR-2 を破らない（Inngest import を `inngest.ts` から増やさない）。最大の罠は Inngest の
 関数本体再実行（I-2 / I-3）で、冪等性は port 側の SQL 形に依拠し条件分岐を持ち込まない。
 
-_Boundary:_ `apps/worker/src/main.ts`, `apps/worker/tests/main.spec.ts`, `apps/worker/src/start.ts`, `apps/web/tests/e2e/approval-resume.spec.ts`（周辺・verify only）
+_Boundary:_ `apps/worker/src/main.ts`, `apps/worker/tests/main.spec.ts`, `apps/worker/src/start.ts`, `apps/web/tests/e2e/approval-resume.spec.ts`（周辺・verify only）, `apps/worker/tests/durability.spec.ts`（周辺・`id` フィールド追随）, `apps/worker/tests/start.spec.ts`（周辺・`jobStepStore` 配線追随）
 _Depends:_ 7
 _Requirements:_ 6.1, 6.6, 7.1, 7.6
 _Traces:_ REQ-006, REQ-007, DES-3.11, DES-5.2
@@ -388,7 +388,7 @@ _Traces:_ REQ-006, REQ-007, DES-3.11, DES-5.2
 カバレッジ対象の `apps/web/src/lib/` に純関数 ＋ 注入 port として置く（ADR-10）。
 存在秘匿は「3 ケースを区別しない単一の値と単一の応答生成点」で構造的に保証する。
 
-_Boundary:_ `apps/web/src/lib/approvals.ts`, `apps/web/tests/approvals.spec.ts`
+_Boundary:_ `apps/web/src/lib/approvals.ts`, `apps/web/tests/approvals.spec.ts`, `apps/worker/src/stores.ts`（`JobStepStore.claimPending` の戻り値を `{ rowCount, totalTokens }` へ拡張 — D3 が claim と同一往復で予算シグナルを要求するため）, `apps/worker/tests/stores-job-step.spec.ts`（周辺・戻り値 shape 追随）, `apps/worker/tests/main.spec.ts`（周辺・インラインフェイク追随）
 _Depends:_ 5, 7
 _Requirements:_ 5.5, 6.1, 6.2, 6.3, 6.4, 7.2, 7.3, 7.6, 8.1, 8.2, 8.3, 8.4, 8.6, 9.2, 9.3, 9.5, 9.6
 _Traces:_ REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, DES-3.8, DES-5.1
@@ -433,6 +433,7 @@ _Traces:_ REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, DES-3.8, DES-5.1
 - **`claimPending` return type extended to `{ rowCount, totalTokens }`**: the port was narrowed from `Promise<number>` to `Promise<{ rowCount: number; totalTokens: number }>` so the single transaction exposes the cumulative token spend to the caller without an extra round-trip. `stores-job-step.spec.ts` and both inline fakes in `main.spec.ts` were updated in the same change.
 - **Budget check is post-claim, not pre-claim**: `claimApprovalTargets` calls `claimPending` unconditionally — rows are always consumed when `rowCount > 0`. The 429 path returns after the commit, never before, ensuring a budget-blocked caller cannot replay the same approval target (R7.3 requirement satisfied structurally, not by convention).
 - **Existence concealment is a single variant**: the three unclaimable sub-cases (unknown / in-flight / consumed) collapse to `not-claimable` in `ClaimOutcome`, with `submittedAs` preserved for the route to generate the correct HTTP status (single → 404, set → 409) without encoding case-specific state.
+- **adversarial-review fix (2026-09-23)**: `/sdd-validate-impl` found that the initial `claimPending(jobId, at)` ignored `stepIds` entirely and consumed every pending row for the job unconditionally — a mixed decision set (one genuinely pending target plus one unknown/foreign `toolCallId`) would consume the pending one and still resume it, violating R9.2/9.6's all-or-nothing requirement. Fixed by adding `stepIds` to `claimPending`'s signature, scoping the UPDATE to `inArray(jobStep.stepId, stepIds)`, and rolling back (via an internal `ClaimMismatchError`) whenever the matched row count is less than `stepIds.length`; `claimApprovalTargets` independently re-checks `rowCount !== decisions.length` as defense-in-depth. See `pdca/do.md`'s dated addendum for the RED→GREEN cycle and PROVE evidence, and `plan.md` IF-2 for the corrected as-built contract.
 
 ---
 

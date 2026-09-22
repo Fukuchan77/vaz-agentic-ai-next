@@ -1,5 +1,160 @@
 # 007-cross-repo-adoption-closeout — PDCA Do Phase
 
+> 本節（Task 1 / Task 2）は commit `e1b7a4d` が誤って削除し、`/sdd-validate-impl` の
+> 検証で欠落が判明したため `43bdadb` の内容から復元した（2026-09-22）。原文は無改変で、
+> 見出しの体裁のみ他節と揃えた。R12.4 の非空虚性証拠はこの 2 節を含めて完全。
+
+---
+
+実装ログ。append-only（着地済みの記録は変えない）。散文は日本語、識別子・パス・コードは英語。
+
+---
+
+## Task 1: 先行ブロッカー — 相対パス断片による stale 偽陽性を閉じる（2026-09-22）
+
+### 実施内容
+
+`tests/repo/cross-repo-reference-resolution.spec.ts` の 1 ファイルのみを変更。
+
+**変更の核心**:
+- `QUALIFIED_FORM` を関数スコープのインライン定義からモジュール先頭の定数へ昇格
+- 文字クラスを `[A-Za-z0-9_.-]` → `[A-Za-z0-9_-]`（ドット除外）に変更
+- 回帰テスト 3 件を新規 `describe` ブロックとして追加（`findReferencingFiles` のファイルスキャンより前に配置）
+
+**PROVE 証拠（非空虚性の確認）**:
+
+バグ復元（`[A-Za-z0-9_.-]+`）時の実行結果:
+```
+node -e "
+const buggyRegex = /([A-Za-z0-9_.-]+)\/docs\/cross-repo-adoption-review\.md/g;
+const input = '[正本レビュー](../../docs/cross-repo-adoption-review.md) を参照';
+const matches = [...input.matchAll(buggyRegex)];
+console.log('matches:', matches.length, matches.map(m => m[1]));
+"
+# → matches: 1 [ '..' ]
+```
+
+テスト `"relative link ... yields zero qualified matches"` が `expect(matches).toHaveLength(0)` で失敗:
+```
+AssertionError: ../../ should produce no QUALIFIED_FORM match — it contains no repo-name segment
+Expected length: 0
+Received length: 1
+```
+
+修正後（`[A-Za-z0-9_-]+`）: `matches.length = 0` → テスト GREEN。
+
+### ゲート結果
+
+```
+pnpm exec vitest run --project repo tests/repo/cross-repo-reference-resolution.spec.ts
+✓ repo  tests/repo/cross-repo-reference-resolution.spec.ts (7 tests) 67ms
+Test Files: 1 passed (1)  |  Tests: 7 passed (7)
+```
+
+```
+mise run check
+Test Files: 65 passed (65)
+Tests: 662 passed | 1 skipped (663)
+```
+
+### 既知の限界（記録）
+
+`findReferencingFiles` は `stripCode` を持たず生テキストを走査するため、コードスパンや
+fenced block 内でパスを話題にするだけでも `QUALIFIED_FORM` にマッチする可能性がある
+（第 2 の偽陽性クラス）。これは plan.md C-5 の既知限界として明示的に残す。
+現在の走査対象（`specs/` を含む全 `.md`、`pdca/` のみ除外）では実害が確認されていない。
+
+### 学び
+
+- 「関数内インライン定数」は回帰テストが書きにくい。昇格コストが低い場合は最初から
+  モジュール先頭に置くと、テストと実装が同じ変数を共有して戻し変更が即座に両スイートを赤にする
+- 既存 4 テストの意図・アサーション文言を一切変えずに修正できた（ADR-3 の「最小変更」）
+
+---
+
+## Task 2: 対応表ガードを先に用意する（2026-09-22）
+
+### 実施内容
+
+`tests/repo/owasp-mapping-citations.spec.ts` の 1 ファイルを新規作成。
+変更ファイルは `_Boundary:_` に宣言された 1 本のみ（`tasks.md` の checkbox 更新を除く）。
+
+**実装の核心**:
+- `MAPPING_DOCS` 定数配列（2 パス）で対象文書を宣言。ガードは文書から語彙・パスを学ばない
+- 非空アサート群（走査数 = 2、実在確認、引用数 > 0、状態トークン数 > 0、索引行数 = 15）を
+  検査本体より前に置き、走査 0 件で緑になる偽陽性経路を塞ぐ（R4.6）
+- `parseSections`: level-2 heading (`## …`) 単位でセクションを分割し、
+  `- 状態: / 実装: / テスト: / CI: / 再評価トリガ:` のキー行のみを収集
+- `classifySpan`: 既知拡張子 + `/` ヒューリスティックでパス vs シンボルを判別（IF-3 verbatim）。
+  シェルコマンド（スペース含む）はシンボルに分類 → LLM 文書の既存行は失敗する（意図的）
+- `parseThreatIndex`: `---` 区切り行で表を検出し `脅威` 列ヘッダを探す。15 行 + 全単射を検査
+- CI 引用は `yaml.parse` で構造的に `name:` 値を収集（文字列検索しない。R4.3 verbatim）
+- `VALID_STATUS_TOKENS` はガード側定数（ハードコード）——文書から学ばせない（task 2.3 の要件）
+
+**PROVE 証拠（非空虚性の確認）**:
+
+新規ガードの RED 確認（期待値通り）。文書が存在しない／新フォーマット未移行の時点での
+実行結果:
+```
+pnpm exec vitest run --project repo tests/repo/owasp-mapping-citations.spec.ts
+Tests: 17 failed | 7 passed (24)
+```
+
+失敗内訳:
+- Agentic 文書: ENOENT（新ファイル名 `owasp-agentic-threats-mitigations-mapping.md` 未存在）
+- LLM 文書: `- 状態:` 行が 0 件（新フォーマット未移行）、バージョン日付なし、
+  シェルコマンドスパンをシンボルとして解決できない
+
+7 つの PASS テスト（ガード実装自体は正しい）:
+- `exactly 2 mapping documents are declared`
+- `document exists: docs/owasp-llm-top10-mapping.md`
+- `LLM document contains at least 1 structured citation`
+- `all path citations in docs/owasp-llm-top10-mapping.md exist`
+- `all CI citations in docs/owasp-llm-top10-mapping.md are valid`
+- `all status tokens in docs/owasp-llm-top10-mapping.md are valid`
+- `all accepted sections in docs/owasp-llm-top10-mapping.md have re-evaluation triggers`
+
+**回帰確認（既存 6 repo テスト）**:
+```
+pnpm exec vitest run --project repo tests/repo/cross-repo-reference-resolution.spec.ts \
+  tests/repo/doc-links.spec.ts tests/repo/ci-workflows.spec.ts tests/repo/dependabot.spec.ts \
+  tests/repo/hermetic-network.spec.ts tests/repo/model-id-gate-precision.spec.ts
+Test Files: 6 passed (6)  |  Tests: 21 passed (21)
+```
+
+**lint / typecheck**:
+```
+pnpm exec biome check tests/repo/owasp-mapping-citations.spec.ts
+→ Checked 1 file in 10ms. No fixes applied.
+
+pnpm exec tsc --noEmit
+→ (exit 0, no errors for owasp-mapping-citations.spec.ts)
+```
+
+### ゲート状態（意図的な RED）
+
+憲章 principle 9（テストを先に書く）。この時点では:
+- `docs/owasp-agentic-threats-mitigations-mapping.md` 未存在（Task 3 で作成）
+- `docs/owasp-llm-top10-mapping.md` は新フォーマット未移行（Task 4 で移行）
+
+ガードは Task 4.4 の完了時点で緑になることを確認する予定（tasks.md の記述通り）。
+
+`mise run check` はこの RED を含むため、**本タスクの ship 対象は Task 2 単体**であり、
+全体ゲートではなく Task 2 の boundary に限定した証拠で validate する（TDD 守則）。
+
+### 学び
+
+- `parseSections` が level-2 heading のみを拾う設計は、冒頭の prose（索引表・語彙定義）を
+  セクション扱いせず正しくスキップする。ただし H3 以下の脅威節が存在する場合は拾えない
+  ——文書設計として脅威節は H2 に限るという不文律が必要
+- シェルコマンドがシンボル扱いされる点は意図的な failing case：Task 4 で文書が
+  `(grep -rn dangerouslySetInnerHTML apps/web/src)` を散文へ移動すれば解消する
+- `parseThreatIndex` は `脅威` 列を header text で検出する。列名が変わると「索引 0 行 → 非空アサート失敗」
+  になり、サイレントパスにならない（anti-false-green 設計が機能している）
+
+---
+
+
 ## Task 3: Agentic 側対応表を 15 脅威全件へリネーム・改訂する（2026-09-22）
 
 ### 実施内容
@@ -319,6 +474,19 @@ Worker test count delta: 72 → 83（+11 新規テスト、全件 stores-job-ste
 - `apps/worker/src/start.ts`: `createJobStepStore` import 追加、`registerJobFunction` オプションに `jobStepStore: createJobStepStore(db)` を注入。
 - 既存テスト（`durability.spec.ts`・`start.spec.ts`）が新シグネチャの変更を反映するよう更新（VDD トリガ #3: 既存テスト修正 → 正当。変更は「送信された id フィールドを期待に追加」と「stores モックに `createJobStepStore` を追加し `options.jobStepStore` のアサートを追加」の 2 点のみ）。
 
+### 境界逸脱の記録（`/sdd-validate-impl` 2026-09-22 で検出）
+
+`_Boundary:_` は付随更新先として `apps/web/tests/e2e/approval-resume.spec.ts` のみを
+（周辺・verify only として）宣言していたが、`a707139` は境界外の既存テスト 2 本も改変した:
+
+| ファイル | 改変内容 | 原因 |
+|---|---|---|
+| `apps/worker/tests/durability.spec.ts` | 期待 payload に `id` フィールドを追加（4 行） | 8.3 の `submitApproval` 冪等キー付与（境界内） |
+| `apps/worker/tests/start.spec.ts` | `createJobStepStore` を mock し `options.jobStepStore` をアサート（11 行） | 8.3 の `start.ts` 配線（境界内） |
+
+いずれも境界内の変更が機械的に強制した既存テストの追随であり、契約・設計の変更ではない。
+`tasks.md` の Task 8 `_Boundary:_` に周辺・verify only として追記済み（同日）。
+
 ### PROVE 証拠（非空虚性）
 
 以下の 3 点を意図的に破り、対応するテストが FAIL することを確認:
@@ -378,6 +546,27 @@ Worker test count delta: 83 → 91（+8 新規テスト: 7 x WorkerApprovalMirro
 `Promise<number>` → `Promise<{ rowCount: number; totalTokens: number }>` に変更。
 トランザクション内で `await` していた `sum` SELECT の結果を捨てていたのを戻り値に追加。
 影響範囲: `stores-job-step.spec.ts`（4 テスト更新 + 2 テスト追加）、`main.spec.ts`（2 インライン fake 更新）。
+
+### 境界逸脱の記録（`/sdd-validate-impl` 2026-09-22 で検出）
+
+`_Boundary:_` は `apps/web/src/lib/approvals.ts` と `apps/web/tests/approvals.spec.ts` の
+2 本のみを宣言していたが、`5df606d` は Task 7 の境界にある 3 本も改変した:
+
+| ファイル | 改変内容 | 性質 |
+|---|---|---|
+| `apps/worker/src/stores.ts` | `JobStepStore.claimPending` を `Promise<number>` → `Promise<{ rowCount, totalTokens }>` へ拡張 | **port 契約の変更**（Task 7 の設計契約） |
+| `apps/worker/tests/stores-job-step.spec.ts` | 戻り値 shape へのアサートを 2 件拡張 | 上記の追随 |
+| `apps/worker/tests/main.spec.ts` | インラインフェイク 2 箇所の戻り値を更新 | 上記の追随 |
+
+これは付随更新ではなく**下位互換のない port 契約の拡張**である。Task 7 は完了済みで、
+契約を消費する Task 10 は後続だったため実害は生じず（`mise run check` 緑、設計意図も
+「claim と同一往復で予算シグナルを得る」= D3 の要求そのもの）、契約拡張の理由は本節上部
+「`JobStepStore.claimPending` 戻り値の拡張（Task 7 port への最小変更）」に記録済みだが、
+`_Boundary:_` への宣言が漏れていた。`tasks.md` の Task 9 `_Boundary:_` に追記済み（同日）。
+
+**学び**: 純関数層（Task 9）が下位の port から新しいシグナルを必要とする場合、その port は
+前段タスクの境界にある。plan 段階で「Task 9 が Task 7 の戻り値型を変える」ことを
+`_Boundary:_` に織り込むか、port 拡張を独立したタスクに切るべきだった。
 
 ### PROVE 証拠（非空虚性）
 
@@ -571,7 +760,7 @@ cross-repo-reference-resolution.spec.ts:   7 passed ✓
 
 ### 実施内容
 
-**13.1 — 非空虚性確認（タスク 2 / 5 / 6 / 7 / 8 / 9 / 10 / 11 の各検査）**
+**13.1 — 非空虚性確認（タスク 1 / 2 / 5 / 6 / 7 / 8 / 9 / 10 / 11 の各検査）**
 
 各ガード・テストについて「実装または文書を一時的に壊すと落ちること」を確認した。
 詳細な PROVE 証拠は各タスクの PDCA do.md 節に既に記録済み。本節では
@@ -603,8 +792,10 @@ cross-repo-reference-resolution.spec.ts:   7 passed ✓
 3. **REQ-009 (9.3) — `approvalDecisionSetSchema` strict-object の非空虚性確認（本タスク実施）**
    - 上記 REQ-005 (5.1) と同一のコード変更で確認済み（同一ファイル・同一 `z.strictObject` 呼び出し）
 
-タスク 2 / 6 / 7 / 8 / 9 / 10 / 11 の PROVE 証拠は各タスクの PDCA 節に記録済み。
-すべての非空虚性証拠を `traceability.md` の Non-vacuity 列に集約した。
+タスク 1 / 2 / 6 / 7 / 8 / 9 / 10 / 11 の PROVE 証拠は各タスクの PDCA 節に記録済み
+（タスク 1 / 2 の 2 節は `e1b7a4d` が削除していたため 2026-09-22 に `43bdadb` から復元。
+本ファイル冒頭の注記を参照）。すべての非空虚性証拠を `traceability.md` の
+Non-vacuity 列に集約した。
 
 **13.2 — `mise run check` 検証ゲート**
 
@@ -620,7 +811,10 @@ lint:model-ids: No hardcoded model IDs found. ✓
 ```
 
 追加確認項目:
-- カバレッジ: lines 90.96% / functions 82.19% / branches 92.08% / statements 91.03%（≥ 80% ✓）
+- カバレッジ（`mise run test:coverage` で別途測定 — `mise run check` は `--coverage` を
+  付けないため閾値は `check` では強制されない）: statements 90.96% / branches 82.19% /
+  functions 92.08% / lines 91.03%。`vitest.config.ts` の設定閾値は `lines 80` と
+  `functions 80` の 2 つのみで、いずれも充足 ✓（`branches` には閾値未設定。実測 82.19% が最低値）
 - `.github/workflows/` ファイル数: **7 本**（api.yml / eval-nightly.yml / eval-pr.yml / lint.yml / python.yml / security-daily.yml / tests.yml）。新規追加なし ✓
 - `GET /api/jobs/:id/stream` route: 本 spec での変更なし（last commit は先行作業分）✓
 - `jobEventTypeEnum` 定義: `packages/db/src/schema.ts:139` で無改変 ✓
@@ -647,6 +841,89 @@ mise run check
   lint:model-ids: No hardcoded model IDs found. ✓
 ```
 
-カバレッジ: 90.96% lines / 82.19% functions — 閾値 80% 超過 ✓
+カバレッジ（`mise run test:coverage`、`check` とは別実行）:
+lines 91.03% / functions 92.08% — 設定閾値 `lines 80` / `functions 80` を超過 ✓
+（statements 90.96% / branches 82.19%。`branches` は閾値未設定）
 
 ---
+
+## adversarial-review fix（2026-09-23）— REQ-009 (9.2/9.6) atomicity gap
+
+`/sdd-validate-impl` の初回検証（本日）で、Task 9 が実装した `claimPending` が
+`stepIds` を受け取らず、`WHERE job_id=$1 AND approval_state='pending'` のみで
+ジョブの pending 行を**無条件に全件**消費していたことが判明した（plan.md IF-2 の
+契約——`stepIds` で絞り込み、`claimed !== stepIds.length` なら全体ロールバック——から
+の逸脱）。
+
+**失敗シナリオ**: pending な step A を持つジョブに、A ＋未登録の toolCallId "X" を
+含む決定セットを送ると、`rowCount=1`（A のみ消費）→ 予算内なら `claimed` → route が
+X も含めて `submitApproval` を呼び 202 を返す。R9.2（1 件でも不正なら全体拒否・
+無消費）と R9.6 に違反。
+
+### RED（修正前・回帰テスト追加）
+
+1. `apps/worker/tests/stores-job-step.spec.ts` に `claimPending(jobId, stepIds, at)`
+   の 3 引数呼び出しへ全既存テストを更新 ＋ 新規 3 テストを追加
+   （`STEP_ID_2` を新設）。3 テストが RED:
+   - `sets consumed_at to the injected at timestamp, not SQL now()`
+     （旧 2 引数シグネチャのまま `AT` が第 2 引数の `at` ではなく配列 `[STEP_ID]` に
+     渡ってしまい `setConsumedAt` が Date でなく配列になる）
+   - `R9.2/9.6: a partial match forces the transaction callback to throw…`
+     （`expected false to be true` — 旧実装は決してロールバックしない）
+   - `claimPending resolves rowCount=0 without touching the DB when stepIds is empty`
+     （旧実装は `stepIds` パラメータ自体を持たず即エラー）
+2. `apps/web/tests/approvals.spec.ts` に新規 2 テスト（呼び出し引数の検証・混在セット
+   の防御的二重チェック）を追加。2 テストが RED:
+   - `calls claimPending with every decision's toolCallId, in order, for a set request`
+   - `R9.2/9.6: returns not-claimable … when rowCount is less than decisions.length`
+
+### GREEN（修正）
+
+- `apps/worker/src/stores.ts`: `JobStepStore.claimPending` のシグネチャを
+  `(jobId, stepIds, at)` に変更。`inArray(jobStep.stepId, stepIds)` を WHERE に追加。
+  UPDATE の影響行数が `stepIds.length` と不一致なら内部専用の `ClaimMismatchError`
+  （TS `erasableSyntaxOnly` 制約により constructor parameter property は使わず
+  明示代入）を投げてトランザクションをロールバックし、`claimPending` 側の
+  `catch` で実際の不一致 rowCount を返す。`stepIds` 空配列は DB に触れず
+  `{rowCount:0, totalTokens:0}` を返す防御的ショートサーキット。
+- `apps/web/src/lib/approvals.ts`: `claimApprovalTargets` が
+  `decisions.map(d => d.toolCallId)` を `stepIds` として `store.claimPending` に渡し、
+  判定を `rowCount === 0` から `rowCount !== decisions.length` に変更（store 側の
+  原子性保証を信用せず、この pure 関数自身も再確認する多層防御）。
+- 16 + 37 テスト全 GREEN（stores-job-step.spec.ts 16 / approvals.spec.ts 37）。
+
+### PROVE 証拠（非空虚性）
+
+`if (rowCount !== stepIds.length)` を `if (false)`（stores.ts）に、
+`if (rowCount !== decisions.length)` を `if (rowCount === 0)`（approvals.ts）に
+それぞれ書き換えて同時に検証すると、以下の 2 テストのみが期待通り FAIL:
+- `stores-job-step.spec.ts` — `R9.2/9.6: a partial match forces the transaction
+  callback to throw…`（`expected false to be true`)
+- `approvals.spec.ts` — `R9.2/9.6: returns not-claimable … when rowCount is less
+  than decisions.length`（`expected 'claimed' to be 'not-claimable'`）
+
+他の 51 テストは無傷（mutation の影響範囲が意図通り局所的）。両ファイルを復元後、
+53/53 GREEN を再確認。
+
+### ゲート再実行
+
+```
+mise run check
+  lint: 168 files, No fixes applied. ✓（1 件の biome フォーマット差分を
+    `biome check --write` で自動修正 — stores-job-step.spec.ts の改行幅のみ）
+  audit: No known vulnerabilities. ✓
+  typecheck: 初回は apps/worker で TS1294（`erasableSyntaxOnly` が
+    constructor parameter property を禁止）が 2 件 FAIL → ClaimMismatchError の
+    フィールドを明示代入に書き換えて解消。再実行で apps/web ✓ | apps/worker ✓ | packages/* ✓
+  test:run: 69 test files, 798 passed / 1 skipped ✓（793 → 798、新規 5 テスト分）
+  lint:model-ids: No hardcoded model IDs found. ✓
+```
+
+### 文書側の追随
+
+- `plan.md` IF-2 の `claimPending` 契約を as-built（位置引数 `(jobId, stepIds, at)`、
+  フィールド名 `rowCount`/`totalTokens`）に合わせて更新し、本 addendum への参照を追記
+  （design deviation の解消）。
+- `traceability.md` の REQ-009 (9.2) / (9.6) 行を実際のテスト名・PROVE 証拠・
+  発見の経緯で更新。Commit 列は「pending commit」——本ファイルへの追記時点で
+  まだコミットしていない。

@@ -208,7 +208,7 @@ describe("claimApprovalTargets — consume-once, existence concealment, budget g
 		expect(outcome.kind).toBe("claimed");
 	});
 
-	test("calls claimPending with the jobId and at timestamp", async () => {
+	test("calls claimPending with the jobId, the requested stepIds, and the at timestamp", async () => {
 		const store = makeStore({ claimResult: { rowCount: 1, totalTokens: 0 } });
 		await claimApprovalTargets({
 			jobId: JOB_ID,
@@ -218,7 +218,44 @@ describe("claimApprovalTargets — consume-once, existence concealment, budget g
 			budget: DEFAULT_BUDGET,
 			at: AT,
 		});
-		expect(store.claimPending).toHaveBeenCalledWith(JOB_ID, AT);
+		expect(store.claimPending).toHaveBeenCalledWith(JOB_ID, [STEP_A], AT);
+	});
+
+	test("calls claimPending with every decision's toolCallId, in order, for a set request", async () => {
+		const store = makeStore({ claimResult: { rowCount: 2, totalTokens: 0 } });
+		await claimApprovalTargets({
+			jobId: JOB_ID,
+			decisions: [
+				{ toolCallId: STEP_A, decision: "approve" },
+				{ toolCallId: STEP_B, decision: "reject" },
+			],
+			submittedAs: "set",
+			store,
+			budget: DEFAULT_BUDGET,
+			at: AT,
+		});
+		expect(store.claimPending).toHaveBeenCalledWith(JOB_ID, [STEP_A, STEP_B], AT);
+	});
+
+	test("R9.2/9.6: returns not-claimable (not claimed) when rowCount is less than decisions.length — defense-in-depth against a non-atomic store, mirrors the atomicity claimPending itself enforces", async () => {
+		// Simulates a mixed set where only 1 of 2 requested targets was actually
+		// pending. A correct `claimPending` implementation never returns this
+		// shape (it rolls back to a fully-partial rowCount), but this pure
+		// function must not trust that blindly — reject the whole set rather
+		// than resuming a workflow step the caller never asked to approve.
+		const store = makeStore({ claimResult: { rowCount: 1, totalTokens: 0 } });
+		const outcome = await claimApprovalTargets({
+			jobId: JOB_ID,
+			decisions: [
+				{ toolCallId: STEP_A, decision: "approve" },
+				{ toolCallId: STEP_B, decision: "reject" },
+			],
+			submittedAs: "set",
+			store,
+			budget: DEFAULT_BUDGET,
+			at: AT,
+		});
+		expect(outcome.kind).toBe("not-claimable");
 	});
 
 	test("returns not-claimable when rowCount is 0 (unknown/in-flight/consumed — 3 cases indistinguishable)", async () => {
