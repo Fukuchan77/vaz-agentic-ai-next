@@ -322,3 +322,73 @@ README は「BeeAI FastAPI React App」を名乗り、「84%+ カバレッジ・
    どちらか一方の repo 保守者（同一アカウント）に確認し、教材の同期方針
   （どちらが正本か、フォークか、それとも意図的な二重化か）を明らかにする。
    本文書は観察のみに留め、判断は行わない。
+
+---
+
+## §7 推奨アクションの実施結果（2026-09-22、同日）
+
+§6 の 4 項目を同日中に実施した。以下は結果の要約で、判断の根拠は各節にある。
+
+### 推奨 1 — 正本への追記: **完了**
+
+`docs/cross-repo-adoption-review.md` に **§7（追記、177 行）** を追加した。
+§1〜§6 は 1 文字も変更していない（追記のみ規約の遵守）。§7 の構成は
+§7.1 検証スコープ／§7.2 `beeai-agentic-ai-sandbox` の失効／§7.3
+`pydantic-ai-sandbox` 分岐／§7.4 `agentic-ai-bootcamp`／§7.5
+`fastapi-pydantic-ai-agent`／§7.6 X-13 の逆転／§7.7 一般則。
+
+併せて `docs/cross-repo-adoption-backlog.md` の陳腐化した前提を訂正した
+（冒頭の「統合済み」記述、X-9 行の取り込み元、X-13 行の前提）。
+
+### 推奨 2 — `pydantic-ai-sandbox` 本体の HITL 再検証: **完了、X-9 の前提が変わった**
+
+`patterns/hitl/` は**現存し拡張が続いている**（`src/patterns_hitl/` 8 モジュール、
+unit テスト 13 ファイル、カバレッジゲート 98%）。2026-09-06 の主張はすべて現行コードで裏が取れた
+（deferred tools、`extra="forbid"` ＋ `message_history` 非定義、consume-once、マスク監査、
+in-memory ＋ TTL 未実装）。なお「8 独立 uv レーン」は**実際には 5 レーン**（`contracts` /
+`deep-research` / `hitl` / `rag` / `sse`）で、この数字は陳腐化していた。
+
+**最大の発見**: 同レーンは**本 repo の X-9 を既に取り込んでいる**。`agent.py` が
+recipient allow-list（`_known_recipient`）と sticky taint（`HitlDeps.tainted`）を実装し、
+README が出所を本 repo と明記のうえ **"X-9a" / "X-9b"** と本 repo 由来の ID で参照している。
+X-9 は「本 repo が取り込む項目」だったが、**先に逆方向で着地した**。
+
+本 repo が持たない防御 6 点（履歴注入のスキーマレベル封鎖・存在秘匿を伴う consume-once・
+境界跨ぎ usage 予算・マスク監査の単一 fail-soft 境界・pending set の原子性 409・
+egress 回帰スキャン）は正本 §7.3 に列挙した。**これらは X-9 の再起票候補**だが、
+本 repo の HITL 配線自体が未完（`apps/worker` の述語）なので、配線の完了を先行させる。
+
+### 推奨 3 — OWASP 対応表の突き合わせ: **完了、前提が逆転した**
+
+X-13 が規範として挙げた「出所は全行にテストを引用」は**もう成立しない**。
+出所側は 2 タクソノミ 20 行へ拡張される過程で**テスト引用が 8/20 行**まで薄まった。
+一方、本 repo の 2 文書は**全 40 引用（パス・シンボル名・CI ステップ）が実在**し、
+テスト未引用は「未対応」と明記した 2 件のみ。**厳格さでは本 repo が上回る**。
+
+ただし本 repo 側に出所側に無い弱点が 4 つ見つかり、
+`docs/cross-repo-adoption-backlog.md` §5 に **X-17〜X-20** として起票した。
+**X-17（agentic 脅威 5 件の無言の欠落、うち 3 件は多エージェント脅威）が最優先** ——
+本 repo は `packages/agents/src/supervisor.ts` で多エージェント構成を持つため、
+単一エージェントの出所側より該当性が高いのに落ちている。
+
+なお `services/api/docs/owasp-agentic-llm-mapping.md`（vendored）は上流の現行版と
+**バイト一致**しており、subtree の同期は保たれている。
+
+### 推奨 4 — 教材 2 本の関係: **完了（観察のみ、判断は保留）**
+
+`agentic-ai-bootcamp` の `lessons/` ＋ `frameworks/` と
+`agentic-ai-sandbox/learn/` の同名ツリーを突き合わせた結果、
+**71 ファイル中 13 ファイルのみ相違**。相違の大半は `learn/` の 1 階層ぶんの
+リンク張り直しだが、**コードは双方向にドリフト**している（`11-evals/evals.py` は
+bootcamp のみが `UNKNOWN` 番兵を持ち、sandbox のみが `overall` の注意書きを持つ。
+`frameworks/` は sandbox のみ型注釈が新形式）。
+
+つまり**後継関係ではなく二方向フォーク**。どちらを正本とするかは repo 保守者の判断であり、
+本 repo の関与範囲外のため**起票せず観察の記録に留める**（正本 §7.4）。
+
+### 派生して残った宿題
+
+- X-17 / X-18 / X-19 / X-20 の実装（本 repo の OWASP 2 文書の改訂）。本文書では起票のみ。
+- X-9 の残り 1 箇所の配線（`apps/worker` の `requiresApprovalForKind`）。
+  `docs/cross-repo-adoption-backlog.md` §3 が記すとおり、`workflowStepSchema` への
+  ステップ単位フラグ追加を伴う横断変更であり、本再検証のスコープ外。

@@ -21,6 +21,15 @@
 
 1. [`2026-09-22-cross-repo-verification.md`](2026-09-22-cross-repo-verification.md) — 本体。
    5 repo それぞれの現状・正本記述との差分・新規発見・本 repo への示唆をまとめる。
+   末尾 §7 に、§6 の推奨アクション 4 件の実施結果（すべて同日完了）を記録している。
+
+## 反映済みの変更（2026-09-22）
+
+本検証の結果は以下へ反映済み。本ディレクトリだけが記録ではない点に注意:
+
+- `docs/cross-repo-adoption-review.md` **§7**（追記、§1〜§6 は不変）— 正本側の時点記録。
+- [`docs/cross-repo-adoption-backlog.md`](../../docs/cross-repo-adoption-backlog.md) —
+  陳腐化した前提の訂正（冒頭・X-9・X-13）と、新規項目 **X-17〜X-20** の起票（§5）。
 
 ## 検証方法
 
