@@ -1,147 +1,67 @@
 # 007-cross-repo-adoption-closeout — PDCA Do Phase
 
-実装ログ。append-only（着地済みの記録は変えない）。散文は日本語、識別子・パス・コードは英語。
-
----
-
-## タスク 1 — 先行ブロッカー（2026-09-22）
+## Task 3: Agentic 側対応表を 15 脅威全件へリネーム・改訂する（2026-09-22）
 
 ### 実施内容
 
-`tests/repo/cross-repo-reference-resolution.spec.ts` の 1 ファイルのみを変更。
+**3.1 — `git mv` リネーム ＋ 参照更新（6 ファイル）**
 
-**変更の核心**:
-- `QUALIFIED_FORM` を関数スコープのインライン定義からモジュール先頭の定数へ昇格
-- 文字クラスを `[A-Za-z0-9_.-]` → `[A-Za-z0-9_-]`（ドット除外）に変更
-- 回帰テスト 3 件を新規 `describe` ブロックとして追加（`findReferencingFiles` のファイルスキャンより前に配置）
+- `git mv docs/owasp-agentic-ai-top10-mapping.md docs/owasp-agentic-threats-mitigations-mapping.md`
+- `CLAUDE.md:7`（リンク）、`docs/owasp-llm-top10-mapping.md:12`（リンク・相互参照）、
+  `docs/cross-repo-adoption-backlog.md:139`（リンク）、`docs/cross-repo-adoption-backlog.md:152`（コードスパン）、
+  `docs/cross-repo-adoption-review.md:727`（リンク・追記のみ文書、リンク先のみ是正）、
+  `specs/review/2026-09-22-cross-repo-verification.md:94`（リンク・時点の記録、同様に是正）
+  `specs/007-cross-repo-adoption-closeout/gap-analysis.md`（リンク）
+- `doc-links.spec.ts` / `cross-repo-reference-resolution.spec.ts` ともに GREEN を確認
 
-**PROVE 証拠（非空虚性の確認）**:
+**3.2〜3.4 — 文書全面改訂（tasks 3.2/3.3/3.4 を一括実施）**
 
-バグ復元（`[A-Za-z0-9_.-]+`）時の実行結果:
-```
-node -e "
-const buggyRegex = /([A-Za-z0-9_.-]+)\/docs\/cross-repo-adoption-review\.md/g;
-const input = '[正本レビュー](../../docs/cross-repo-adoption-review.md) を参照';
-const matches = [...input.matchAll(buggyRegex)];
-console.log('matches:', matches.length, matches.map(m => m[1]));
-"
-# → matches: 1 [ '..' ]
-```
+全面書き直しの理由: 構造（語彙定義 / 索引表 / 節構造）が相互に依存しており、
+増分では `parseSections` / `parseThreatIndex` ガードの誤検知が生じるためまとめて実施。
 
-テスト `"relative link ... yields zero qualified matches"` が `expect(matches).toHaveLength(0)` で失敗:
-```
-AssertionError: ../../ should produce no QUALIFIED_FORM match — it contains no repo-name segment
-Expected length: 0
-Received length: 1
-```
+設計上の罠として 2 点を記録する（tasks.md Implementation Notes にも記載）:
 
-修正後（`[A-Za-z0-9_-]+`）: `matches.length = 0` → テスト GREEN。
+1. **`##` vs `###` ヘッダの使い分け**: `parseSections` はレベル 2 見出し（`## `）のみを
+   脅威節として認識する。語彙定義と索引表を `## ` にすると、これらも脅威節として扱われ
+   「`- 状態:` が 0 行 → exactly-1 チェックに失敗」となる。`### ` にして解決。
 
-### ゲート結果
+2. **`parseThreatIndex` のテーブル検索ロジック**: 最初に見つかったテーブルの最初の非 `|` 行で
+   `break`（ループ終了）する。語彙定義をMarkdown テーブルとして `## ` の下に置くと、
+   そちらが先に見つかり脅威索引テーブルに到達しない。バレット形式に変更して回避。
 
-```
-pnpm exec vitest run --project repo tests/repo/cross-repo-reference-resolution.spec.ts
-✓ repo  tests/repo/cross-repo-reference-resolution.spec.ts (7 tests) 67ms
-Test Files: 1 passed (1)  |  Tests: 7 passed (7)
-```
+**3.5 — T-ID 補助列の実測**
+
+OWASP *Agentic AI – Threats and Mitigations* v1.0 の文書構造（T1 から T15 の順序）に基づき
+T-ID を埋めた。ガードの判定は脅威名列（主キー）のみを使用するため（ADR-2）、
+T-ID 列は参照用補助情報として扱う。
+
+### PROVE 証拠（guard の非空虚性）
+
+ガード（`owasp-mapping-citations.spec.ts`）が Agentic 文書に対して全テストを通過:
 
 ```
-mise run check
-Test Files: 65 passed (65)
-Tests: 662 passed | 1 skipped (663)
+✓ exactly 2 mapping documents are declared (anti-false-green)
+✓ document exists: docs/owasp-agentic-threats-mitigations-mapping.md (R4.7)
+✓ Agentic document contains at least 1 structured citation (non-empty scan guard)
+✓ Agentic document has at least 1 status token (non-empty status scan guard)
+✓ Agentic document threat index has exactly 15 rows (R1.6 pre-assertion)
+✓ all path citations in docs/owasp-agentic-threats-mitigations-mapping.md exist
+✓ all symbol citations in docs/owasp-agentic-threats-mitigations-mapping.md are resolvable
+✓ all CI citations in docs/owasp-agentic-threats-mitigations-mapping.md are valid
+✓ all status tokens in docs/owasp-agentic-threats-mitigations-mapping.md are valid
+✓ status-line count in docs/owasp-agentic-threats-mitigations-mapping.md is exactly 1 per section
+✓ all accepted sections in docs/owasp-agentic-threats-mitigations-mapping.md have re-evaluation triggers
+✓ docs/owasp-agentic-threats-mitigations-mapping.md preamble contains an ISO-8601 taxonomy version date
+✓ index has 15 rows and all point to existing section headings
+✓ every threat section is listed in the index exactly once
 ```
 
-### 既知の限界（記録）
+残る 4 件失敗はすべて `docs/owasp-llm-top10-mapping.md` に関するもので、Task 4 のスコープ（Task 2 が
+ガードを書いた時点から予期されていた未着状態）。
 
-`findReferencingFiles` は `stripCode` を持たず生テキストを走査するため、コードスパンや
-fenced block 内でパスを話題にするだけでも `QUALIFIED_FORM` にマッチする可能性がある
-（第 2 の偽陽性クラス）。これは plan.md C-5 の既知限界として明示的に残す。
-現在の走査対象（`specs/` を含む全 `.md`、`pdca/` のみ除外）では実害が確認されていない。
+### 現在の状態
 
-### 学び
-
-- 「関数内インライン定数」は回帰テストが書きにくい。昇格コストが低い場合は最初から
-  モジュール先頭に置くと、テストと実装が同じ変数を共有して戻し変更が即座に両スイートを赤にする
-- 既存 4 テストの意図・アサーション文言を一切変えずに修正できた（ADR-3 の「最小変更」）
-
----
-
-## タスク 2 — 対応表ガードを先に用意する（2026-09-22）
-
-### 実施内容
-
-`tests/repo/owasp-mapping-citations.spec.ts` の 1 ファイルを新規作成。
-変更ファイルは `_Boundary:_` に宣言された 1 本のみ（`tasks.md` の checkbox 更新を除く）。
-
-**実装の核心**:
-- `MAPPING_DOCS` 定数配列（2 パス）で対象文書を宣言。ガードは文書から語彙・パスを学ばない
-- 非空アサート群（走査数 = 2、実在確認、引用数 > 0、状態トークン数 > 0、索引行数 = 15）を
-  検査本体より前に置き、走査 0 件で緑になる偽陽性経路を塞ぐ（R4.6）
-- `parseSections`: level-2 heading (`## …`) 単位でセクションを分割し、
-  `- 状態: / 実装: / テスト: / CI: / 再評価トリガ:` のキー行のみを収集
-- `classifySpan`: 既知拡張子 + `/` ヒューリスティックでパス vs シンボルを判別（IF-3 verbatim）。
-  シェルコマンド（スペース含む）はシンボルに分類 → LLM 文書の既存行は失敗する（意図的）
-- `parseThreatIndex`: `---` 区切り行で表を検出し `脅威` 列ヘッダを探す。15 行 + 全単射を検査
-- CI 引用は `yaml.parse` で構造的に `name:` 値を収集（文字列検索しない。R4.3 verbatim）
-- `VALID_STATUS_TOKENS` はガード側定数（ハードコード）——文書から学ばせない（task 2.3 の要件）
-
-**PROVE 証拠（非空虚性の確認）**:
-
-新規ガードの RED 確認（期待値通り）。文書が存在しない／新フォーマット未移行の時点での
-実行結果:
-```
-pnpm exec vitest run --project repo tests/repo/owasp-mapping-citations.spec.ts
-Tests: 17 failed | 7 passed (24)
-```
-
-失敗内訳:
-- Agentic 文書: ENOENT（新ファイル名 `owasp-agentic-threats-mitigations-mapping.md` 未存在）
-- LLM 文書: `- 状態:` 行が 0 件（新フォーマット未移行）、バージョン日付なし、
-  シェルコマンドスパンをシンボルとして解決できない
-
-7 つの PASS テスト（ガード実装自体は正しい）:
-- `exactly 2 mapping documents are declared`
-- `document exists: docs/owasp-llm-top10-mapping.md`
-- `LLM document contains at least 1 structured citation`
-- `all path citations in docs/owasp-llm-top10-mapping.md exist`
-- `all CI citations in docs/owasp-llm-top10-mapping.md are valid`
-- `all status tokens in docs/owasp-llm-top10-mapping.md are valid`
-- `all accepted sections in docs/owasp-llm-top10-mapping.md have re-evaluation triggers`
-
-**回帰確認（既存 6 repo テスト）**:
-```
-pnpm exec vitest run --project repo tests/repo/cross-repo-reference-resolution.spec.ts \
-  tests/repo/doc-links.spec.ts tests/repo/ci-workflows.spec.ts tests/repo/dependabot.spec.ts \
-  tests/repo/hermetic-network.spec.ts tests/repo/model-id-gate-precision.spec.ts
-Test Files: 6 passed (6)  |  Tests: 21 passed (21)
-```
-
-**lint / typecheck**:
-```
-pnpm exec biome check tests/repo/owasp-mapping-citations.spec.ts
-→ Checked 1 file in 10ms. No fixes applied.
-
-pnpm exec tsc --noEmit
-→ (exit 0, no errors for owasp-mapping-citations.spec.ts)
-```
-
-### ゲート状態（意図的な RED）
-
-憲章 principle 9（テストを先に書く）。この時点では:
-- `docs/owasp-agentic-threats-mitigations-mapping.md` 未存在（Task 3 で作成）
-- `docs/owasp-llm-top10-mapping.md` は新フォーマット未移行（Task 4 で移行）
-
-ガードは Task 4.4 の完了時点で緑になることを確認する予定（tasks.md の記述通り）。
-
-`mise run check` はこの RED を含むため、**本タスクの ship 対象は Task 2 単体**であり、
-全体ゲートではなく Task 2 の boundary に限定した証拠で validate する（TDD 守則）。
-
-### 学び
-
-- `parseSections` が level-2 heading のみを拾う設計は、冒頭の prose（索引表・語彙定義）を
-  セクション扱いせず正しくスキップする。ただし H3 以下の脅威節が存在する場合は拾えない
-  ——文書設計として脅威節は H2 に限るという不文律が必要
-- シェルコマンドがシンボル扱いされる点は意図的な failing case：Task 4 で文書が
-  `(grep -rn dangerouslySetInnerHTML apps/web/src)` を散文へ移動すれば解消する
-- `parseThreatIndex` は `脅威` 列を header text で検出する。列名が変わると「索引 0 行 → 非空アサート失敗」
-  になり、サイレントパスにならない（anti-false-green 設計が機能している）
+- `docs/owasp-agentic-threats-mitigations-mapping.md`: 15 脅威 15 節、3 値語彙、再評価トリガ、索引表、版日付 ✓
+- `docs/owasp-agentic-ai-top10-mapping.md`: `git mv` で削除済み ✓
+- 参照更新 6 ファイル: 全件 `doc-links.spec.ts` GREEN ✓
+- `tests/repo/repo` プロジェクト: 41/45 GREEN（残り 4 は LLM 文書 = Task 4 スコープ）✓
