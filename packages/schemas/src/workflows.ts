@@ -216,3 +216,36 @@ export const jobEventTypeSchema = z.enum([
 ]);
 
 export type JobEventType = z.infer<typeof jobEventTypeSchema>;
+
+/**
+ * Single approval decision wire contract (C-7 / R5.1, R5.2, R9.1, R9.3, R9.4).
+ *
+ * `strictObject` guarantees that extra fields (conversation history, usage,
+ * model identifiers) are rejected at the edge (D1 proof).
+ */
+export const approvalDecisionSchema = z.strictObject({
+	toolCallId: z.uuid(),
+	decision: z.enum(["approve", "reject"]),
+	args: z.unknown().optional(),
+});
+
+export type ApprovalDecision = z.infer<typeof approvalDecisionSchema>;
+
+/**
+ * Set form approval decision wire contract (C-7 / R9.3).
+ *
+ * `strictObject` guarantees that root-level extra fields are rejected.
+ * `min(1)` guarantees at least one decision is submitted.
+ */
+export const approvalDecisionSetSchema = z.strictObject({
+	decisions: z.array(approvalDecisionSchema).min(1),
+});
+
+export type ApprovalDecisionSet = z.infer<typeof approvalDecisionSetSchema>;
+
+/**
+ * Discriminated approval request union accepting either single or set shape (C-7).
+ */
+export const approvalRequestSchema = z.union([approvalDecisionSchema, approvalDecisionSetSchema]);
+
+export type ApprovalRequest = z.infer<typeof approvalRequestSchema>;

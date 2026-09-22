@@ -231,7 +231,7 @@ _Depends:_ 4
 _Requirements:_ 5.1, 5.2, 7.4, 9.1, 9.3, 9.4
 _Traces:_ REQ-005, REQ-007, REQ-009, DES-3.7, DES-3.10, DES-5.1, DES-5.5
 
-- [ ] 5.1 `packages/schemas/tests/workflows.spec.ts` に先にテストを書く: 単一形
+- [x] 5.1 `packages/schemas/tests/workflows.spec.ts` に先にテストを書く: 単一形
       `{ toolCallId, decision, args? }` とセット形 `{ decisions: [...] }` の受理、および
       会話履歴・usage・model を名乗るフィールドを含むボディの **reject**（D1 の「証明」）。
       セット形の空配列拒否も含む
@@ -239,14 +239,14 @@ _Traces:_ REQ-005, REQ-007, REQ-009, DES-3.7, DES-3.10, DES-5.1, DES-5.5
   _Depends:_ 4.4
   _Requirements:_ 5.1, 5.2, 9.1, 9.4
   _Traces:_ REQ-005, REQ-009, DES-3.7
-- [ ] 5.2 `approvalDecisionSchema`（`z.strictObject`）/ `approvalDecisionSetSchema` /
+- [x] 5.2 `approvalDecisionSchema`（`z.strictObject`）/ `approvalDecisionSetSchema` /
       `approvalRequestSchema`（判別可能 `z.union`）と `z.infer` 由来の型を追加する
       （`any` 不使用。履歴・usage・model をフィールドとして定義しない）
   _Boundary:_ `packages/schemas/src/workflows.ts`
   _Depends:_ 5.1
   _Requirements:_ 5.1, 5.2, 9.1, 9.3, 9.4
   _Traces:_ REQ-005, REQ-009, DES-3.7, DES-5.1
-- [ ] 5.3 (P) `packages/schemas/tests/env.spec.ts` に既定値・`coerce`・正数制約のテストを先に書き、
+- [x] 5.3 (P) `packages/schemas/tests/env.spec.ts` に既定値・`coerce`・正数制約のテストを先に書き、
       `aiEnvSchema` と `parseAiEnv` へ `JOB_TOKEN_BUDGET` を `CHAT_TOKEN_BUDGET` と同型で追加し、
       `.env.example` に既定値つきで追記する（`docker-compose.yml` には置かない既存作法に揃える）
   _Boundary:_ `packages/schemas/tests/env.spec.ts`, `packages/schemas/src/env.ts`, `.env.example`
@@ -256,8 +256,9 @@ _Traces:_ REQ-005, REQ-007, REQ-009, DES-3.7, DES-3.10, DES-5.1, DES-5.5
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- `approvalDecisionSchema` / `approvalDecisionSetSchema` は `z.strictObject` で定義し、余剰フィールド（履歴・usage・model 等）をエッジで確実に reject（D1「証明」）。
+- `JOB_TOKEN_BUDGET` は `CHAT_TOKEN_BUDGET` と同型（`z.coerce.number().int().positive().default(200_000)`）として `aiEnvSchema` と `parseAiEnv` に追加。
+- `approvalRequestSchema` は single と set の `z.union` であり、双方が `strictObject` であるため union 全体でも余剰プロパティを透過させずに安全にバリデーションできる。
 
 ---
 

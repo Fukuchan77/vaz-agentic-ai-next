@@ -1,5 +1,11 @@
 import { citationSchema } from "@vaz/schemas/rag";
 import {
+	type ApprovalDecision,
+	type ApprovalDecisionSet,
+	type ApprovalRequest,
+	approvalDecisionSchema,
+	approvalDecisionSetSchema,
+	approvalRequestSchema,
 	type JobEvent,
 	jobEventSchema,
 	type SpecialistInput,
@@ -309,5 +315,106 @@ describe("jobEventSchema (typed event discriminated union, R3.6)", () => {
 			metrics: { stopReason: "timeout", inputTokens: 1, outputTokens: 1, totalTokens: 2 },
 		});
 		expect(parsed.success).toBe(false);
+	});
+});
+
+describe("approval wire contracts (C-7 / R5.1, R5.2, R9.1, R9.3, R9.4)", () => {
+	const validDecision = {
+		toolCallId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+		decision: "approve",
+		args: { recipient: "allowed@example.com" },
+	};
+
+	test("accepts a valid single approval decision with UUID toolCallId and approve decision", () => {
+		const parsed = approvalDecisionSchema.safeParse(validDecision);
+		expect(parsed.success).toBe(true);
+		if (parsed.success) {
+			const d: ApprovalDecision = parsed.data;
+			expect(d.decision).toBe("approve");
+		}
+	});
+
+	test("type checks ApprovalDecisionSet and ApprovalRequest types", () => {
+		const setPayload: ApprovalDecisionSet = { decisions: [validDecision as ApprovalDecision] };
+		const requestPayload: ApprovalRequest = setPayload;
+		expect(approvalRequestSchema.safeParse(requestPayload).success).toBe(true);
+	});
+
+	test("accepts a valid single approval decision with reject decision and omitted args", () => {
+		const single = {
+			toolCallId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+			decision: "reject",
+		};
+		const parsed = approvalDecisionSchema.safeParse(single);
+		expect(parsed.success).toBe(true);
+	});
+
+	test("rejects a decision with invalid decision discriminant", () => {
+		const invalid = {
+			toolCallId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+			decision: "maybe",
+		};
+		const parsed = approvalDecisionSchema.safeParse(invalid);
+		expect(parsed.success).toBe(false);
+	});
+
+	test("rejects a decision with non-UUID toolCallId", () => {
+		const invalid = {
+			toolCallId: "not-a-uuid",
+			decision: "approve",
+		};
+		const parsed = approvalDecisionSchema.safeParse(invalid);
+		expect(parsed.success).toBe(false);
+	});
+
+	test("rejects excess / forbidden fields in single decision (strictObject, D1 proof)", () => {
+		for (const extraKey of ["history", "messages", "usage", "model", "prompt", "extraField"]) {
+			const bodyWithExtra = {
+				...validDecision,
+				[extraKey]: "forbidden",
+			};
+			const parsed = approvalDecisionSchema.safeParse(bodyWithExtra);
+			expect(parsed.success).toBe(false);
+		}
+	});
+
+	test("accepts a valid decision set with at least one decision", () => {
+		const set = {
+			decisions: [validDecision],
+		};
+		const parsed = approvalDecisionSetSchema.safeParse(set);
+		expect(parsed.success).toBe(true);
+	});
+
+	test("rejects an empty decision set (min 1, R9.3)", () => {
+		const emptySet = {
+			decisions: [],
+		};
+		const parsed = approvalDecisionSetSchema.safeParse(emptySet);
+		expect(parsed.success).toBe(false);
+	});
+
+	test("rejects excess / forbidden fields in decision set root (strictObject, D1 proof)", () => {
+		for (const extraKey of ["history", "messages", "usage", "model", "prompt", "extraField"]) {
+			const setWithExtra = {
+				decisions: [validDecision],
+				[extraKey]: "forbidden",
+			};
+			const parsed = approvalDecisionSetSchema.safeParse(setWithExtra);
+			expect(parsed.success).toBe(false);
+		}
+	});
+
+	test("approvalRequestSchema accepts both single decision and decision set (union)", () => {
+		expect(approvalRequestSchema.safeParse(validDecision).success).toBe(true);
+		expect(approvalRequestSchema.safeParse({ decisions: [validDecision] }).success).toBe(true);
+	});
+
+	test("approvalRequestSchema rejects payloads with forbidden fields or empty sets", () => {
+		expect(approvalRequestSchema.safeParse({ decisions: [] }).success).toBe(false);
+		expect(approvalRequestSchema.safeParse({ ...validDecision, history: [] }).success).toBe(false);
+		expect(
+			approvalRequestSchema.safeParse({ decisions: [validDecision], usage: 100 }).success,
+		).toBe(false);
 	});
 });
