@@ -182,27 +182,27 @@ _Depends:_ 3
 _Requirements:_ 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5
 _Traces:_ REQ-001, REQ-002, REQ-003, REQ-004, DES-3.2, DES-3.3, DES-5.3
 
-- [ ] 4.1 冒頭に語彙定義ブロックを C-3 と**同一文言**で置き、出所タクソノミ名
+- [x] 4.1 冒頭に語彙定義ブロックを C-3 と**同一文言**で置き、出所タクソノミ名
       （OWASP Top 10 for LLM Applications 2025）と版日付 `2024-11-17` を記す
   _Boundary:_ `docs/owasp-llm-top10-mapping.md`
   _Depends:_ 3.5
   _Requirements:_ 2.5, 3.3
   _Traces:_ REQ-002, REQ-003, DES-3.3
-- [ ] 4.2 LLM01〜LLM10 の各節を構造化引用ブロック（IF-3 の 5 キー）へ移行し、状態トークンを
+- [x] 4.2 LLM01〜LLM10 の各節を構造化引用ブロック（IF-3 の 5 キー）へ移行し、状態トークンを
       1 つだけ付与する。旧 2 値と `- 未対応:` キーを廃止し、`- CI:` に混在していたシェルコマンドを
       散文へ移す。受容 2 値の節に具体的な将来の変更としての再評価トリガを書く
   _Boundary:_ `docs/owasp-llm-top10-mapping.md`
   _Depends:_ 4.1
   _Requirements:_ 2.1, 2.2, 2.3, 2.4
   _Traces:_ REQ-002, DES-3.2, DES-5.3
-- [ ] 4.3 「未対応」と記されている LLM05（回帰ガード不在）/ LLM07（System Prompt Leakage）の
+- [x] 4.3 「未対応」と記されている LLM05（回帰ガード不在）/ LLM07（System Prompt Leakage）の
       2 クレームを 3 値へ再分類して再評価トリガを持たせ、「全 6 ワークフロー」の記述を実測 7 本へ
       是正し、Agentic 側対応表への相互参照を新ファイル名で双方向に維持する
   _Boundary:_ `docs/owasp-llm-top10-mapping.md`, `docs/owasp-agentic-threats-mitigations-mapping.md`
   _Depends:_ 4.2
   _Requirements:_ 2.6, 3.4, 3.5
   _Traces:_ REQ-002, REQ-003, DES-3.2
-- [ ] 4.4 タスク 2 のガードを 2 文書に対して緑にする（引用実在・シンボル実在・CI ステップ名・
+- [x] 4.4 タスク 2 のガードを 2 文書に対して緑にする（引用実在・シンボル実在・CI ステップ名・
       3 値語彙・版日付・索引全単射）。引用の書式ゆれはガードではなく文書側を直して合わせ、
       ガードの許容 3 値定数は緩めない
   _Boundary:_ `tests/repo/owasp-mapping-citations.spec.ts`, `docs/owasp-agentic-threats-mitigations-mapping.md`, `docs/owasp-llm-top10-mapping.md`
@@ -212,8 +212,13 @@ _Traces:_ REQ-001, REQ-002, REQ-003, REQ-004, DES-3.2, DES-3.3, DES-5.3
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- シンボルアノテーション（`（`symbolName`）`）は `- 実装:` キー行にのみ置く。テストファイルで
+  当該シンボルを import・使用していない場合は `- テスト:` 行からアノテーションを除去する
+  （例: `isApprovalCapable` / `buildBudgetStopCondition` は実装ファイルにのみ存在）。
+- `- CI:` 行の第 1 コードスパン = ワークフローファイルパス、以降 = そのワークフローの
+  `name:` 値（YAML 構造的取得）。シェルコマンドは CI 行に書かず散文へ移す。
+- `- 状態: Partial · accepted` は実装は存在するが専用テストがない（または不完全な）状態を表す。
+  `- 状態: Accepted` は能動的な対策がない場合。いずれも `- 再評価トリガ:` が必須。
 
 ---
 
