@@ -91,7 +91,7 @@
   正本 X-13 が「統合対象」として挙げていた 2 表（LLM Top 10 ＋ Agentic AI Top 10）は
   **既にこの repo 単体で両方揃っている**。本ハブの
   [`docs/owasp-llm-top10-mapping.md`](../../docs/owasp-llm-top10-mapping.md) /
-  [`docs/owasp-agentic-ai-top10-mapping.md`](../../docs/owasp-agentic-ai-top10-mapping.md)
+  [`docs/owasp-agentic-threats-mitigations-mapping.md`](../../docs/owasp-agentic-threats-mitigations-mapping.md)
   と突き合わせ、テスト引用形式の書き方（各行にテストファイルを引用）に差異が無いか
   比較する価値がある。
 

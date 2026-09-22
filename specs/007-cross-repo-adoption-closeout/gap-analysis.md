@@ -48,7 +48,7 @@
 
 | AC | 判定 | 根拠・所見 |
 |---|---|---|
-| 1.1 15 脅威全件の節 | 🆕 | 現状 **10 節**（`grep -c '^## '` = 10）で T1〜T10 のみ。[`docs/owasp-agentic-ai-top10-mapping.md:22-134`](../../docs/owasp-agentic-ai-top10-mapping.md) |
+| 1.1 15 脅威全件の節 | 🆕 | 現状 **10 節**（`grep -c '^## '` = 10）で T1〜T10 のみ。[`docs/owasp-agentic-threats-mitigations-mapping.md:22-134`](../../docs/owasp-agentic-threats-mitigations-mapping.md) |
 | 1.2 T11〜T15 の該当性＋状態トークン | 🆕 | 5 節を新設。現状 T11〜T15 の語はファイル内に 1 度も現れない |
 | 1.3 supervisor の保証／非保証 | 🔧 | **引用すべき実装は全て存在する**: citation handoff とその即時リセット（[`supervisor.ts:452-463`](../../packages/agents/src/supervisor.ts)）／`ApprovalDeniedError` の構造的 duck-typing による打ち切り（`supervisor.ts:498-514`）／`WorkflowStepRunner` の step 境界（`supervisor.ts:87-89, 469`）。**追加の好材料**: `mergeApprovedArgs` が `kind` を task 自身の値に固定し「編集でどの specialist が走るかは変えられない」を保証（`supervisor.ts:420-426`）——Rogue Agents の直接の反例。非保証側: `data-processing.input: z.unknown()`（[`workflows.ts:66`](../../packages/schemas/src/workflows.ts)）が不透明な通し穴 |
 | 1.4 実装が無い脅威も節を省略しない | 🆕 | 現状は「未対応」節が 1 つだけ（`agentic:127`）で、落ちている 5 件は節ごと不在 |
