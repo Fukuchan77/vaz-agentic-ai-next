@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { citationSchema } from "@vaz/schemas/rag";
 import {
 	type ApprovalDecision,
@@ -8,6 +9,7 @@ import {
 	approvalRequestSchema,
 	type JobEvent,
 	jobEventSchema,
+	MAX_PLAN_STEPS,
 	type SpecialistInput,
 	type SpecialistResult,
 	type SupervisorPlan,
@@ -192,6 +194,38 @@ describe("supervisorPlanSchema / workflowStepSchema (R3.3)", () => {
 
 	test("rejects a plan with an empty goal", () => {
 		expect(supervisorPlanSchema.safeParse({ goal: "", steps: [validStep] }).success).toBe(false);
+	});
+
+	// OWASP Agentic T6 (Resource Overload) / LLM10 (Unbounded Consumption).
+	// The plan is client-supplied on POST /api/jobs and every step is dispatched
+	// as an LLM call, so the array length is the request's cost multiplier.
+	describe("plan step cap (MAX_PLAN_STEPS — T6 / LLM10)", () => {
+		const nSteps = (n: number) =>
+			Array.from({ length: n }, () => ({ ...validStep, stepId: randomUUID() }));
+
+		test("accepts a plan at exactly MAX_PLAN_STEPS", () => {
+			expect(
+				supervisorPlanSchema.safeParse({ goal: "g", steps: nSteps(MAX_PLAN_STEPS) }).success,
+			).toBe(true);
+		});
+
+		test("rejects a plan one step over MAX_PLAN_STEPS", () => {
+			expect(
+				supervisorPlanSchema.safeParse({ goal: "g", steps: nSteps(MAX_PLAN_STEPS + 1) }).success,
+			).toBe(false);
+		});
+
+		test("rejects an oversized plan outright (no truncation to the cap)", () => {
+			// Silently dispatching the first MAX_PLAN_STEPS would execute work the
+			// caller never sees rejected. Fail closed instead.
+			const parsed = supervisorPlanSchema.safeParse({ goal: "g", steps: nSteps(500) });
+			expect(parsed.success).toBe(false);
+		});
+
+		test("the cap is a positive integer (guards a typo'd export)", () => {
+			expect(Number.isInteger(MAX_PLAN_STEPS)).toBe(true);
+			expect(MAX_PLAN_STEPS).toBeGreaterThan(0);
+		});
 	});
 
 	test("rejects a step with a non-UUID stepId", () => {

@@ -274,7 +274,15 @@ function buildOnEnd(deps: AgentDeps, options: { budget: number; maxSteps: number
  * before the tool ever executes. `undefined` (unset) keeps the SDK's
  * documented backward-compatible behavior — chat still works, just without
  * this binding; see `.env.example` for why it should be set in any real
- * deployment.
+ * deployment. Because that degradation is invisible from the client's point of
+ * view, an unset secret is logged once per run at `warn` (the value itself is
+ * never logged — it is a secret, and R4.7 forbids it regardless).
+ *
+ * The value is read through `parseAiEnv()` rather than `process.env` directly,
+ * so every env read under `packages/*` goes through the one validated schema
+ * (`@vaz/schemas/env`). That is also what normalises the empty-string case
+ * (`TOOL_APPROVAL_SECRET=`, as `.env.example` ships it) to `undefined` rather
+ * than silently signing with an empty key.
  */
 export function buildStreamTextOptions(
 	deps: AgentDeps,
@@ -283,7 +291,16 @@ export function buildStreamTextOptions(
 	messages: ModelMessage[],
 ) {
 	let externallyDriven = false;
-	const budget = parseAiEnv().CHAT_TOKEN_BUDGET;
+	const aiEnv = parseAiEnv();
+	const budget = aiEnv.CHAT_TOKEN_BUDGET;
+	const toolApprovalSecret = aiEnv.TOOL_APPROVAL_SECRET;
+	if (toolApprovalSecret === undefined) {
+		deps.logger.warn(
+			"TOOL_APPROVAL_SECRET is unset — tool approvals are not HMAC-bound; a forged " +
+				"approval id passes the HITL gate and RECIPIENT_ALLOWLIST is the only control left",
+			{ agentName: "chat-agent" },
+		);
+	}
 	return {
 		model: options.model ?? resolveModel(),
 		system: CHAT_SYSTEM_PROMPT,
@@ -297,7 +314,7 @@ export function buildStreamTextOptions(
 			// Additive sticky signal; the policy still OR-s in its own delimiter scan.
 			isExternallyDriven: () => externallyDriven,
 		}),
-		experimental_toolApprovalSecret: process.env.TOOL_APPROVAL_SECRET || undefined,
+		experimental_toolApprovalSecret: toolApprovalSecret,
 		prepareStep: buildPrepareStep(() => {
 			externallyDriven = true;
 		}, options.windowMessages),

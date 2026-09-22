@@ -110,9 +110,15 @@ SQL に直接連結する経路は存在しない——ツール実行は `input
 管理者ロールも同じ統治パターン（`ADMIN_EMAILS`、committed・空初期値）で、IdP claim を信用せず
 アプリ側の allow-list からのみ解決する。
 
+承認ゲート自体の完全性は `TOOL_APPROVAL_SECRET` が支える。chat 経路はステートレスで
+クライアントが履歴ごと `tool-approval-request` を送り返すため、署名が無いと AI SDK は
+クライアント由来の `approval.id` から承認要求を再合成してしまい、偊造 ID がそのまま通る
+（承認ゲートがラバースタンプ化し、Rule of Two の片方が実質失われる）。
+`@vaz/schemas/env` で検証して `buildStreamTextOptions` が HMAC 署名鍵として渡す。
+
 - 状態: Mitigated
-- 実装: [`packages/agents/src/approval-policy.ts`](../packages/agents/src/approval-policy.ts)（`isApprovalCapable`）、[`packages/tools/src/allowlist.ts`](../packages/tools/src/allowlist.ts)（`assertAllowedRecipient`）、[`packages/config/src/role-allowlist.ts`](../packages/config/src/role-allowlist.ts)（`resolveVazRole`）
-- テスト: `packages/agents/tests/approval-policy.spec.ts`、`packages/tools/tests/allowlist.spec.ts`（`assertAllowedRecipient`）、`packages/config/tests/role-allowlist.spec.ts`（`resolveVazRole`）
+- 実装: [`packages/agents/src/approval-policy.ts`](../packages/agents/src/approval-policy.ts)（`isApprovalCapable`）、[`packages/tools/src/allowlist.ts`](../packages/tools/src/allowlist.ts)（`assertAllowedRecipient`）、[`packages/config/src/role-allowlist.ts`](../packages/config/src/role-allowlist.ts)（`resolveVazRole`）、[`packages/schemas/src/env.ts`](../packages/schemas/src/env.ts)（`TOOL_APPROVAL_SECRET`）、[`packages/agents/src/chat-agent.ts`](../packages/agents/src/chat-agent.ts)（`experimental_toolApprovalSecret`）
+- テスト: `packages/agents/tests/approval-policy.spec.ts`、`packages/tools/tests/allowlist.spec.ts`（`assertAllowedRecipient`）、`packages/config/tests/role-allowlist.spec.ts`（`resolveVazRole`）、`packages/agents/tests/chat-agent.spec.ts`（`experimental_toolApprovalSecret`）、`packages/schemas/tests/env.spec.ts`（`TOOL_APPROVAL_SECRET`）
 
 ## LLM07: System Prompt Leakage
 
@@ -157,6 +163,19 @@ Tier2 eval（faithfulness/relevancy）が golden set の各ケースについて
 Nightly eval にはコストキャップ（`EVAL_NIGHTLY_COST_CAP_TOKENS`）があり、超過を検知して
 非ゼロ終了する。CI 側は全ジョブに `timeout-minutes` を設定している。
 
-- 状態: Mitigated
-- 実装: [`packages/agents/src/chat-agent.ts`](../packages/agents/src/chat-agent.ts)（`buildBudgetStopCondition`）
-- テスト: `packages/agents/tests/chat-agent.spec.ts`、`packages/evals/tests/nightly.spec.ts`
+ジョブ経路（`POST /api/jobs`）は別の上限を持つ。プランはクライアントから到着し、
+supervisor はその step を全件 specialist にディスパッチするので、step 数がそのまま
+1 リクエストのコスト倍率になる。`MAX_PLAN_STEPS`（`supervisorPlanSchema` の `max()`）が
+これを構造的に縛る。
+
+**残余リスク（受容）**: `POST /api/jobs` は未認証でも 401 を返さず、`userId: null` のまま
+ジョブを受け付ける（auth は Phase 5。`apps/worker/src/main.ts` の `JobRequest.userId` が
+`string | null` であるのがその証拠）。つまり step 数は縛られているが、**リクエスト数は
+縛られていない**。また `JOB_TOKEN_BUDGET` は承認再開経路（`apps/web/src/lib/approvals.ts`）でしか
+参照されず、承認ゲートを持たないプランはそこを通らないため、ジョブのトークン上限としては
+実効していない。
+
+- 状態: Partial · accepted
+- 実装: [`packages/agents/src/chat-agent.ts`](../packages/agents/src/chat-agent.ts)（`buildBudgetStopCondition`）、[`packages/schemas/src/workflows.ts`](../packages/schemas/src/workflows.ts)（`MAX_PLAN_STEPS`）
+- テスト: `packages/agents/tests/chat-agent.spec.ts`、`packages/evals/tests/nightly.spec.ts`、`packages/schemas/tests/workflows.spec.ts`（`MAX_PLAN_STEPS`）
+- 再評価トリガ: `POST /api/jobs` に認証を入れたとき（Phase 5、未認証リクエストを 401 で落とすようにしたとき）、または worker specialist に承認ゲートを配線して `JOB_TOKEN_BUDGET` が全ジョブに効くようになったとき

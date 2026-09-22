@@ -49,3 +49,17 @@ describe("aiEnvSchema JOB_TOKEN_BUDGET (C-10 / R7.4)", () => {
 		expect(() => parseAiEnv({ JOB_TOKEN_BUDGET: "1.5" })).toThrow();
 	});
 });
+
+describe("aiEnvSchema TOOL_APPROVAL_SECRET (X-9 — HMAC binding for tool approvals)", () => {
+	test("is undefined when unset — the SDK's backward-compatible default", () => {
+		expect(parseAiEnv({}).TOOL_APPROVAL_SECRET).toBeUndefined();
+	});
+
+	test("treats an empty string as unset rather than signing with an empty key", () => {
+		expect(parseAiEnv({ TOOL_APPROVAL_SECRET: "" }).TOOL_APPROVAL_SECRET).toBeUndefined();
+	});
+
+	test("passes a non-empty secret through unchanged", () => {
+		expect(parseAiEnv({ TOOL_APPROVAL_SECRET: "s3cret" }).TOOL_APPROVAL_SECRET).toBe("s3cret");
+	});
+});
