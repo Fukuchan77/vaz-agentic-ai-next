@@ -413,3 +413,75 @@ mise run check
 
 Test count delta: 729（Task 8 gate） → 766（Task 9 gate）= **+37 新規テスト**
 （35 x `approvals.spec.ts` + 2 x `stores-job-step.spec.ts` 追加ケース）
+
+---
+
+## Task 10: 承認ルートを「検証してから送る」へ転換する（C-12）（2026-09-23）
+
+### 実施内容
+
+**10.1 — `apps/web/tests/jobs-approve-route.spec.ts` テスト追加（TDD先行）**
+
+既存 10 テストを Section A として保存したまま、Section B として 20 テストを追加（計 30 テスト）。
+追加ケース:
+- D1: `history` / `model` / `usage` を含む余剰フィールド → 400 かつ `claimApprovalTargets` 未呼び出し（R5.2/5.3/5.5）
+- セット形受理: 2 決定 → `submitApproval` が 2 回呼ばれる（R9.1）
+- 重複 `toolCallId` → 409 かつ DB 未アクセス（R9.3/9.6）; 409 ボディに toolCallId を含まない（R9.5）
+- not-claimable 単一形 → 404（R6.2/6.3）; セット形 → 409（R9.2）; ボディが同一（R6.4）
+- budget-exceeded → 429; `submitApproval` 未呼び出しだが `claimApprovalTargets` 呼び出し済み（R7.2/7.3）
+- 監査成功後に記録呼び出し（D4/R8.1）; 監査失敗でも 202 が返る（R8.3）
+
+モックは `vi.mock(import(...), async (importOriginal))` の部分モック方式: `normalizeApprovalRequest` / `findDuplicateTarget` / `resolveJobTokenBudget` は実装を使い（純関数のためネットワーク不要）、`claimApprovalTargets` と `recordApprovalDecisions` のみ差し替えた。
+
+**10.2 — `apps/web/src/app/api/jobs/[id]/approve/route.ts` 全面書き替え**
+
+旧「fire-and-forget」実装（独自 `z.object` → `submitApproval` 即呼び出し）を廃止し、
+`lib/approvals.ts` のオーケストレーション経由に転換:
+
+1. `authorizeJobAccess` → 400/401/404/403（不変）
+2. JSON parse → 400 on fail
+3. `approvalRequestSchema.safeParse` → 400（`z.strictObject` で余剰フィールド拒否 D1）
+4. `normalizeApprovalRequest` → `{ decisions, submittedAs }`
+5. `findDuplicateTarget` → 409（DB 接触前）
+6. `getWebDb` + `createJobStepStore` + `createAuditSink`（失敗時は 500; fail-closed 設計）
+7. `claimApprovalTargets` → not-claimable → 404/409; budget-exceeded → 429; claimed → continue
+8. `recordApprovalDecisions`（fail-soft, try/catch でバックアップ）
+9. `submitApproval` × N（claimed.decisions ループ）
+10. 202 `{ ok: true }`
+
+**10.3 — doccomment 書き替えとペリフェリー確認**
+
+- route.ts のドックコメントを「D1〜D5 の各防御・ADR-1 方針転換記録」として全面改訂
+- `ApprovalPanel.spec.tsx`（10 テスト）、`jobs.spec.ts`（10 テスト）が無改変で GREEN ✓
+
+### PROVE 証拠（非空虚性）
+
+**実装前 RED 確認**（route.ts 書き替え前、テスト追加直後）:
+
+```
+FAIL  web  tests/jobs-approve-route.spec.ts
+  Error: [vitest] No "normalizeApprovalRequest" export is defined on the "@/lib/approvals" mock
+  Tests  18 failed | 12 passed (30)
+```
+
+※ 部分モック方式に切り替えた後、route.ts の `if (process.env.DATABASE_URL?.trim())` ガードが
+原因でさらに 12 失敗（store = undefined → 500）。ガードを削除して `try/catch` に変更後に全 30 GREEN。
+
+**D1 strictObject 実証**: `approvalRequestSchema` の `z.strictObject` を `z.object` に変えると
+`"returns 400 when single form carries an extra field"` が `expected 400 to be 202` で FAIL。
+
+**not-claimable 404 実証**: `case "not-claimable"` を削除すると
+`"single-form not-claimable → 404"` が `expected 404 to be 202` で FAIL。
+
+### Verification Gate
+
+```
+mise run check
+  lint: 167 files, No fixes applied.
+  audit: No known vulnerabilities
+  typecheck: apps/worker ✓ | apps/web ✓ | packages/* ✓
+  test:run: 68 test files passed | 786 passed / 1 skipped
+```
+
+Test count delta: 766（Task 9 gate） → 786（Task 10 gate）= **+20 新規テスト**
+（20 x `jobs-approve-route.spec.ts` Section B）

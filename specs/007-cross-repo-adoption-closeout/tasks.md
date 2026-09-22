@@ -446,7 +446,7 @@ _Depends:_ 8, 9
 _Requirements:_ 5.2, 5.3, 5.4, 5.5, 6.2, 6.3, 6.4, 6.5, 7.2, 7.3, 9.1, 9.2, 9.4, 9.5, 12.5
 _Traces:_ REQ-005, REQ-006, REQ-007, REQ-009, REQ-012, DES-3.12, DES-5.1
 
-- [ ] 10.1 `apps/web/tests/jobs-approve-route.spec.ts` に先にテストを追加する（既存 10 テストは
+- [x] 10.1 `apps/web/tests/jobs-approve-route.spec.ts` に先にテストを追加する（既存 10 テストは
       維持）: 未定義フィールドを含むボディの 400 と**承認対象を消費しないこと**、単一形での
       unknown / in-flight / consumed の 3 ケースがヘッダ・ボディ・コードで区別できないこと、
       セット形の不正・重複での 409、予算超過の 429、検証成功時のみ `engine.send` が呼ばれること、
@@ -456,7 +456,7 @@ _Traces:_ REQ-005, REQ-006, REQ-007, REQ-009, REQ-012, DES-3.12, DES-5.1
   _Depends:_ 8.3, 9.4
   _Requirements:_ 5.2, 5.3, 5.4, 6.2, 6.3, 6.4, 7.2, 7.3, 9.1, 9.2, 9.4, 9.5, 12.5
   _Traces:_ REQ-005, REQ-006, REQ-007, REQ-009, REQ-012, DES-5.1
-- [ ] 10.2 `route.ts` を `lib/approvals.ts` 経由の「検証 ＋ 消費 → 送信」へ転換する。
+- [x] 10.2 `route.ts` を `lib/approvals.ts` 経由の「検証 ＋ 消費 → 送信」へ転換する。
       `approvalRequestSchema` の不適合は 400、`submittedAs` が `"single"` なら 404 /
       `"set"` なら 409、予算超過は 429、成功時のみ `engine.send`（`id: "<jobId>:<stepId>"`）。
       HTTP 変換と 1 本のオーケストレーションに留め、検証ロジックを持ち込まない
@@ -464,7 +464,7 @@ _Traces:_ REQ-005, REQ-006, REQ-007, REQ-009, REQ-012, DES-3.12, DES-5.1
   _Depends:_ 10.1
   _Requirements:_ 5.2, 5.5, 6.2, 6.3, 6.4, 7.2, 7.3, 9.1, 9.4, 9.5
   _Traces:_ REQ-005, REQ-006, REQ-007, REQ-009, DES-3.12
-- [ ] 10.3 `authorizeJobAccess` のラダー（400 / 401 / 404 / 403）が不変であることをテストで固定し、
+- [x] 10.3 `authorizeJobAccess` のラダー（400 / 401 / 404 / 403）が不変であることをテストで固定し、
       `route.ts` のドックコメントを fire-and-forget から「検証してから送る」への方針転換として
       書き換える（ADR-1 の記録）。周辺の `apps/web/tests/ApprovalPanel.spec.tsx`（既存単一形ボディの
       UI テスト、R9.4）と `apps/web/tests/jobs.spec.ts`（ジョブ単位の既存テスト、R6.5）が
@@ -476,8 +476,9 @@ _Traces:_ REQ-005, REQ-006, REQ-007, REQ-009, REQ-012, DES-3.12, DES-5.1
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- **Partial mock via `importOriginal`**: the route imports `normalizeApprovalRequest` / `findDuplicateTarget` / `resolveJobTokenBudget` directly from `@/lib/approvals`; the test mocks only `claimApprovalTargets` and `recordApprovalDecisions` via `vi.mock(import(...), async (importOriginal) => { ...actual, ... })` so the pure helpers run with real logic while the DB-touching functions are fake.
+- **DB guard removed**: the original draft used `if (process.env.DATABASE_URL?.trim())` to conditionally build the store, mirroring the chat route's fail-soft pattern. For the approve route this is wrong — a missing DB means no consume-once gate, which must not silently allow an unguarded resume. The guard was replaced with a direct `try/catch` that returns 500 on any `getWebDb` failure.
+- **`recordApprovalDecisions` is fail-soft at two levels**: the function itself swallows sink errors (Task 9 design), and the route wraps it in an additional `try/catch` as belt-and-suspenders. The double wrap is cheap and makes the invariant ("audit never blocks resume") explicit at the call site.
 
 ---
 
