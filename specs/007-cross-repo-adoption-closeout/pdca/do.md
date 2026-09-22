@@ -344,3 +344,72 @@ mise run check
 ```
 
 Worker test count delta: 83 → 91（+8 新規テスト: 7 x WorkerApprovalMirror + 1 x submitApproval idempotency。既存 2 テストは新シグネチャ対応で修正）。
+
+---
+
+## Task 9: 承認決定ロジック（C-8）（2026-09-23）
+
+### 実施内容
+
+**9.1 — `apps/web/tests/approvals.spec.ts` 新規作成（テスト先行）**
+
+35 テストを 6 describe ブロックに作成し、実装前に全件 RED であることを確認してから実装へ進んだ。
+
+主要ケース:
+- `normalizeApprovalRequest`: 単一形→1要素配列への畳み込み、`submittedAs` の保持、args の透過
+- `findDuplicateTarget`: 空・単一・重複あり・重複なし
+- `maskedArgKeys`: 値を含まないキー名のみ返却、undefined/null/string/空オブジェクト
+- `resolveJobTokenBudget`: 既定値・coerce・正数制約（0/-1 で throw）
+- `claimApprovalTargets`: claimed/not-claimable/budget-exceeded の 8 ケース
+- `recordApprovalDecisions`: tool名・maskedArgs・callerId/jobId・fail-soft・R4.7
+
+**9.2〜9.4 — `apps/web/src/lib/approvals.ts` 実装**
+
+- `normalizeApprovalRequest`: 単一形を `{ decisions: [d], submittedAs: "single" }` へ正規化
+- `findDuplicateTarget`: Set による O(n) 重複検出（DB 接触前）
+- `maskedArgKeys`: `typeof args === "object"` チェック付き `Object.keys()`（配列・null 除外）
+- `resolveJobTokenBudget`: `parseAiEnv(env).JOB_TOKEN_BUDGET` に委譲（DRY / C-10）
+- `ClaimOutcome`: 3 バリアント（`claimed` / `not-claimable` / `budget-exceeded`）の判別可能 union
+- `claimApprovalTargets`: `claimPending` 1 コール → rowCount=0 で `not-claimable`、totalTokens≥budget で `budget-exceeded`（行は消費済み）、それ以外で `claimed`
+- `recordApprovalDecisions`: `for` ループで各 decision を `try/catch` で包み、失敗時は `logger.error` に `{ jobId, stepId, error.message }` のみ出力して継続（fail-soft）
+
+**`JobStepStore.claimPending` 戻り値の拡張（Task 7 port への最小変更）**
+
+`Promise<number>` → `Promise<{ rowCount: number; totalTokens: number }>` に変更。
+トランザクション内で `await` していた `sum` SELECT の結果を捨てていたのを戻り値に追加。
+影響範囲: `stores-job-step.spec.ts`（4 テスト更新 + 2 テスト追加）、`main.spec.ts`（2 インライン fake 更新）。
+
+### PROVE 証拠（非空虚性）
+
+**実装前 RED 確認（全 35 テスト）**:
+
+```
+RUN  v4.1.11
+FAIL  web  tests/approvals.spec.ts
+  Cannot find module '@/lib/approvals' from 'tests/approvals.spec.ts'
+  Tests  35 failed (35)
+```
+
+**claimApprovalTargets budget-exceeded の非空虚性**: `totalTokens >= budget` の条件を
+`totalTokens > budget` に書き換えると、「budget-exceeded when totalTokens >= budget」テストが
+`expected 'claimed' to be 'budget-exceeded'` で FAIL することを確認。
+
+**recordApprovalDecisions fail-soft の非空虚性**: `try/catch` を削除すると
+「does NOT throw and returns successfully when audit sink fails」テストが
+`Error: DB is down` で FAIL することを確認。
+
+**maskedArgKeys 値漏洩防止の非空虚性**: `Object.keys()` の代わりに `Object.values()` を返すよう
+変更すると、「never contains the VALUE of any key」テストが `'do-not-log-this' to not be "do-not-log-this"` で FAIL することを確認。
+
+### Verification Gate
+
+```
+mise run check
+  lint: Checked 167 files in 81ms. No fixes applied.
+  audit: No known vulnerabilities found.
+  typecheck: apps/worker ✓ | apps/web ✓ | packages/* ✓
+  test:run: 68 test files passed / Tests 766 passed | 1 skipped
+```
+
+Test count delta: 729（Task 8 gate） → 766（Task 9 gate）= **+37 新規テスト**
+（35 x `approvals.spec.ts` + 2 x `stores-job-step.spec.ts` 追加ケース）

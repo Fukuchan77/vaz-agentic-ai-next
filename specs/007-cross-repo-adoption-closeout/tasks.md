@@ -393,7 +393,7 @@ _Depends:_ 5, 7
 _Requirements:_ 5.5, 6.1, 6.2, 6.3, 6.4, 7.2, 7.3, 7.6, 8.1, 8.2, 8.3, 8.4, 8.6, 9.2, 9.3, 9.5, 9.6
 _Traces:_ REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, DES-3.8, DES-5.1
 
-- [ ] 9.1 `apps/web/tests/approvals.spec.ts` を新規作成し、純関数の振る舞いを先に固定する:
+- [x] 9.1 `apps/web/tests/approvals.spec.ts` を新規作成し、純関数の振る舞いを先に固定する:
       単一形 / セット形の正規化と `submittedAs` の保持、セット内重複の検出、`maskedArgKeys` が
       **キー名のみ**を返し値を返さないこと、予算判定の境界（上限到達で拒否）、監査シンクを
       失敗させても再開が成功し `logger` へ raw `args` の値が出ないこと
@@ -401,14 +401,14 @@ _Traces:_ REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, DES-3.8, DES-5.1
   _Depends:_ 5.3, 7.2
   _Requirements:_ 7.2, 8.1, 8.3, 8.4, 9.3
   _Traces:_ REQ-007, REQ-008, REQ-009, DES-3.8
-- [ ] 9.2 `apps/web/src/lib/approvals.ts` に純関数群を実装する:
+- [x] 9.2 `apps/web/src/lib/approvals.ts` に純関数群を実装する:
       `normalizeApprovalRequest`（単一形を 1 要素セットへ畳み、投稿形を保持）/
       `findDuplicateTarget`（DB に触れる前に検出）/ `maskedArgKeys` / `resolveJobTokenBudget`
   _Boundary:_ `apps/web/src/lib/approvals.ts`
   _Depends:_ 9.1
   _Requirements:_ 5.5, 8.1, 9.3
   _Traces:_ REQ-005, REQ-008, REQ-009, DES-3.8
-- [ ] 9.3 `claimApprovalTargets` と判別可能 union `ClaimOutcome`
+- [x] 9.3 `claimApprovalTargets` と判別可能 union `ClaimOutcome`
       （`claimed` / `not-claimable` — unknown / in-flight / consumed を**区別しない単一の値**）を
       実装し、`claimPending` を 1 トランザクションで呼んで累積 usage の読み出しと消費を同時に行う
       （追加 DB ラウンドトリップ 1 回）。影響行数が決定数と一致しないときは全体をロールバックし
@@ -418,7 +418,7 @@ _Traces:_ REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, DES-3.8, DES-5.1
   _Depends:_ 9.2
   _Requirements:_ 6.1, 6.2, 6.3, 6.4, 7.2, 7.3, 7.6, 9.2, 9.5, 9.6
   _Traces:_ REQ-006, REQ-007, REQ-009, DES-3.8, DES-5.1
-- [ ] 9.4 `recordApprovalDecisions` を**承認経路の単一の監査発火点**として実装する:
+- [x] 9.4 `recordApprovalDecisions` を**承認経路の単一の監査発火点**として実装する:
       `tool: "approval:decision"`、`args: { stepId, decision, editedArgKeys }`（値は載せない）、
       `userId: callerId` と `jobId` を含める。内部で try/catch し、失敗時は再開を失敗させず
       成功時と同じステータスを返し、`logger.error` には相関フィールド
