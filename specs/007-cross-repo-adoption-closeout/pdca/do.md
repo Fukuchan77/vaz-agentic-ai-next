@@ -566,3 +566,87 @@ pnpm exec vitest run --project repo
 doc-links.spec.ts:   3 passed ✓
 cross-repo-reference-resolution.spec.ts:   7 passed ✓
 ```
+
+## Task 13: 検証ゲートと非空虚性・トレーサビリティ（2026-09-23）
+
+### 実施内容
+
+**13.1 — 非空虚性確認（タスク 2 / 5 / 6 / 7 / 8 / 9 / 10 / 11 の各検査）**
+
+各ガード・テストについて「実装または文書を一時的に壊すと落ちること」を確認した。
+詳細な PROVE 証拠は各タスクの PDCA do.md 節に既に記録済み。本節では
+**タスク 13.1 で新規に実施した追加確認** を記録する:
+
+1. **REQ-005 (5.1) — `approvalDecisionSchema` strict-object の非空虚性確認（本タスク実施）**
+   - 操作: `packages/schemas/src/workflows.ts` の `approvalDecisionSchema` を
+     `z.strictObject` → `z.object` に変更して `pnpm exec vitest run --project packages packages/schemas/tests/workflows.spec.ts` を実行
+   - 観測された失敗:
+     ```
+     × rejects excess / forbidden fields in single decision (strictObject, D1 proof)
+     AssertionError: expected true to be false // Object.is equality
+     × approvalRequestSchema rejects payloads with forbidden fields or empty sets
+     AssertionError: expected true to be false // Object.is equality
+     Tests  2 failed | 44 passed (46)
+     ```
+   - 復元完了 ✓
+
+2. **REQ-007 (7.2) — budget-exceeded `>=` 境界の非空虚性確認（本タスク実施）**
+   - 操作: `apps/web/src/lib/approvals.ts` の `if (totalTokens >= budget)` を
+     `if (totalTokens > budget)` に変更して `pnpm exec vitest run --project web apps/web/tests/approvals.spec.ts` を実行
+   - 観測された失敗:
+     ```
+     × returns budget-exceeded when totalTokens >= budget (rows are consumed)
+     AssertionError: expected 'claimed' to be 'budget-exceeded' // Object.is equality
+     ```
+   - 復元完了 ✓
+
+3. **REQ-009 (9.3) — `approvalDecisionSetSchema` strict-object の非空虚性確認（本タスク実施）**
+   - 上記 REQ-005 (5.1) と同一のコード変更で確認済み（同一ファイル・同一 `z.strictObject` 呼び出し）
+
+タスク 2 / 6 / 7 / 8 / 9 / 10 / 11 の PROVE 証拠は各タスクの PDCA 節に記録済み。
+すべての非空虚性証拠を `traceability.md` の Non-vacuity 列に集約した。
+
+**13.2 — `mise run check` 検証ゲート**
+
+実行コマンド: `mise run check`
+
+結果:
+```
+lint:       Checked 168 files in 78ms. No fixes applied. ✓
+audit:      No known vulnerabilities found. ✓
+typecheck:  apps/web ✓ | apps/worker ✓ | packages/* ✓
+test:run:   69 test files passed | Tests 793 passed | 1 skipped ✓
+lint:model-ids: No hardcoded model IDs found. ✓
+```
+
+追加確認項目:
+- カバレッジ: lines 90.96% / functions 82.19% / branches 92.08% / statements 91.03%（≥ 80% ✓）
+- `.github/workflows/` ファイル数: **7 本**（api.yml / eval-nightly.yml / eval-pr.yml / lint.yml / python.yml / security-daily.yml / tests.yml）。新規追加なし ✓
+- `GET /api/jobs/:id/stream` route: 本 spec での変更なし（last commit は先行作業分）✓
+- `jobEventTypeEnum` 定義: `packages/db/src/schema.ts:139` で無改変 ✓
+- `packages/agents/tests/audit-hook.spec.ts`（既存ツール実行監査テスト 4 件）: 793 passed の内数として GREEN ✓
+
+**13.3 — `traceability.md` 完成**
+
+- Non-vacuity 列（6 列目）を追加し、73 全受け入れ基準について証拠を記入
+- REQ-011 (11.1〜11.7) の Test + Non-vacuity + Commit 列を埋めた（commit: `b894e19`）
+- REQ-012 の Test + Non-vacuity + Commit 列を埋めた（commit: T-13）
+- REQ-007 (7.6) の Commit を "pending" → `a707139` に更新
+- REQ-008 (8.2) / REQ-008 (8.5) / REQ-010 (10.1〜10.5) の Commit を `020941a` に更新
+- 「承認経路テストのネットワーク独立性（REQ-012.5）」節を追加
+- 「plan による spec の訂正 3 点」が本表下部に記録済みであることを確認
+
+### Verification Gate
+
+```
+mise run check
+  lint: 168 files, No fixes applied. ✓
+  audit: No known vulnerabilities. ✓
+  typecheck: apps/web ✓ | apps/worker ✓ | packages/* ✓
+  test:run: 69 test files, 793 passed / 1 skipped ✓
+  lint:model-ids: No hardcoded model IDs found. ✓
+```
+
+カバレッジ: 90.96% lines / 82.19% functions — 閾値 80% 超過 ✓
+
+---

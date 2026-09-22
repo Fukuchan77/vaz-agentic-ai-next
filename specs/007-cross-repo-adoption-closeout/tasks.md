@@ -581,14 +581,14 @@ _Depends:_ 12
 _Requirements:_ 7.5, 8.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7
 _Traces:_ REQ-007, REQ-008, REQ-012, DES-3.14
 
-- [ ] 13.1 本 spec が追加した各テスト・ガードについて、対応する実装または文書を一時的に壊すと
+- [x] 13.1 本 spec が追加した各テスト・ガードについて、対応する実装または文書を一時的に壊すと
       落ちることを確認する（タスク 2 / 5 / 6 / 7 / 8 / 9 / 10 / 11 の各検査）。確認結果を
       非空虚性の列として記録し、壊した変更は元に戻す
   _Boundary:_ `specs/007-cross-repo-adoption-closeout/traceability.md`
   _Depends:_ 12.3
   _Requirements:_ 12.4
   _Traces:_ REQ-012, DES-3.14
-- [ ] 13.2 `mise run check`（lint / typecheck / test:run / audit / `lint:model-ids`）が緑であること、
+- [x] 13.2 `mise run check`（lint / typecheck / test:run / audit / `lint:model-ids`）が緑であること、
       カバレッジ閾値（lines / functions ≥ 80%）を下回らないこと、`.github/workflows/**` に
       新規ファイルを追加していないこと（既存 7 本の上で走る）、`GET /api/jobs/:id/stream` と
       `jobEventTypeEnum` が無改変であること、既存のツール実行監査テストが緑のままであることを
@@ -597,7 +597,7 @@ _Traces:_ REQ-007, REQ-008, REQ-012, DES-3.14
   _Depends:_ 13.1
   _Requirements:_ 7.5, 8.5, 12.1, 12.2, 12.3, 12.6
   _Traces:_ REQ-007, REQ-008, REQ-012, DES-3.14
-- [ ] 13.3 `traceability.md` を完成させる: 各受け入れ基準 ID → 実装ファイル → 検証テスト →
+- [x] 13.3 `traceability.md` を完成させる: 各受け入れ基準 ID → 実装ファイル → 検証テスト →
       非空虚性確認の対応を埋め、承認経路のテストが実 LLM・実 Redis・実 DB を要求しないことを
       明記し、plan が訂正した spec の 3 点（ワークフロー 7 本 / `AGENTS.md` に旧名参照なし /
       R6.2 は区別不能性の要求）を記録する
@@ -608,5 +608,9 @@ _Traces:_ REQ-007, REQ-008, REQ-012, DES-3.14
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- 非空虚性は「PDCA do.md に先行記録された PROVE 証拠の参照」と「タスク 13.1 で新規実施した 2 件の
+  破壊テスト（`z.strictObject` → `z.object` / `>=` → `>`）」の組み合わせで 73 全行を網羅した。
+  新規実証が必要だったのは他タスクの do.md に証拠がなかった REQ-005 (5.1) と REQ-007 (7.2) の 2 行のみ。
+- `traceability.md` に Non-vacuity 列（6 列目）を追加したことで、「Test 列が存在する」≠「非空虚」の
+  区別が表から直接読み取れるようになった。今後の spec で同じ表形式を採用するときのテンプレートになる。
+- T-13 の Commit 列は spec 007 の最終コミット（`/sdd-ship` で確定）で上書きされる。
