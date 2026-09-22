@@ -372,7 +372,7 @@ describe("WorkerApprovalMirror — pending set + usage mirroring (C-11 / R6.1 R7
 		return {
 			registerPending: async () => {},
 			recordStepUsage: async () => {},
-			claimPending: async () => 0,
+			claimPending: async () => ({ rowCount: 0, totalTokens: 0 }),
 		};
 	}
 
@@ -398,7 +398,7 @@ describe("WorkerApprovalMirror — pending set + usage mirroring (C-11 / R6.1 R7
 				callOrder.push("registerPending");
 			},
 			recordStepUsage: async () => {},
-			claimPending: async () => 0,
+			claimPending: async () => ({ rowCount: 0, totalTokens: 0 }),
 		};
 
 		// approvalGate records its invocation in callOrder before resolving

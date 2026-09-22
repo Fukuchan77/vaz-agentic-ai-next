@@ -87,7 +87,7 @@ interface ClaimCall {
 	/** Affected-row count the fake UPDATE resolves with. */
 	updatedCount: number;
 	/** The value returned by `claimPending`. */
-	result: number;
+	result: { rowCount: number; totalTokens: number };
 }
 
 type CapturingTx = {
@@ -246,15 +246,27 @@ describe("createJobStepStore.claimPending — atomic consume (R6.1 / R9.2)", () 
 		expect(fake.tx.updates[0]?.setApprovalState).toBe("consumed");
 	});
 
-	test("returns the number of rows updated (affected count)", async () => {
+	test("returns the number of rows updated (affected count) in rowCount", async () => {
 		const fake = fakeTransactionDb([{ total: 400 }], 3);
-		const count = await createJobStepStore(fake.db).claimPending(JOB_ID, AT);
-		expect(count).toBe(3);
+		const result = await createJobStepStore(fake.db).claimPending(JOB_ID, AT);
+		expect(result.rowCount).toBe(3);
 	});
 
-	test("returns 0 when no pending rows exist for the job", async () => {
+	test("returns the cumulative totalTokens from the sum select", async () => {
+		const fake = fakeTransactionDb([{ total: 400 }], 3);
+		const result = await createJobStepStore(fake.db).claimPending(JOB_ID, AT);
+		expect(result.totalTokens).toBe(400);
+	});
+
+	test("returns totalTokens=0 when no rows exist for the job (null sum)", async () => {
+		const fake = fakeTransactionDb([{ total: null }], 0);
+		const result = await createJobStepStore(fake.db).claimPending(JOB_ID, AT);
+		expect(result.totalTokens).toBe(0);
+	});
+
+	test("returns rowCount=0 when no pending rows exist for the job", async () => {
 		const fake = fakeTransactionDb([], 0);
-		const count = await createJobStepStore(fake.db).claimPending(JOB_ID, AT);
-		expect(count).toBe(0);
+		const result = await createJobStepStore(fake.db).claimPending(JOB_ID, AT);
+		expect(result.rowCount).toBe(0);
 	});
 });
