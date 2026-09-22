@@ -30,6 +30,20 @@ const EXCLUDED_SEGMENTS = ["node_modules", ".venv", "__pycache__", ".git", ".nex
 // what Task 3 ran, which is not a dangling pointer to fix.
 const EXCLUDED_PATH_PATTERN = /(^|\/)specs\/[^/]+\/pdca\//;
 
+// Matches repo-qualified references of the form `<repo-name>/docs/cross-repo-adoption-review.md`.
+//
+// The character class intentionally excludes `.` so that relative-path segments
+// (`.` and `..`) are never captured as a "repo name".  With `.` in the class,
+// a relative link like `../../docs/cross-repo-adoption-review.md` would have its
+// `..` segment captured as the repo name, then fail the `!== "vaz-agentic-ai-next"`
+// check as a false stale hit (I-8, `specs/007-cross-repo-adoption-closeout/research.md`).
+//
+// Known limitation: code-spans and fenced blocks inside `.md` files are not
+// stripped before matching (no `stripCode` equivalent), so text that *discusses*
+// a path without linking it can also match.  That second false-positive class is
+// documented as an accepted known limit in plan.md C-5 and is not addressed here.
+const QUALIFIED_FORM = /([A-Za-z0-9_-]+)\/docs\/cross-repo-adoption-review\.md/g;
+
 async function findReferencingFiles(): Promise<string[]> {
 	const hits: string[] = [];
 	for await (const relPath of glob("**/*.md", { cwd: ROOT.pathname })) {
@@ -42,6 +56,39 @@ async function findReferencingFiles(): Promise<string[]> {
 	}
 	return hits;
 }
+
+/**
+ * Regression cases for the `..`-as-repo-name false-positive (I-8,
+ * `specs/007-cross-repo-adoption-closeout/research.md`).
+ *
+ * These tests pin the behaviour of the module-level QUALIFIED_FORM regex so
+ * that reverting the dot-exclusion fix immediately causes failures here,
+ * before any file-system scan is attempted.
+ */
+describe("QUALIFIED_FORM regression: relative-path fragments must not be treated as repo names (I-8)", () => {
+	test("relative link `../../docs/…` yields zero qualified matches (no false stale hit)", () => {
+		const input = "[正本レビュー](../../docs/cross-repo-adoption-review.md) を参照";
+		const matches = [...input.matchAll(QUALIFIED_FORM)];
+		expect(
+			matches,
+			"../../ should produce no QUALIFIED_FORM match — it contains no repo-name segment",
+		).toHaveLength(0);
+	});
+
+	test("a genuinely stale repo-qualified reference is still detected", () => {
+		const input = "old-repo-name/docs/cross-repo-adoption-review.md の旧リンク";
+		const staleMatches = [...input.matchAll(QUALIFIED_FORM)];
+		expect(staleMatches).toHaveLength(1);
+		expect(staleMatches[0][1]).toBe("old-repo-name");
+	});
+
+	test("the current hub's qualified form is accepted (not stale)", () => {
+		const input = "vaz-agentic-ai-next/docs/cross-repo-adoption-review.md";
+		const currentMatches = [...input.matchAll(QUALIFIED_FORM)];
+		expect(currentMatches).toHaveLength(1);
+		expect(currentMatches[0][1]).toBe("vaz-agentic-ai-next");
+	});
+});
 
 describe("cross-repo-adoption-review.md reference resolution (R9.1, reachable subset)", () => {
 	test("the canonical file itself exists at the hub root", async () => {
@@ -65,7 +112,6 @@ describe("cross-repo-adoption-review.md reference resolution (R9.1, reachable su
 		// stale, by naming the wrong repo. This regex finds every such qualified
 		// occurrence and checks its repo name, rather than requiring the qualifier
 		// on same-repo links that never needed one.
-		const QUALIFIED_FORM = /([A-Za-z0-9_.-]+)\/docs\/cross-repo-adoption-review\.md/g;
 		const hits = await findReferencingFiles();
 		const staleNames: string[] = [];
 
