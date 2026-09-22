@@ -430,8 +430,9 @@ _Traces:_ REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, DES-3.8, DES-5.1
 
 ### Implementation Notes
 
-<!-- Empty at generation. Implementer appends 1-3 bullet learnings after
-completing this major task. -->
+- **`claimPending` return type extended to `{ rowCount, totalTokens }`**: the port was narrowed from `Promise<number>` to `Promise<{ rowCount: number; totalTokens: number }>` so the single transaction exposes the cumulative token spend to the caller without an extra round-trip. `stores-job-step.spec.ts` and both inline fakes in `main.spec.ts` were updated in the same change.
+- **Budget check is post-claim, not pre-claim**: `claimApprovalTargets` calls `claimPending` unconditionally — rows are always consumed when `rowCount > 0`. The 429 path returns after the commit, never before, ensuring a budget-blocked caller cannot replay the same approval target (R7.3 requirement satisfied structurally, not by convention).
+- **Existence concealment is a single variant**: the three unclaimable sub-cases (unknown / in-flight / consumed) collapse to `not-claimable` in `ClaimOutcome`, with `submittedAs` preserved for the route to generate the correct HTTP status (single → 404, set → 409) without encoding case-specific state.
 
 ---
 

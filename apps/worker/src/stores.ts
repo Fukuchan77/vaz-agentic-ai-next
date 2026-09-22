@@ -126,9 +126,11 @@ export interface JobStore {
  *
  * - {@link claimPending}: single-transaction consume-once gate. Reads
  *   `sum(total_tokens)` for the job then UPDATE-WHERE-pending sets
- *   `approval_state = 'consumed'` and `consumed_at = at`. Returns the number
- *   of rows updated (0 means no pending steps existed — already claimed or
- *   never registered). `consumed` → `pending` is intentionally absent: the
+ *   `approval_state = 'consumed'` and `consumed_at = at`. Returns both the
+ *   number of rows updated and the cumulative token spend for the job, so
+ *   the caller can enforce a token budget in the same round-trip (Task 9 / D3).
+ *   0 rowCount means no pending steps existed (already claimed or never
+ *   registered). `consumed` → `pending` is intentionally absent: the
  *   API has no method to reverse a claim.
  */
 export interface JobStepStore {
@@ -149,16 +151,24 @@ export interface JobStepStore {
 
 	/**
 	 * Atomically consume all pending steps for `jobId` in one transaction:
-	 *   1. Read `sum(total_tokens)` for the job (exposed to callers as the
-	 *      budget-gate signal — see Task 9).
+	 *   1. Read `sum(total_tokens)` for the job and expose it as the budget-gate
+	 *      signal (Task 9 / D3, R7.1–R7.3).
 	 *   2. UPDATE rows WHERE `approval_state = 'pending'` → `'consumed'`,
 	 *      setting `consumed_at = at` (injected, NOT SQL `now()`).
-	 *   3. Return the number of rows updated (0 = nothing was pending).
+	 *   3. Return `{ rowCount, totalTokens }`:
+	 *      - `rowCount`: rows updated (0 = nothing was pending).
+	 *      - `totalTokens`: cumulative spend for the job AFTER this claim
+	 *        (sum of all rows, including the ones just consumed).
+	 *
+	 * NOTE: the budget check and the 429 / 202 decision MUST be made by the
+	 * caller AFTER the claim commits — the rows are always consumed when
+	 * rowCount > 0, regardless of whether the budget was exceeded. This
+	 * ensures a budget-blocked caller cannot replay the same approval target.
 	 *
 	 * `consumed` → `pending` reversal is not provided: once claimed, a step
 	 * is permanently consumed (D5 atomicity constraint).
 	 */
-	claimPending(jobId: string, at: Date): Promise<number>;
+	claimPending(jobId: string, at: Date): Promise<{ rowCount: number; totalTokens: number }>;
 }
 
 /** Drizzle-backed {@link JobStepStore} over the `job_step` table. */
@@ -183,12 +193,13 @@ export function createJobStepStore(db: PgDatabase<PgQueryResultHKT>): JobStepSto
 
 		async claimPending(jobId, at) {
 			return db.transaction(async (tx) => {
-				// Step 1: read the cumulative token spend for this job. The result is
-				// available to the caller as a budget-gate signal (Task 9 / D3).
-				await tx
+				// Step 1: read the cumulative token spend for this job. Exposed to the
+				// caller as the budget-gate signal (Task 9 / D3, R7.1–R7.3).
+				const sumRows = await tx
 					.select({ total: sql<number>`sum(${jobStep.totalTokens})` })
 					.from(jobStep)
 					.where(eq(jobStep.jobId, jobId));
+				const totalTokens = sumRows[0]?.total ?? 0;
 
 				// Step 2: conditionally UPDATE only the pending rows. `consumed_at` is
 				// the injected `at` — never SQL `now()` — so the timestamp is
@@ -200,7 +211,8 @@ export function createJobStepStore(db: PgDatabase<PgQueryResultHKT>): JobStepSto
 
 				// Drizzle's pg driver sets `rowCount` on the raw result; fall back to
 				// 0 when the adapter returns a plain object without it.
-				return (result as { rowCount?: number }).rowCount ?? 0;
+				const rowCount = (result as { rowCount?: number }).rowCount ?? 0;
+				return { rowCount, totalTokens };
 			});
 		},
 	};
