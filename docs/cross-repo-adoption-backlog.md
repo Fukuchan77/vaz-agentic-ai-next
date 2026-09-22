@@ -136,23 +136,24 @@ X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み
 **新規に起票すべき項目**（いずれも本 repo 側の作業。本文書の表には未追加）:
 
 - **X-17 — agentic 脅威 5 件の欠落**（優先度: 高）。
-  [`docs/owasp-agentic-ai-top10-mapping.md`](owasp-agentic-ai-top10-mapping.md) は
+  [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) は
   出所タクソノミ 15 脅威のうち T1〜T10 のみを収録し、残る 5 件
   （Unexpected RCE / Agent Communication Poisoning / Rogue Agents in Multi-Agent Systems /
   Human Attacks on Multi-Agent Systems / Human Manipulation）を**受容と明記せずに落としている**。
   本 repo は `packages/agents/src/supervisor.ts` で supervisor → specialist の多エージェント
   構成を持つため、**エージェント間脅威は単一エージェントの兄弟 repo よりむしろ該当する**。
   受け入れ条件: 5 件を節として追加し、supervisor が specialist 間で何を保証し何を保証しないかを
-  明記する。
+  明記する。→ **spec 007-cross-repo-adoption-closeout により解決**（X-17〜X-20 全件を本 spec が扱う。
+  [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) へリネーム済み）。
 - **X-18 — 状態語彙と再評価トリガの不在**（優先度: 中）。本 repo の 2 文書は
   「対応済み」と「未対応」しか表現できず、部分対応＋残余リスク受容（LLM05、Overwhelming HITL）を
   区別できない。出所側の 3 値（`Mitigated` / `Partial · accepted` / `Accepted`）と、
-  受容行ごとの**再評価トリガを具体的な将来の変更として書く**形式を取り込む。
+  受容行ごとの**再評価トリガを具体的な将来の変更として書く**形式を取り込む。→ **spec 007 により解決**。
 - **X-19 — タクソノミ名と内容の不一致**（優先度: 中）。
-  `docs/owasp-agentic-ai-top10-mapping.md` はファイル名が Agentic Top 10（ASI01–ASI10）を
+  `docs/owasp-agentic-threats-mitigations-mapping.md` はファイル名が Agentic Top 10（ASI01–ASI10）を
   名乗るが、内容は旧「Agentic AI – Threats and Mitigations」のレイヤ別脅威表。
-  どちらかに揃え、両文書の冒頭にタクソノミのバージョン日付を明記する。
+  どちらかに揃え、両文書の冒頭にタクソノミのバージョン日付を明記する。→ **spec 007 により解決**（ファイル名を内容に揃えてリネーム済み）。
 - **X-20 — 引用パスの腐敗検知**（優先度: 低）。2 文書の全 40 引用は 2026-09-22 時点で
   すべて解決したが、これを守る仕組みが無い。`tests/repo/` に
   「両文書が引用するパスが実在する」ガードを足す（`ci-workflows.spec.ts` と同じく
-  「走査した引用数 > 0」の非空アサート付きで）。
+  「走査した引用数 > 0」の非空アサート付きで）。→ **spec 007 により解決**（`tests/repo/owasp-mapping-citations.spec.ts` 追加済み）。

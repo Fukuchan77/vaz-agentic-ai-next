@@ -9,7 +9,7 @@
 
 参照実装: `fastapi-pydantic-ai-agent/docs/owasp-agentic-llm-mapping.md`（全行にテスト引用がある形式）。
 Agentic AI 特有の脅威（マルチステップ自律実行・ツール連鎖など）は本表の対象外——
-[`docs/owasp-agentic-ai-top10-mapping.md`](owasp-agentic-ai-top10-mapping.md) を参照。
+[`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) を参照。
 
 散文は日本語、識別子・型・パス・コードは英語。
 

@@ -724,7 +724,7 @@ X-13 を「出所の形式を真似る」項目として読むのはもはや誤
 ただし本ハブ側には出所側に無い弱点が残る。`docs/cross-repo-adoption-backlog.md` §5 に
 X-17〜X-20 として起票した:
 
-- **X-17（高）**: [`docs/owasp-agentic-ai-top10-mapping.md`](owasp-agentic-ai-top10-mapping.md) が
+- **X-17（高）**: [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) が
   出所タクソノミ 15 脅威のうち T11〜T15 を**受容と明記せずに落としている**。
   落ちている 5 件には Agent Communication Poisoning / Rogue Agents in Multi-Agent Systems /
   Human Attacks on Multi-Agent Systems が含まれ、**supervisor → specialist の多エージェント構成を
