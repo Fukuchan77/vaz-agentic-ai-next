@@ -529,3 +529,40 @@ mise run check
 
 Test count delta: 786（Task 10 gate） → 793（Task 11 gate）= **+7 新規テスト**
 （7 x `tests/repo/egress-policy-bypass.spec.ts`）
+
+## Task 12: 正本レビューへの §8 追記とバックログの解決（C-13）（2026-09-23）
+
+### 実施内容
+
+**12.1 — `docs/cross-repo-adoption-review.md` §8 addendum 追記**
+
+- Table of Contents に §6〜§8 の 3 エントリを追加（§6 / §7 は既存だったが ToC 未掲載だった）。
+- 末尾に `## §8 追記（2026-09-23）— spec 007-cross-repo-adoption-closeout による着地` を追記。
+- §8.1: X-17〜X-20 の着地表（全 4 件 ✅）
+- §8.1 内の手続き記録: X-19 リネームによる §7.6 / `specs/review/` のリンク是正を「本文改変ではなくリンク先の是正」として明記（追記のみ規約の例外記録）
+- §8.2: D1〜D6 の着地表（全 6 件 ✅）、適用面の限定（`apps/web` job/approval のみ）
+- §8.3: 検証ゲート状態の記録
+
+**12.2 — §1〜§7 無改変の確認**
+
+`git diff docs/cross-repo-adoption-review.md` を確認: 差分は ToC 3 行追加と §8 のみ。
+§1〜§7 本文には本セッションでの変更はゼロ（§7.6 のリンク是正は Task 3.1 の prior commit 分であり、§8 addendum にその旨を記録済み）。
+
+**12.3 — `docs/cross-repo-adoption-backlog.md`, `AGENTS.md`, `CLAUDE.md` 更新**
+
+- `backlog.md` §5: 「新規に起票すべき項目」見出しを「新規に起票し解決した項目（spec 007、2026-09-23 完了）」に変更。X-17〜X-20 の各項目の末尾を「→ **spec 007 により解決**（…完了文言…）」に更新。
+- `AGENTS.md` Repo-governance guards 行: `owasp-mapping-citations.spec.ts`（X-20）と `egress-policy-bypass.spec.ts`（D6）の 2 本を末尾に追加。
+- `AGENTS.md` HITL approval 節: `job_step` テーブルの不変条件と `POST /api/jobs/:id/approve` が fire-and-forget でなくなった点（400/404/409/429）を追加。
+- `CLAUDE.md` durable job flow 行: 承認 API の変更（strict-schema → consume-once → budget check → audit → resume）を付記。
+- `CLAUDE.md` Tool-execution audit 行: 承認決定の単一 fail-soft 発火点（`approvals.ts`）を付記。
+
+### Verification Gate
+
+```
+pnpm exec vitest run --project repo
+  Test Files  8 passed (8)
+  Tests       52 passed (52)
+
+doc-links.spec.ts:   3 passed ✓
+cross-repo-reference-resolution.spec.ts:   7 passed ✓
+```
