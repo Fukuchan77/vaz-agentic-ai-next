@@ -240,10 +240,13 @@ export function createJobStepStore(db: PgDatabase<PgQueryResultHKT>): JobStepSto
 					// Step 1: read the cumulative token spend for this job. Exposed to the
 					// caller as the budget-gate signal (Task 9 / D3, R7.1–R7.3).
 					const sumRows = await tx
-						.select({ total: sql<number>`sum(${jobStep.totalTokens})` })
+						.select({ total: sql<string | null>`sum(${jobStep.totalTokens})` })
 						.from(jobStep)
 						.where(eq(jobStep.jobId, jobId));
-					const totalTokens = sumRows[0]?.total ?? 0;
+					// `sum(integer)` is `bigint`, which node-postgres returns as a string
+					// (the `sql<…>` generic only annotates the type) — coerce so callers get the
+					// `number` the port promises.
+					const totalTokens = Number(sumRows[0]?.total ?? 0);
 
 					// Step 2: conditionally UPDATE only the requested, still-pending rows.
 					// `consumed_at` is the injected `at` — never SQL `now()` — so the

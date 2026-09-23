@@ -84,7 +84,7 @@ function fakeInsertDb(): { db: PgDatabase<PgQueryResultHKT>; inserts: InsertReco
  */
 interface ClaimCall {
 	/** Rows returned by the sum-select inside the transaction. */
-	selectRows: Array<{ total: number | null }>;
+	selectRows: Array<{ total: number | string | null }>;
 	/** Rows captured by the conditional UPDATE. */
 	updateRows: Array<{
 		setConsumedAt: Date | null;
@@ -99,13 +99,13 @@ interface ClaimCall {
 }
 
 type CapturingTx = {
-	selectRows: Array<{ total: number | null }>;
+	selectRows: Array<{ total: number | string | null }>;
 	updates: ClaimCall["updateRows"];
 	updatedCount: number;
 };
 
 function fakeTransactionDb(
-	selectRows: Array<{ total: number | null }>,
+	selectRows: Array<{ total: number | string | null }>,
 	updatedCount: number,
 ): {
 	db: PgDatabase<PgQueryResultHKT>;
@@ -271,6 +271,14 @@ describe("createJobStepStore.claimPending — atomic consume (R6.1 / R9.2 / R9.6
 			[STEP_ID, STEP_ID_2, "44444444-4444-4444-8444-444444444444"],
 			AT,
 		);
+		expect(result.totalTokens).toBe(400);
+	});
+
+	test("coerces the bigint sum node-postgres returns as a string to a number", async () => {
+		// `sum(integer)` is `bigint` in Postgres, and node-postgres hands int8 back as
+		// a string by default — `sql<number>` is a type annotation only.
+		const fake = fakeTransactionDb([{ total: "400" }], 1);
+		const result = await createJobStepStore(fake.db).claimPending(JOB_ID, [STEP_ID], AT);
 		expect(result.totalTokens).toBe(400);
 	});
 
