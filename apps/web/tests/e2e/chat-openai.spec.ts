@@ -1,25 +1,25 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * End-to-end chat round-trip against Anthropic — the sibling of
- * `chat-openai.spec.ts` and `chat-ollama.spec.ts`. Together they verify that the
+ * End-to-end chat round-trip against OpenAI — the sibling of
+ * `chat-anthropic.spec.ts` and `chat-ollama.spec.ts`. Together they verify that the
  * env-driven provider switch (`@vaz/config#resolveModel`) is equivalent
  * end-to-end on every provider after the monorepo migration (R1.10 / NFR-5).
  *
  * Run conditions (auto-skipped when unmet, so default `mise run test:e2e`
  * without secrets stays green):
- * - The server is started with `AI_PROVIDER=anthropic` (the default provider)
- * - `ANTHROPIC_API_KEY` is present (never committed; supplied via env/CI secret)
+ * - The server is started with `AI_PROVIDER=openai`
+ * - `OPENAI_API_KEY` is present (never committed; supplied via env/CI secret)
  *
- * Example: `ANTHROPIC_API_KEY=… mise run test:e2e`
+ * Example: `AI_PROVIDER=openai OPENAI_API_KEY=… mise run test:e2e`
  */
-test.describe("chat via Anthropic (cloud LLM)", () => {
+test.describe("chat via OpenAI (cloud LLM)", () => {
 	test.skip(
-		(process.env.AI_PROVIDER ?? "anthropic") !== "anthropic" || !process.env.ANTHROPIC_API_KEY,
-		"runs only when AI_PROVIDER=anthropic and ANTHROPIC_API_KEY is set",
+		process.env.AI_PROVIDER !== "openai" || !process.env.OPENAI_API_KEY,
+		"runs only when AI_PROVIDER=openai and OPENAI_API_KEY is set",
 	);
 
-	test("round-trips a message with Anthropic", async ({ page }) => {
+	test("round-trips a message with OpenAI", async ({ page }) => {
 		test.setTimeout(120_000);
 
 		await page.goto("/");

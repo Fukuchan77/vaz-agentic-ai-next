@@ -16,11 +16,13 @@ describe("model-ID single-source drift guard (ADR-5)", () => {
 
 	test("env schema defaults equal @vaz/config DEFAULT_MODEL_ID", () => {
 		expect(envDefaults.ANTHROPIC_MODEL).toBe(DEFAULT_MODEL_ID.anthropic);
+		expect(envDefaults.OPENAI_MODEL).toBe(DEFAULT_MODEL_ID.openai);
 		expect(envDefaults.OLLAMA_MODEL).toBe(DEFAULT_MODEL_ID.ollama);
 	});
 
 	test("each default is a member of its provider allow-list", () => {
 		expect(MODEL_ALLOWLIST.anthropic).toContain(DEFAULT_MODEL_ID.anthropic);
+		expect(MODEL_ALLOWLIST.openai).toContain(DEFAULT_MODEL_ID.openai);
 		expect(MODEL_ALLOWLIST.ollama).toContain(DEFAULT_MODEL_ID.ollama);
 	});
 

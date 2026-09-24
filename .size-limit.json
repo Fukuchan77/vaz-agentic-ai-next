@@ -1,0 +1,12 @@
+[
+	{
+		"name": "Client JS (brotli)",
+		"path": "apps/web/.next/static/chunks/**/*.js",
+		"limit": "420 kB"
+	},
+	{
+		"name": "Client CSS (brotli)",
+		"path": "apps/web/.next/static/chunks/**/*.css",
+		"limit": "22 kB"
+	}
+]

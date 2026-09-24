@@ -17,7 +17,7 @@ By eliminating boilerplate optimization via the React Compiler and leveraging a 
 | Area                    | Technology                                                                                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | AI toolkit               | [Vercel AI SDK 7](https://ai-sdk.dev) (`ai` + `@ai-sdk/react`)                                                                                 |
-| LLM providers            | [Anthropic Claude](https://www.anthropic.com) (`@ai-sdk/anthropic`) / local LLM via [Ollama](https://ollama.com) (`@ai-sdk/openai-compatible`) |
+| LLM providers            | [Anthropic Claude](https://www.anthropic.com) (`@ai-sdk/anthropic`) / [OpenAI](https://openai.com) (`@ai-sdk/openai`) / local LLM via [Ollama](https://ollama.com) (`@ai-sdk/openai-compatible`) |
 | Framework                | [Next.js 16](https://nextjs.org) App Router (Turbopack)                                                                                        |
 | Compiler                 | [React Compiler](https://react.dev/learn/react-compiler) (automatic memoization)                                                               |
 | Runtime validation       | [Zod v4](https://zod.dev)                                                                                                                      |
@@ -29,17 +29,17 @@ By eliminating boilerplate optimization via the React Compiler and leveraging a 
 | Database                 | [PostgreSQL](https://www.postgresql.org) + [pgvector](https://github.com/pgvector/pgvector) via [Drizzle ORM](https://orm.drizzle.team)        |
 | Durable workflow engine  | [Inngest](https://www.inngest.com) (self-hosted, drives `apps/worker`)                                                                          |
 | Auth                     | [Auth.js](https://authjs.dev) (`next-auth@5`; Entra ID / Google Workspace)                                                                      |
-| Package manager          | [pnpm 11.9+](https://pnpm.io)                                                                                                                  |
-| Task runner / toolchain  | [mise](https://mise.jdx.dev) (Node 24 LTS + pnpm + `uv` pinned)                                                                                 |
+| Package manager          | [pnpm 12](https://pnpm.io)                                                                                                                     |
+| Task runner / toolchain  | [mise](https://mise.jdx.dev) (Node 24 LTS + pnpm 12 + `uv` + gitleaks pinned)                                                                    |
 
 ### Getting Started
 
-Prerequisite: [mise](https://mise.jdx.dev) installed (it provides Node 24 LTS, pnpm 11.9, and `uv`, all pinned in `mise.toml`).
+Prerequisite: [mise](https://mise.jdx.dev) installed (it provides Node 24 LTS, pnpm 12, `uv`, and gitleaks, all pinned in `mise.toml`; the exact pnpm build is `package.json`'s `packageManager`, currently 12.5.1).
 
 ```bash
-mise install         # Node 24 / pnpm 11.9.0 / uv
+mise install         # Node 24 / pnpm 12 / uv / gitleaks
 pnpm install         # install dependencies (also activates git hooks)
-cp .env.example .env.local   # then set ANTHROPIC_API_KEY (or switch to Ollama — see below)
+cp .env.example .env.local   # then set ANTHROPIC_API_KEY (or switch to OpenAI / Ollama — see below)
 docker compose up -d # Postgres+pgvector, Redis, the Inngest engine, and the worker
 mise run db:migrate  # apply packages/db/drizzle/*.sql (idempotent)
 mise run dev         # http://localhost:3000
@@ -59,11 +59,22 @@ The chat API resolves its language model at request time from environment variab
 
 | Variable            | Default                     | Description                           |
 | ------------------- | --------------------------- | -------------------------------------- |
-| `AI_PROVIDER`       | `anthropic`                 | `anthropic` or `ollama`               |
+| `AI_PROVIDER`       | `anthropic`                 | `anthropic`, `openai`, or `ollama`    |
 | `ANTHROPIC_API_KEY` | —                           | Required when `AI_PROVIDER=anthropic` |
 | `ANTHROPIC_MODEL`   | `claude-opus-4-8`           | Claude model ID                       |
+| `OPENAI_API_KEY`    | —                           | Required when `AI_PROVIDER=openai`    |
+| `OPENAI_MODEL`      | `gpt-5.5`                   | OpenAI model ID                       |
 | `OLLAMA_BASE_URL`   | `http://localhost:11434/v1` | Ollama's OpenAI-compatible endpoint   |
 | `OLLAMA_MODEL`      | `llama3.2`                  | Any model pulled into Ollama          |
+
+OpenAI:
+
+```bash
+AI_PROVIDER=openai OPENAI_API_KEY=… pnpm dev
+```
+
+The provider only changes the chat / supervisor / judge model. Embeddings stay on
+`AI_EMBEDDING_PROVIDER` (Ollama only), because the RAG corpus dimension is DDL-fixed.
 
 Local LLM (no API key needed):
 
@@ -92,6 +103,7 @@ equivalents also work.
 | Hardcoded-model-ID gate         | `mise run lint:model-ids`    | fails the build if a model ID leaks outside `@vaz/config`  |
 | Type check                      | `mise run typecheck`         | `pnpm -r run typecheck` (each workspace member)            |
 | Dependency audit                | `mise run audit`             | `pnpm audit --audit-level=moderate`                        |
+| Bundle size budget              | `mise run size`              | `.size-limit.json` (JS 420 kB / CSS 22 kB, brotli); needs `mise run build` |
 | Apply DB baseline DDL           | `mise run db:migrate`        | `packages/db/drizzle/*.sql` → `DATABASE_URL`, idempotent   |
 | **Aggregate quality gate**      | `mise run check`             | lint + typecheck + test:run + audit + lint:model-ids       |
 | Python sidecar quality gate     | `mise run py:check`          | `services/agent`; NOT a dependency of `check` (NFR-1)      |
@@ -148,8 +160,9 @@ anything that calls a real model is manual or opt-in.
 - **lint** (`main` + PR) — hardcoded-model-ID gate → `biome check` → `tsc --noEmit`
 - **tests** (`main` + PR) — `unit` (`vitest run --coverage`) and `audit` (`pnpm audit`) run
   independently; `gate` is the single required status check that fails if either did.
-  There is **no `e2e` job** — Playwright is owned by the pre-push hook, which also covers
-  the local-Ollama chat round-trip that a hosted runner cannot run cheaply
+  `bundle-size` builds `apps/web` and runs `size-limit` against `.size-limit.json`
+  (also required by `gate`). The `e2e` job runs chromium-only without infra; the
+  local-Ollama chat round-trip stays with the pre-push hook
 - **python** (`main` + PR) — `services/agent`'s `mise run py:check`; path-filtered to only
   run when `services/agent/**` changes
 - **security-daily** (`cron "0 17 * * *"` + manual) — the only scheduled workflow:
@@ -179,12 +192,12 @@ React Compiler による最適化ボイラープレートの排除と、Rust 製
 
 ### はじめに
 
-前提: [mise](https://mise.jdx.dev) をインストール済みであること(Node 24 LTS・pnpm 11.9・`uv` は `mise.toml` の固定バージョンで mise が用意します)。
+前提: [mise](https://mise.jdx.dev) をインストール済みであること(Node 24 LTS・pnpm 12・`uv`・gitleaks は `mise.toml` の固定バージョンで mise が用意します。pnpm の厳密なビルドは `package.json` の `packageManager`、現在 12.5.1)。
 
 ```bash
-mise install                  # Node 24 / pnpm 11.9.0 / uv を用意
+mise install                  # Node 24 / pnpm 12 / uv / gitleaks を用意
 pnpm install                  # 依存をインストール(git フックも自動で有効化)
-cp .env.example .env.local     # ANTHROPIC_API_KEY を設定(または下記の Ollama へ切替)
+cp .env.example .env.local     # ANTHROPIC_API_KEY を設定(または下記の OpenAI / Ollama へ切替)
 docker compose up -d           # Postgres+pgvector・Redis・Inngest engine・worker を起動
 mise run db:migrate            # packages/db/drizzle/*.sql を適用(冪等)
 mise run dev                   # 開発サーバーを http://localhost:3000 で起動
@@ -202,6 +215,7 @@ durable job・承認フローを試すには Postgres/Redis/Inngest が必要な
 チャット API は環境変数からモデルをリクエスト時に解決します(Zod で検証 — `packages/schemas/src/env.ts`)。
 
 - **Anthropic(デフォルト)**: `.env.local` に `ANTHROPIC_API_KEY` を設定(モデルは `claude-opus-4-8`)
+- **OpenAI**: `AI_PROVIDER=openai` と `OPENAI_API_KEY` を設定(モデルは `OPENAI_MODEL`、既定 `gpt-5.5`)。切り替わるのはチャット / supervisor / judge のモデルのみで、埋め込みは `AI_EMBEDDING_PROVIDER`(Ollama のみ)のまま
 - **ローカル LLM(Ollama、API キー不要)**:
 
 ```bash
@@ -221,6 +235,7 @@ AI_PROVIDER=ollama pnpm dev
 | Lint / format チェック          | `mise run lint`               |
 | 型チェック                      | `mise run typecheck`          |
 | 依存脆弱性 audit                | `mise run audit`              |
+| バンドルサイズ検査(要 build)     | `mise run size`               |
 | モデル ID ハードコード検出ゲート    | `mise run lint:model-ids`     |
 | DB baseline DDL の適用         | `mise run db:migrate`         |
 | **集約品質ゲート**              | `mise run check`              |
@@ -250,7 +265,7 @@ AI_PROVIDER=ollama pnpm dev
 ランナー使用量を抑えるため、GitHub Actions は **`main` への push と pull request** でのみ発火します(作業ブランチへの中間 push では走りません。ローカルの git フックが一次防衛線です)。実モデルを叩くワークフローは手動 / opt-in です。
 
 - `lint`(`main`+PR)— モデル ID ゲート→biome→tsc
-- `tests`(`main`+PR)— `unit`+`audit` が独立実行、`gate` が唯一の必須ステータスチェック。**`e2e` ジョブはありません** — Playwright は pre-push フックの担当で、ホストランナーでは現実的に回せないローカル Ollama との実往復もそちらでカバーします
+- `tests`(`main`+PR)— `unit`+`audit` が独立実行、`gate` が唯一の必須ステータスチェック。`bundle-size` は `apps/web` をビルドして `.size-limit.json` の上限(JS 420 kB / CSS 22 kB、brotli)を検査し、`gate` の必須対象に含まれます。`e2e` ジョブはインフラなしの chromium のみで、ローカル Ollama との実往復は pre-push フックの担当です
 - `python`(`main`+PR)— `services/agent/**` の変更時のみ path-filter 発火
 - `security-daily`(`cron "0 17 * * *"` + 手動)— 唯一のスケジュール実行。`pnpm audit --audit-level=moderate` のみを回し、コミットが無い日でも新規アドバイザリを検知します
 - `eval-pr`(PR、opt-in)— **`run-eval` ラベル**が付いた PR でのみ実行する LLM judge ゲート(golden set の case ごとに実モデルを呼ぶため)
