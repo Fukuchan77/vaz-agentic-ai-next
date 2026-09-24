@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^4.0.58",
+		"@ai-sdk/openai": "^4.0.72",
 		"@ai-sdk/openai-compatible": "^3.0.53",
 		"@ai-sdk/otel": "^1.0.108",
 		"@vaz/schemas": "workspace:*",

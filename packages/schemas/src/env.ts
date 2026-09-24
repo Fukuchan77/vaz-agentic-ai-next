@@ -6,8 +6,9 @@ import { z } from "zod";
  * Validated with Zod v4 at startup to catch misconfiguration before runtime.
  */
 export const aiEnvSchema = z.object({
-	AI_PROVIDER: z.enum(["anthropic", "ollama"]).default("anthropic"),
+	AI_PROVIDER: z.enum(["anthropic", "openai", "ollama"]).default("anthropic"),
 	ANTHROPIC_MODEL: z.string().min(1).default("claude-opus-4-8"),
+	OPENAI_MODEL: z.string().min(1).default("gpt-5.5"),
 	OLLAMA_BASE_URL: z.url().default("http://localhost:11434/v1"),
 	OLLAMA_MODEL: z.string().min(1).default("llama3.2"),
 	// Embedding provider config (R2.3, Phase 2). Default local Ollama so corpus
@@ -43,6 +44,7 @@ export function parseAiEnv(env: Record<string, string | undefined> = process.env
 	return aiEnvSchema.parse({
 		AI_PROVIDER: emptyToUndefined(env.AI_PROVIDER),
 		ANTHROPIC_MODEL: emptyToUndefined(env.ANTHROPIC_MODEL),
+		OPENAI_MODEL: emptyToUndefined(env.OPENAI_MODEL),
 		OLLAMA_BASE_URL: emptyToUndefined(env.OLLAMA_BASE_URL),
 		OLLAMA_MODEL: emptyToUndefined(env.OLLAMA_MODEL),
 		AI_EMBEDDING_PROVIDER: emptyToUndefined(env.AI_EMBEDDING_PROVIDER),

@@ -102,6 +102,7 @@ services:
       # Provider env resolved per-request by @vaz/config (empty by default).
       AI_PROVIDER: ${AI_PROVIDER:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
     depends_on:
       db:
