@@ -587,14 +587,14 @@ wheels = [
 
 [[package]]
 name = "docling"
-version = "2.129.0"
+version = "2.130.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docling-slim", extra = ["standard"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d6/54/564d64b522afbb63a9ac31fdd8b75c7720a667324ae18437f1f507cf23bf/docling-2.129.0.tar.gz", hash = "sha256:a64e2b07c59503809d2b9ca1f57452a9d100c7bb35082ed56fce2a60760557a3", size = 9091, upload-time = "2026-09-18T09:21:25.852Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/ff/9d68bae90e8ca663aa2e8b5ca9e25db50ad8bfd2a6852450b94de55be623/docling-2.130.0.tar.gz", hash = "sha256:f713849d7136511dff1079aeb7eed53bd68c20637c933a69728dbc8564340881", size = 9090, upload-time = "2026-09-22T15:38:15.518Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/7b/2d409a66f230f1d455646e9cf33363dd02a2153d2344cd4421743ba983f2/docling-2.129.0-py3-none-any.whl", hash = "sha256:9541a7dcd80f24cbe73033c9b72240d0760b392b18ce45ea8165014fc9f6cbcb", size = 5229, upload-time = "2026-09-18T09:21:24.642Z" },
+    { url = "https://files.pythonhosted.org/packages/16/35/422c785d51ddc42a4ba3aa07ac636dd8f593d794578d7017b533496307c3/docling-2.130.0-py3-none-any.whl", hash = "sha256:86f2052018a93c48810efecbd7a9ecb801dd407602c85c49a1006f252a7151ca", size = 5229, upload-time = "2026-09-22T15:38:13.986Z" },
 ]
 
 [[package]]
@@ -677,7 +677,7 @@ wheels = [
 
 [[package]]
 name = "docling-slim"
-version = "2.129.0"
+version = "2.130.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -690,9 +690,9 @@ dependencies = [
     { name = "requests" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/d4/d5dc387b244b00a281cdf35c77cca6d54229b344115338a2286d3b4419c9/docling_slim-2.129.0.tar.gz", hash = "sha256:78c79230c23100881370f58d86c8d4a885e5c899faf8a6b50a4f0fb693028e34", size = 700053, upload-time = "2026-09-18T09:20:05.322Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/d5/4db4fd7e756d40db15b07ad072294548b0f508fb35fdd3496fa191223822/docling_slim-2.130.0.tar.gz", hash = "sha256:d45b467d322cd15f03fcc1e792bd4a52aa2dc075dfee229b13ae43a8603f82a6", size = 708768, upload-time = "2026-09-22T15:36:53.243Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/8d/b0b1bd879c95364e61a5ba4a466835a054b375f53bd0e367f93fa1d9d94e/docling_slim-2.129.0-py3-none-any.whl", hash = "sha256:f072377cd9b567ae1763bbef75012e72faab5fc89c79b6d934ce05796abb5313", size = 866102, upload-time = "2026-09-18T09:20:03.13Z" },
+    { url = "https://files.pythonhosted.org/packages/db/57/9e21add9ec842b314d4d193db8c4186354b872529ef3a17f8aeedbd0c515/docling_slim-2.130.0-py3-none-any.whl", hash = "sha256:913043ee069eb4f107d47ebfca8bdbfbfd7ec84160a7193b7260777e3adbea19", size = 876695, upload-time = "2026-09-22T15:36:51.06Z" },
 ]
 
 [package.optional-dependencies]
