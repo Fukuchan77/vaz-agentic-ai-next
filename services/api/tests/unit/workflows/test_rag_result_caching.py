@@ -41,6 +41,8 @@ def mock_settings():
     settings.rag_initial_k = 2
     settings.rag_widened_k = 4
     settings.rag_prompt_max_chars = 15000
+    settings.llm_max_output_tokens = 4096
+    settings.llm_temperature = 0.7
     return settings
 
 
