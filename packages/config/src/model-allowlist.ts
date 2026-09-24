@@ -25,6 +25,7 @@ type AiProvider = AiEnv["AI_PROVIDER"];
  */
 export const MODEL_ALLOWLIST = {
 	anthropic: ["claude-opus-4-8"],
+	openai: ["gpt-5.5"],
 	ollama: ["llama3.2"],
 } as const satisfies Record<AiProvider, readonly [string, ...string[]]>;
 
@@ -35,5 +36,6 @@ export const MODEL_ALLOWLIST = {
  */
 export const DEFAULT_MODEL_ID = {
 	anthropic: MODEL_ALLOWLIST.anthropic[0],
+	openai: MODEL_ALLOWLIST.openai[0],
 	ollama: MODEL_ALLOWLIST.ollama[0],
 } as const satisfies Record<AiProvider, string>;

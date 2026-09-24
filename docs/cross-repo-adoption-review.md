@@ -17,6 +17,10 @@ Agentic AI アプリ開発のベース・学習用リポジトリ 5 本を横断
 - [§3 見送るもの（と理由）](#3-見送るものと理由)
 - [§4 着地順](#4-着地順)
 - [§5 repo 別の取り込み主軸](#5-repo-別の取り込み主軸)
+- [§6 追記（2026-09-21）— 同一性の崩壊と再実測](#6-追記2026-09-21--同一性の崩壊と再実測)
+- [§7 追記（2026-09-22）— 全 5 repo 実クローン再検証](#7-追記2026-09-22--全-5-repo-実クローン再検証)
+- [§8 追記（2026-09-23）— spec `007-cross-repo-adoption-closeout` による着地](#8-追記2026-09-23--spec-007-cross-repo-adoption-closeout-による着地)
+- [§9 追記（2026-09-22）— 実装検証による §8 の訂正と追加修正](#9-追記2026-09-22--実装検証による-8-の訂正と追加修正)
 
 ---
 
@@ -570,3 +574,316 @@ grep -rl 'permissions:' .github/workflows/ | wc -l               # → 6（workf
 find . \( -name '*.py' -o -name '*.ts' -o -name '*.tsx' \) \
   -not -path './.git/*' -not -path '*/node_modules/*' -not -path '*/.venv/*' -exec cat {} + | wc -l
 ```
+
+---
+
+## §7 追記（2026-09-22）— 全 5 repo 実クローン再検証
+
+> **この節の位置づけ**: §1〜§6 は改変しない（追記のみ規約）。本節は、5 リポジトリすべてを
+> 実際にクローンして再実測した結果、**§1 の横断マトリクスおよび §5 の取り込み主軸表が
+> 前提にしている「対象そのもの」が変わっていた**ことを記録する。§6.2 が示した一般則
+> （「本文は正確だが抜粋であり時点の記録である。判断材料にする前に実クローンで再実測すること」）を
+> 適用した結果であり、§6.3 が `beeai-agentic-ai-sandbox` について明示的に残した
+> 申し送りへの回答でもある。
+>
+> 実測値・per-repo の詳細・再現コマンドは
+> [`specs/review/2026-09-22-cross-repo-verification.md`](../specs/review/2026-09-22-cross-repo-verification.md)。
+> 本節は結論と、正本の記述のどこが読み替えを要するかだけを記す。
+
+### §7.1 検証スコープ
+
+**5 repo すべてを実クローンして検証した**（§6.3 が未 attach を理由に対象外としていた
+`beeai-agentic-ai-sandbox` を含む）。
+
+| repo | 検証時の最終コミット |
+|---|---|
+| `fastapi-pydantic-ai-agent` | 2026-09-20 |
+| `pydantic-ai-sandbox` | 2026-09-20 |
+| `agentic-ai-sandbox` | 2026-06-28（以後停止） |
+| `agentic-ai-bootcamp` | 本節で初めて対象化（§0 対象表に無い repo） |
+| `beeai-agentic-ai-sandbox` | 2026-01-25（単一コミット） |
+
+### §7.2 `beeai-agentic-ai-sandbox` — §1 の当該列は対象ごと失効した
+
+§6.3 は同 repo を「2026-09-06 時点のまま未検証」として申し送っていた。再検証の結果、
+**同 repo は別プロダクトへ全面置換されており、§1 の同 repo 列および §5 の同 repo 行が
+引用する資産はほぼ全て現存しない**。
+
+現在の姿は「BeeAI FastAPI React App」（FastAPI ＋ React の chat / RAG / 文書処理アプリ）で、
+§0 が記した 4 段ラダー（`examples/` → `patterns/` → `effective_agents/` → `apps/`）は無い。
+
+| §1 / §2 / §5 の記述 | 2026-09-22 の実態 |
+|---|---|
+| Actions SHA 固定 **0/18**（X-1 の最優先 target） | `.github/` ごと不在。workflow 0 本 — 指摘の前提が消滅 |
+| `SECURITY-NOTES.md` の非抑止方針（X-12 で「最も厳格」と評価） | **ファイルが存在しない** |
+| `effective_agents/autonomous_agent.py` の `input()` 承認（X-9 の教材） | ディレクトリごと消滅 |
+| `patterns/README.md` の LangGraph→BeeAI 翻訳表、記事用語対応表、`_print_usage()`（X-16 の中核） | いずれも消滅 |
+| `ci.yml` の `schema-drift` ジョブ（X-11 で「即移植可」と評価） | `ci.yml` ごと消滅 |
+| 10 本の Playwright spec が CI で 1 度も走らない（X-14） | **spec は現存**（`00-smoke`〜`09-accessibility`、a11y 込み）。ただし CI 自体が消滅したため状況は悪化 |
+| `docs/DEPLOYMENT.md` の「存在しないインフラを書かない宣言」（X-16 で称賛） | **正反対**。Dockerfile も compose も無いまま ECS/Lambda/Cloud Run/K8s/Prometheus/ELK を記した 803 行が存在 |
+
+**帰結**: X-11 / X-14 / X-14b / X-16 が同 repo を出所として挙げる箇所は、**取り込み元として
+再利用できない**。いずれも本ハブ側では既に着地済み（§6.2 と `docs/cross-repo-adoption-backlog.md` §3）
+のため実害は無く、**出所の記録としてのみ読むこと**。
+
+### §7.3 `pydantic-ai-sandbox` — 「`agentic-ai-sandbox` へ統合済み」は成立しない
+
+`docs/cross-repo-adoption-backlog.md` が 2026-09-21 に記した「統合済み（`reference/` ティア配下）」は、
+**2026-06-28 時点のスナップショットの取り込み**を指している。再検証の結果:
+
+- `agentic-ai-sandbox` は **2026-06-28 以降 1 コミットも増えていない**。
+- `pydantic-ai-sandbox` **本体はその後も独立に開発が続き、2026-09-20 まで更新されている**。
+  同 repo 自身の `docs/cross-repo-adoption-backlog.md` は `agentic-ai-sandbox` に一切言及しない。
+
+したがって両者は**並存する別リポジトリ**であり、`agentic-ai-sandbox/reference/` を
+`pydantic-ai-sandbox` の後継として単独で参照すると、**約 3 か月分の独立進化を取りこぼす**。
+
+最も影響が大きいのが **X-9（HITL）**:
+
+| | `agentic-ai-sandbox/reference/` | `pydantic-ai-sandbox` 本体 |
+|---|---|---|
+| `patterns/hitl/` | **不在**（統合時に脱落） | **現存し拡張継続中** |
+
+さらに重要な観測として、**同レーンは本ハブの X-9 を既に取り込んでいる**。
+`patterns/hitl/src/patterns_hitl/agent.py` は recipient allow-list を `_known_recipient` /
+`_unknown_recipient_retry` として、sticky taint を `HitlDeps.tainted` として実装し、
+README が出所を本ハブと明記したうえで **"X-9a" / "X-9b"** という本文書由来の ID で参照している。
+X-9 は「本ハブが取り込む項目」として起票されたが、**先に逆方向で着地した**ことになる。
+
+逆に、同レーンが持ち本ハブが持たない防御が 6 点ある（詳細は specs/review 側）。
+要点のみ:
+
+1. **履歴注入のスキーマレベル封鎖** — `message_history` / `usage` / `model` を
+   *フィールドとして定義しない* ことを要件とし、`extra="forbid"` と併せて 422 で落とす。
+   偽造履歴がモデルに到達しないことを証明するテストまである
+   （`test_resume_with_client_supplied_message_history_never_reaches_the_model`）。
+2. **consume-once ＋ 存在秘匿** — unknown / in-flight / consumed を単一の 404 に畳み、
+   本文にセッション ID も状態語も載せない（列挙・リプレイ防御）。
+3. **境界を跨ぐ usage 予算** — stop/resume を跨いで積算し、超過は 429 でセッションを消費。
+4. **マスク済み監査の単一 fail-soft 境界** — override は**キー名のみ**記録し値は残さない。
+   シンクの失敗が resume を失敗させない。
+5. **pending set の原子性** — 1 つでも不正な `tool_call_id` があれば、ツールを 1 つも
+   実行せずに 409 で決定セット全体を拒否する。
+6. **egress ポリシーの回帰スキャン** — 自レーンの `src/` を grep して迂回リテラルの
+   混入を落とすテスト（CVE-2026-46678 を引用）。
+
+本ハブが持ち同レーンが持たないもの（durable な suspend/resume、**コミット済み**の
+recipient allow-list）は §2 X-9 の記述どおりで変わらない。同レーンの allow-list は
+空辞書で fail-open し、`harness.py` が `HitlDeps()` をハードコードするため HTTP 層まで
+配線されていない。
+
+### §7.4 `agentic-ai-bootcamp` — §0 の対象表に無い 6 本目
+
+本文書が一度も言及していないリポジトリ。Pydantic AI のハンズオン教材（12 課 ＋
+LangGraph / LlamaIndex の比較トラック、英日併記）で、CI・Dependabot・OWASP 対応表・
+ネットワーク遮断機構はいずれも持たない（`.github/` 自体が無い）。
+本ハブが取り込む運用資産は無い。
+
+特筆すべきは `agentic-ai-sandbox/learn/` との関係である。両者の
+`lessons/` ＋ `frameworks/` は **71 ファイル中 13 ファイルのみが相違**し、残りは完全一致する。
+相違の内訳:
+
+- 大半は**機械的なリンク張り直し**（`learn/` の 1 階層ぶん深いため `../../docs/` → `../../../docs/`）。
+- `11-evals/README.md` は、bootcamp 側が `EVAL-GRADERS.md` を
+  **`pydantic-ai-sandbox` への GitHub 絶対 URL** で指すのに対し、sandbox 側は
+  **自 repo 内の相対パス** `../../../reference/patterns/EVAL-GRADERS.md` を指す
+  （同 repo の「repo 間 URL 撤廃」方針と `scripts/check_doc_links.py` の帰結）。
+- **コードは双方向にドリフトしている**: `11-evals/evals.py` は bootcamp のみが
+  `UNKNOWN` 番兵を持ち、sandbox のみが `overall` の Unknown 畳み込みに関する注意書きを持つ。
+  `frameworks/` 側では sandbox のみが型注釈を新形式（`Generator[T]`）へ更新している。
+
+つまり**片方が他方の後継ではなく、二方向に分岐したフォーク**である。どちらが正本かは
+本文書の判断範囲外であり、観測のみを記録する。
+
+### §7.5 `fastapi-pydantic-ai-agent` — 取り込みは既に双方向で完了している
+
+同 repo は本ハブに `services/api` として丸ごと取り込まれている（spec `006-repo-consolidation`
+Task 6）。再検証の結果:
+
+- import 後に上流へ増えた 3 ファイル（`tests/unit/test_ci_workflows.py` /
+  `test_dependabot_config.py` / `test_pre_push_hook.py`）は `services/api` に無いが、
+  これは `AGENTS.md` の "Known gap" が記録する**意図的な省略**と一致する。
+  `.md` / `.yml` レベルの差分も CI・pre-commit の 4 ファイルのみで、docs は完全一致。**新規の乖離は無い**。
+- 同 repo は X-2 / X-6 / X-7 / X-8 / X-9 / X-12 / X-13 / X-16 を **2026-09-08 までに自ら消化済み**。
+  `evals/pr_gate.py` と `docs/context-budget.md` は**本ハブの実装を出所として明記した移植**である。
+- 実測差分: workflow が 5 本 → **2 本**に統合（SHA 固定は 5/5 を維持）、
+  `tests/support/hermetic.py` が 47 → 75 行（X-2 の指摘どおり `connect_ex` / `getaddrinfo` を追加）、
+  `docs/owasp-agentic-llm-mapping.md` が 43 → 72 行（**Agentic AI Top 10 表を追加**）。
+
+### §7.6 X-13 の前提は逆転した — 本ハブの形式の方が厳格である
+
+§2 X-13 は「各行にテストを引用する形式を採ること — これが無いと表は主張のリストに退化する」と
+`fastapi-pydantic-ai-agent` の形式を規範として挙げた。**この前提は現在成立しない**。
+
+| | 行数 | 実装引用 | **テスト引用** | 引用の解決 |
+|---|---|---|---|---|
+| `fastapi-pydantic-ai-agent/docs/owasp-agentic-llm-mapping.md` | 20（2 タクソノミ） | 20/20 | **8/20** | 解決する |
+| 本ハブの OWASP 2 文書 | 22 クレーム | ほぼ全件 | **未対応と明記した 2 件を除き全件** | **全 40 引用が解決** |
+
+出所側は表を 2 タクソノミ 20 行へ拡張する過程でテスト引用を伴わない行が増えた。
+一方、本ハブの 2 文書は全 40 引用（ファイルパス・シンボル名・CI ステップ）が
+2026-09-22 時点ですべて実在する。**テスト引用の厳格さでは本ハブが上回っており、
+X-13 を「出所の形式を真似る」項目として読むのはもはや誤り**である。
+
+ただし本ハブ側には出所側に無い弱点が残る。`docs/cross-repo-adoption-backlog.md` §5 に
+X-17〜X-20 として起票した:
+
+- **X-17（高）**: [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) が
+  出所タクソノミ 15 脅威のうち T11〜T15 を**受容と明記せずに落としている**。
+  落ちている 5 件には Agent Communication Poisoning / Rogue Agents in Multi-Agent Systems /
+  Human Attacks on Multi-Agent Systems が含まれ、**supervisor → specialist の多エージェント構成を
+  持つ本ハブにこそ該当する**。単一エージェントの出所側ですら対応する行を
+  「Accepted」として明示的に残している。
+- **X-18（中）**: 状態語彙が「対応済み / 未対応」の 2 値しかなく、部分対応＋残余リスク受容を
+  表現できない。受容行ごとの再評価トリガも無い。
+- **X-19（中）**: ファイル名が Agentic Top 10（ASI01–ASI10）を名乗るのに、内容は旧
+  「Threats and Mitigations」のレイヤ別脅威表。両文書ともタクソノミのバージョン日付が無い。
+- **X-20（低）**: 全 40 引用の解決を守る仕組みが無い（今は手動確認に依存している）。
+
+### §7.7 この再検証が示す一般則
+
+§6.2 は「本文は正確だが抜粋であり時点の記録である」と述べた。今回はその一段上の事象が起きた:
+
+> **時点の記録は、対象が同一であり続ける限りにおいてのみ「古い事実」である。
+> 対象そのものが置き換わると、それは古い事実ではなく別物についての記述になる。**
+
+`beeai-agentic-ai-sandbox`（別プロダクトへ置換）と `pydantic-ai-sandbox`（分岐して並存）は
+いずれも後者に当たる。したがって横断レビューを判断材料にする際は、
+**数値を再実測する前に、まず「その repo は今も同じ repo か」を確認すること**。
+確認のコストは最終コミット日時とトップレベル構造を見るだけで済む。
+
+---
+
+## §8 追記（2026-09-23）— spec `007-cross-repo-adoption-closeout` による着地
+
+> **この節の位置づけ**: §1〜§7 は改変しない（追記のみ規約）。本節は、§7.6 が起票した
+> X-17〜X-20 と、§7.3 が列挙した D1〜D6（`pydantic-ai-sandbox` の `patterns/hitl/` が
+> 持ち本ハブが持たなかった 6 防御）の着地を記録する。
+> 実装の詳細・PROVE 証拠・ゲート出力は `specs/007-cross-repo-adoption-closeout/pdca/do.md`
+> および `specs/007-cross-repo-adoption-closeout/traceability.md` を参照。
+
+### §8.1 X-17〜X-20 の着地
+
+| ID | 優先度 | 着地 | 内容 |
+|---|---|---|---|
+| X-17 | 高 | ✅ 着地 | [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) を 15 脅威全件（T1〜T15）に拡張。T11〜T15（Unexpected RCE / Agent Communication Poisoning / Rogue Agents / Human Attacks on MAS / Human Manipulation）を追加し、supervisor → specialist 間の保証・非保証を明記。状態トークン + 再評価トリガを全受容行に付与 |
+| X-18 | 中 | ✅ 着地 | 対応表 2 文書の語彙を `Mitigated` / `Partial · accepted` / `Accepted`（出所 verbatim 3 値）に統一。受容行（`Partial · accepted` / `Accepted`）に具体的な将来の変更としての再評価トリガを必須化。語彙定義を各文書冒頭に配置 |
+| X-19 | 中 | ✅ 着地 | `docs/owasp-agentic-ai-top10-mapping.md` → `docs/owasp-agentic-threats-mitigations-mapping.md` に `git mv`。内容（レイヤ別 Threats and Mitigations・15 脅威）に合わせてファイル名を揃え、ASI01–ASI10 の名称を廃止。両文書の冒頭に ISO-8601 タクソノミバージョン日付を明記 |
+| X-20 | 低 | ✅ 着地 | `tests/repo/owasp-mapping-citations.spec.ts` を追加。引用パス実在・シンボル実在・CI ステップ名・3 値語彙・バージョン日付の 5 軸を機械検証し、各軸に「走査 > 0」の非空アサートを配置。新規 GitHub Actions ワークフローなし |
+
+**§7.6 / `specs/review/` リンク是正の記録（追記のみ規約に関わる手続き事項）**:
+X-19 のリネームにより、§7.6 の [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md)
+および `specs/review/2026-09-22-cross-repo-verification.md` 内の参照が旧ファイル名（`owasp-agentic-ai-top10-mapping.md`）を
+指したままになっていたため、**主張を一切変えずリンク先のみを新ファイル名へ是正した**
+（`tests/repo/doc-links.spec.ts` が未更新リンクを失敗させるため必須の修正）。
+これはテキストの改変ではなく、リンク先の実体が変わったことへの追従であり、
+追記のみ規約（§1〜§7 の主張・測定値・判定を書き換えない）の例外としてここに記録する。
+
+### §8.2 D1〜D6 の着地（`apps/web` の job/approval 経路のみ）
+
+**実装対象の限定**: D1〜D6 はすべて `apps/web` の job/approval 経路（`POST /api/jobs/:id/approve` ＋
+`GET /api/jobs/:id/stream`）に実装した。`/api/chat` と `services/api` は対象外とした。
+
+- `/api/chat` は `useChat` がクライアント側履歴を送る前提のため、「サーバ側履歴が正」の封鎖は
+  別設計判断として out of scope（spec `007` Scope 参照）。
+- `services/api` は verbatim `git subtree` 取り込みであり上流の所有物。
+
+| 防御 | 着地 | 実装ファイル / テストファイル |
+|---|---|---|
+| D1 — 履歴注入のスキーマレベル封鎖 | ✅ 着地 | `packages/schemas/src/workflows.ts`（`z.strictObject` — `history` / `usage` / `model` を定義しない）、余剰フィールドを 400 で拒否。`packages/schemas/tests/workflows.spec.ts` |
+| D2 — consume-once ＋ 存在秘匿 | ✅ 着地 | `apps/web/src/lib/approvals.ts`（`claimApprovalTargets`）＋ `apps/worker/src/stores.ts`（`claimPending` トランザクション）。unknown / in-flight / consumed を単一 404 に畳み、ボディに識別子・状態語を含まない。`apps/web/tests/approvals.spec.ts`、`apps/web/tests/jobs-approve-route.spec.ts` |
+| D3 — 境界を跨ぐ usage 予算 | ✅ 着地（Partial）| `apps/worker/src/stores.ts`（`recordStepUsage` / `claimPending` 内 sum）＋ `apps/web/src/lib/approvals.ts`（`resolveJobTokenBudget`）＋ `apps/web/src/app/api/jobs/[id]/approve/route.ts`（429 返却）。`packages/schemas/src/env.ts`（`JOB_TOKEN_BUDGET` env）。現状 usage を報告するのは `document-generation` specialist のみ — 対応表に `Partial · accepted` ＋ 再評価トリガとして記録 |
+| D4 — マスク済み監査の単一 fail-soft 境界 | ✅ 着地 | `apps/web/src/lib/approvals.ts`（`maskedArgKeys` ＋ `recordApprovalDecisions`）。キー名のみ記録・値なし、fail-soft（audit シンク失敗で resume を失敗させない）、単一発火点（`apps/web/src/lib/approvals.ts` の 1 箇所のみ）。`tests/repo/egress-policy-bypass.spec.ts` が発火点唯一性を機械検証 |
+| D5 — pending set の原子性 | ✅ 着地 | `apps/web/src/lib/approvals.ts`（`findDuplicateTarget` ＋ `claimApprovalTargets`）。1 件でも不正な `toolCallId` があれば DB 接触なしで 409、決定セット全体を拒否。`apps/web/tests/approvals.spec.ts`、`apps/web/tests/jobs-approve-route.spec.ts` |
+| D6 — egress ポリシーの回帰スキャン | ✅ 着地 | `tests/repo/egress-policy-bypass.spec.ts`。メールアドレス形リテラルと許可リスト判定の短絡を `apps/*/src/**` ＋ `packages/*/src/**` から検出。監査発火点唯一性アサートを同一走査に相乗り。新規ワークフローなし |
+
+**スキーマ・環境変数**:
+- `job_step` テーブル（`packages/db/src/schema.ts`、`packages/db/drizzle/0002_add_job_step.sql`）:
+  `(job_id, step_id)` 複合 PK による consume-once 一意性担保、`approval_state` pg enum（`pending` / `consumed`）、`total_tokens` による観測 usage 蓄積。`jobEventTypeEnum` は無改変（SSE 後方互換）。
+- `JOB_TOKEN_BUDGET` env（`packages/schemas/src/env.ts`）: 既定値 200,000 トークン。未設定の環境で既存ジョブが失敗しない。
+
+**既存テストの保護**: `GET /api/jobs/:id/stream`、`jobEventTypeEnum`、ツール実行監査（`packages/agents/src/audit-hook.ts` fail-loud 経路）はすべて無改変。
+
+### §8.3 検証ゲートの状態（2026-09-23 時点）
+
+```
+mise run check（lint / typecheck / test:run / audit）: 全 GREEN
+  test:run: 793 テスト passed / 1 skipped（Task 11 完了時点）
+lint:model-ids（forbid-model-ids.sh）: GREEN（新たな hardcode なし）
+.github/workflows/: 7 本（変更なし。新規ワークフローファイルを追加しない）
+```
+
+カバレッジ閾値（lines / functions ≥ 80%）: 下回らないことを Task 13.2 で確認予定。
+
+
+---
+
+## §9 追記（2026-09-22）— 実装検証による §8 の訂正と追加修正
+
+> **この節の位置づけ**: 追記のみ規約に従い、§1〜§8 は 1 文字も改変しない。
+> 本節は `007-cross-repo-adoption` ブランチを HEAD で独立に検証した結果、
+> §8 の記述のうち 4 件が事実とずれていたことと、その検証で見つかった
+> 3 件の実装上の欠陥を修正したことを記録する。
+
+### §9.1 §8 の記述の訂正
+
+| # | §8 の記述 | 実際 |
+|---|---|---|
+| 1 | §8 見出しの日付が **2026-09-23** | §8 を追記したコミット `b894e19` は **2026-09-22 15:48 JST**。本文書は時点記録である以上、未来日付は記録として成立しない。spec `007` の全コミットが 2026-09-22 内（最終 `b9edc46` = 22:23 JST）。見出しは追記のみ規約のため改変せず、本行を訂正とする |
+| 2 | §8.2 D5: 「1 件でも不正な `toolCallId` があれば **DB 接触なしで** 409」 | DB 接触なしなのは**セット内重複**の場合のみ（`findDuplicateTarget`）。未登録 ID が混在する場合は `claimPending` まで到達して ROLLBACK し、single 形式なら **404**、set 形式なら 409 を返す。この混在ケースの原子性修正（`98926c4`）は §8 執筆後に入ったため、§8.2 は修正前の振る舞いを記述している |
+| 3 | §8.3: `test:run` が「793 passed / 1 skipped」 | それは **Task 11 完了時点**の値。その後 `5383d66` / `98926c4` / `bb952fa` / `b9edc46` が入り、§9 時点の実測は **70 files / 821 passed / 1 skipped**（本節 §9.3） |
+| 4 | §8.3: カバレッジ閾値を「Task 13.2 で確認**予定**」 | Task 13 は完了済みで、`traceability.md` REQ-012.6 に実測値が入っている。「予定」のまま残っていたのは記録の更新漏れ |
+
+### §9.2 実装上の修正 3 件
+
+| ID | 内容 | 修正 |
+|---|---|---|
+| §9.2a | **D6 の非空虚性が実際には成立していなかった** | `tests/repo/egress-policy-bypass.spec.ts` の `ALLOWED_EXCEPTION_PATHS` は `packages/tools/src/email.ts`——つまり CVE-2026-46678 と同型の欠陥（エージェントのメールツール内の宛先ハードコード）が起きるまさにそのファイル——を除外していた。`traceability.md` REQ-010 (1) は「除外を外すと FAIL する」を PROVE 証拠としていたが、実測では 7/7 GREEN のままだった（両除外パスとも現状 1 行も正規表現に一致しない）。送信ツールを除外から外し、検出器自体の発火を固定する self-test 6 件を追加。`email.ts` に宛先リテラルを入れると FAIL することを実測で確認 |
+| §9.2b | **`TOOL_APPROVAL_SECRET` が検証外の `process.env` 直読みで、未設定時に無言で劣化** | `packages/agents/src/chat-agent.ts` の当該行は `packages/*/src` 配下で唯一の `process.env.X` 直読みだった（他は全て `env` 引数注入）。`aiEnvSchema` に optional で追加し、`parseAiEnv()` 経由に変更。未設定時は `deps.logger.warn` を 1 回出す（値は決してログしない——R4.7）。LLM06 の引用にも追加 |
+| §9.2c | **T6 / LLM10 の `Mitigated` が過大申告** | `supervisorPlanSchema.steps` は `.min(1)` のみで上限がなく、`POST /api/jobs` は未認証でも 401 を返さない。両文書が引用していた `buildBudgetStopCondition` は chat 側のみで、ジョブを一切縛っていなかった。`MAX_PLAN_STEPS = 20` を導入して step 数を構造的に縛り、それでも残る未認証リクエスト数と `JOB_TOKEN_BUDGET` の未到達性を明記して `Partial · accepted` ➕ 再評価トリガへ降格 |
+
+`JOB_TOKEN_BUDGET` の未到達性について補足: `apps/worker/src/start.ts` は
+`requiresApprovalForKind: () => false` なので、本番では `registerPending` が一度も呼ばれず、
+承認再開経路（したがって D2 / D3 / D5）に到達しない。これは `start.ts` のコメントが
+明示的に記録している意図的な境界（`workflowStepSchema` への step 単位フラグ追加を伴う横断変更）であり、
+欠陥ではない。ただし**対応表がそれを前提に `Mitigated` を名乗るのは別問題**であり、
+上記 §9.2c はそこを分離したもの。
+
+### §9.3 検証ゲートの状態（2026-09-22、§9 の修正適用後）
+
+```
+biome check .                 : clean（169 files）
+pnpm -r run typecheck         : clean（9 projects）
+vitest run                    : 70 files / 821 passed / 1 skipped
+pnpm audit --audit-level=high : No known vulnerabilities found
+scripts/forbid-model-ids.sh   : clean
+.github/workflows/            : 7 本（本節の修正でも新規追加なし）
+```
+
+### §9.4 本検証で GREEN を裏付けられた不変条件
+
+「テストが通っている」ではなく、実際に壊して FAIL を確認したものだけを挙げる。
+
+| 変異 | 結果 |
+|---|---|
+| `approvals.ts` の `rowCount !== decisions.length` → `rowCount === 0` | FAIL（混在セットの原子性） |
+| `stores.ts` の `if (rowCount !== stepIds.length)` → `if (false)` | FAIL（ROLLBACK 経路） |
+| `packages/tools/src/email.ts` に宛先リテラルを追加 | FAIL（§9.2a の修正後。修正前は GREEN のままだった） |
+
+以下は今回の検証で「正しいことを確認したが変更していない」点（記録のため）:
+
+- `job_step.approval_state` は nullable かつ **DB default なし**。したがって `recordStepUsage` が
+  未登録 step の行を作っても `approval_state = NULL` となり、`claimPending` の
+  `WHERE approval_state = 'pending'` に掛からない——usage 記録が claimable な pending 行を生まない。
+- `recordStepUsage` の `onConflictDoUpdate({ set: { totalTokens } })` は `approval_state` を温存する。
+- `.gitleaksignore` の 242 件は全件が単一コミット `11a87f5`（`Squashed 'services/api/' content`）由来。
+  fingerprint が commit 固定なので、新規シークレットを遂施できない。
+
+### §9.5 未対応として残したもの
+
+- **存在秘匿の層間不整合**: 承認ターゲット層は unknown / in-flight / consumed を単一 404 に畳む一方で、
+  その上の `authorizeJobAccess` は 404（ジョブ無し）と 403（他人のジョブ）を撃ち分けるため
+  ジョブ存在オラクルになっている。R5.1 は spec `007` が意図的に無改変とした範囲なので本節でも触らない。
+- **予算ゲートの並行性**: `claimPending` の `sum()` と UPDATE は同一トランザクション内だが
+  READ COMMITTED なので、**互いに素な step 集合**への同時 approve 2 本は両方とも予算チェックを
+  通過し得る。consume-once は行ロックが守るため実害は予算の超過のみ。

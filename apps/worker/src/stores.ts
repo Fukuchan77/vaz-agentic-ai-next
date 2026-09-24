@@ -1,7 +1,7 @@
-import { auditLog, job, jobEvent } from "@vaz/db/schema";
+import { auditLog, job, jobEvent, jobStep } from "@vaz/db/schema";
 import type { AuditEntry } from "@vaz/schemas/deps";
 import type { JobEvent } from "@vaz/schemas/workflows";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AuditLogStore } from "./audit";
 import type { JobEventStore } from "./events";
@@ -106,6 +106,184 @@ export interface JobOwnerLookup {
 export interface JobStore {
 	insert(row: JobInsert): Promise<void>;
 	findOwnerUserId(jobId: string): Promise<JobOwnerLookup>;
+}
+
+/* -------------------------------------------------------------------------- */
+/* JobStepStore — pending set + observed usage (D5 / C-9, Task 7)             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Port for the `job_step` table: atomic pending-set management and observed
+ * token-usage recording (R6.1 / R7.1 / R7.5, D5). Three responsibilities:
+ *
+ * - {@link registerPending}: mark a step as needing approval before it runs.
+ *   Idempotent (`ON CONFLICT DO NOTHING`) — Inngest replays the function body
+ *   on retries and on resume, so the same `stepId` may be registered twice.
+ *
+ * - {@link recordStepUsage}: write the observed `totalTokens` for a completed
+ *   step as an absolute value (not an increment). Idempotent via upsert — a
+ *   replay of the same step always overwrites, never double-counts.
+ *
+ * - {@link claimPending}: single-transaction, all-or-nothing consume-once gate
+ *   over the caller's requested `stepIds` (R9.2/9.6, adversarial-review fix).
+ *   Reads `sum(total_tokens)` for the job then UPDATE-WHERE-pending-AND-in-set
+ *   sets `approval_state = 'consumed'` and `consumed_at = at`. If the number of
+ *   rows actually updated is less than `stepIds.length` (some id was unknown /
+ *   already consumed / in-flight), the transaction is rolled back — nothing is
+ *   left consumed — and the mismatch is surfaced to the caller as the true
+ *   (partial) `rowCount`, so a caller can enforce "reject the whole set" by
+ *   comparing `rowCount !== stepIds.length` (Task 9 / D2 / D5). The cumulative
+ *   `totalTokens` lets the caller enforce a token budget in the same
+ *   round-trip (Task 9 / D3). `consumed` → `pending` is intentionally absent:
+ *   the API has no method to reverse a claim.
+ */
+export interface JobStepStore {
+	/**
+	 * Register `stepId` as approval-pending for `jobId`. Idempotent: a second
+	 * call for the same `(jobId, stepId)` is a safe no-op (`ON CONFLICT DO
+	 * NOTHING`), so Inngest function-body replays never violate the composite PK.
+	 */
+	registerPending(jobId: string, stepId: string, at: Date): Promise<void>;
+
+	/**
+	 * Upsert the observed `totalTokens` for `(jobId, stepId)` as an absolute
+	 * value. On conflict (the row already exists from `registerPending`), SET
+	 * `total_tokens` to the supplied count — never increment. A replay of the
+	 * same specialist run therefore writes the same count, not double.
+	 */
+	recordStepUsage(jobId: string, stepId: string, totalTokens: number): Promise<void>;
+
+	/**
+	 * Atomically consume the requested `stepIds` for `jobId` in one transaction,
+	 * all-or-nothing (R9.2/9.6, D5):
+	 *   1. Read `sum(total_tokens)` for the job and expose it as the budget-gate
+	 *      signal (Task 9 / D3, R7.1–R7.3).
+	 *   2. UPDATE rows WHERE `step_id = ANY(stepIds)` AND `approval_state =
+	 *      'pending'` → `'consumed'`, setting `consumed_at = at` (injected, NOT
+	 *      SQL `now()`).
+	 *   3. If the number of rows updated is less than `stepIds.length` — some
+	 *      requested id was unknown, already consumed, or in-flight — the
+	 *      transaction is rolled back (nothing is left consumed) and the actual
+	 *      matched count is returned, NOT `stepIds.length`.
+	 *   4. Return `{ rowCount, totalTokens }`:
+	 *      - `rowCount`: rows actually matched/updated. `rowCount ===
+	 *        stepIds.length` is the caller's signal for "fully claimed";
+	 *        anything less (including 0) means the whole set must be rejected.
+	 *      - `totalTokens`: cumulative spend for the job (sum of all rows for
+	 *        `jobId`, independent of which steps were just consumed).
+	 *
+	 * NOTE: the budget check and the 429 / 202 decision MUST be made by the
+	 * caller AFTER the claim commits — the rows are consumed when the full set
+	 * matched, regardless of whether the budget was then found exceeded. This
+	 * ensures a budget-blocked caller cannot replay the same approval target.
+	 *
+	 * `consumed` → `pending` reversal is not provided: once claimed, a step
+	 * is permanently consumed (D5 atomicity constraint).
+	 *
+	 * `stepIds` empty is a no-op that returns `{ rowCount: 0, totalTokens: 0 }`
+	 * without touching the DB (defensive; the wire schema requires at least
+	 * one decision, so this should not occur in practice).
+	 */
+	claimPending(
+		jobId: string,
+		stepIds: readonly string[],
+		at: Date,
+	): Promise<{ rowCount: number; totalTokens: number }>;
+}
+
+/**
+ * Internal sentinel thrown inside {@link createJobStepStore}'s `claimPending`
+ * transaction to force a ROLLBACK when fewer rows matched than were
+ * requested. Never escapes `claimPending` — caught and translated into the
+ * partial `{ rowCount, totalTokens }` result.
+ */
+class ClaimMismatchError extends Error {
+	rowCount: number;
+	totalTokens: number;
+
+	constructor(rowCount: number, totalTokens: number) {
+		super("claimPending: partial match — rolling back");
+		this.rowCount = rowCount;
+		this.totalTokens = totalTokens;
+	}
+}
+
+/** Drizzle-backed {@link JobStepStore} over the `job_step` table. */
+export function createJobStepStore(db: PgDatabase<PgQueryResultHKT>): JobStepStore {
+	return {
+		async registerPending(jobId, stepId, at) {
+			await db
+				.insert(jobStep)
+				.values({ jobId, stepId, approvalState: "pending", createdAt: at })
+				.onConflictDoNothing();
+		},
+
+		async recordStepUsage(jobId, stepId, totalTokens) {
+			await db
+				.insert(jobStep)
+				.values({ jobId, stepId, totalTokens })
+				.onConflictDoUpdate({
+					target: [jobStep.jobId, jobStep.stepId],
+					set: { totalTokens },
+				});
+		},
+
+		async claimPending(jobId, stepIds, at) {
+			if (stepIds.length === 0) {
+				// Defensive no-op: the wire schema (`approvalDecisionSetSchema.min(1)`)
+				// guarantees this doesn't happen in practice, but an empty `IN ()`
+				// is invalid SQL, so short-circuit before starting a transaction.
+				return { rowCount: 0, totalTokens: 0 };
+			}
+			try {
+				return await db.transaction(async (tx) => {
+					// Step 1: read the cumulative token spend for this job. Exposed to the
+					// caller as the budget-gate signal (Task 9 / D3, R7.1–R7.3).
+					const sumRows = await tx
+						.select({ total: sql<string | null>`sum(${jobStep.totalTokens})` })
+						.from(jobStep)
+						.where(eq(jobStep.jobId, jobId));
+					// `sum(integer)` is `bigint`, which node-postgres returns as a string
+					// (the `sql<…>` generic only annotates the type) — coerce so callers get the
+					// `number` the port promises.
+					const totalTokens = Number(sumRows[0]?.total ?? 0);
+
+					// Step 2: conditionally UPDATE only the requested, still-pending rows.
+					// `consumed_at` is the injected `at` — never SQL `now()` — so the
+					// timestamp is deterministic and testable without mocking the clock.
+					const result = await tx
+						.update(jobStep)
+						.set({ approvalState: "consumed", consumedAt: at })
+						.where(
+							and(
+								eq(jobStep.jobId, jobId),
+								inArray(jobStep.stepId, stepIds),
+								eq(jobStep.approvalState, "pending"),
+							),
+						);
+
+					// Drizzle's pg driver sets `rowCount` on the raw result; fall back to
+					// 0 when the adapter returns a plain object without it.
+					const rowCount = (result as { rowCount?: number }).rowCount ?? 0;
+
+					// R9.2/9.6 all-or-nothing: if fewer rows matched than requested, throw
+					// to force a ROLLBACK — nothing stays consumed for a mismatched set —
+					// and surface the true (partial) count to the caller instead of
+					// silently reporting success.
+					if (rowCount !== stepIds.length) {
+						throw new ClaimMismatchError(rowCount, totalTokens);
+					}
+
+					return { rowCount, totalTokens };
+				});
+			} catch (error) {
+				if (error instanceof ClaimMismatchError) {
+					return { rowCount: error.rowCount, totalTokens: error.totalTokens };
+				}
+				throw error;
+			}
+		},
+	};
 }
 
 /** Drizzle-backed {@link JobStore} over the `job` table. */

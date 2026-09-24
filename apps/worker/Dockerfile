@@ -16,7 +16,13 @@
 # restart-crossing run is exercised once the FLAG is lifted (durable E2E, Task 15).
 
 ARG NODE_VERSION=24
-ARG PNPM_VERSION=11.10.0
+# Must equal the `packageManager` version in the root package.json: this stage runs
+# `pnpm install --frozen-lockfile` against the committed pnpm-lock.yaml, and a pnpm
+# whose major does not match the lockfile format either refuses the frozen install or
+# silently re-resolves it — neither of which is a reproducible image. Guarded by
+# tests/repo/container-toolchain-pins.spec.ts, because nothing in the TS gate builds
+# this image and the drift is therefore invisible until a deploy.
+ARG PNPM_VERSION=12.5.1
 
 # --- build: install the workspace, then prune to a standalone worker deploy ---
 FROM node:${NODE_VERSION}-slim AS build

@@ -21,10 +21,15 @@ CI の `tests` ワークフローが `audit` ジョブ（Task 3 で `unit` か�
 内の直列ステップ）で失敗する。または `.githooks/pre-commit` 経由でローカル `git commit` が
 `mise run audit` で止まる。**コード変更が原因でない CI 赤**はまず advisory 起因を疑う。
 
-変更がなくても新規 advisory は降ってくるため、日次の `security-daily` ワークフローが両スタックを
-見ている: `audit` ジョブ(`pnpm audit`)と `py-audit` ジョブ(`mise run py:audit` = `pip-audit`)。
-Python 側は `python.yml` が `services/agent/**` にパスフィルタされており、サイドカーを触る PR が
-来ない限り `py:check` は発火しないため、`py-audit` がその唯一の常設検知網になる。
+変更がなくても新規 advisory は降ってくるため、日次の `security-daily` ワークフローが 3 レーン
+すべてを見ている: `audit` ジョブ(`pnpm audit`)、`py-audit` ジョブ(`mise run py:audit`)、
+`api-audit` ジョブ(`mise run api:audit`)。Python 側は `python.yml` が `services/agent/**`、
+`api.yml` が `services/api/**` にパスフィルタされており、そのレーンを触る PR が来ない限り
+`py:check` / `api:check` は発火しないため、この 2 ジョブがそれぞれの唯一の常設検知網になる。
+`api-audit` は 2026-09-22 の依存更新で追加した — `services/api` は 006 の import 以降この網から
+漏れており、**リポジトリ最多の `--ignore-vuln`(9 エントリ / 14 件抑制)を抱えたレーンが無監視**
+だった。レーンが抜けても CI は赤にならず「ただ見ていない」だけになるので、
+`tests/repo/ci-workflows.spec.ts` が mise の `*:audit` タスクとこのワークフローの対応をガードする。
 2026-09-09〜11 の `security-daily` 3 連続失敗(js-yaml GHSA-2883-xcg3-v3hh、head SHA は不変)が
 この経路の実例で、原因は「override が pin した 4.3.1 自身に新しい advisory が出た」ことだった。
 
@@ -103,12 +108,15 @@ Python 側 advisory も解消済み。`uv lock --upgrade` 後は `pyproject.toml
 ## 6. override / ignoreGhsas / ignore-vuln の撤去条件表
 
 各エントリは撤去条件を宣言し、条件が成立したら**追加コミットで撤去する**(放置しない)。
-Python 側の `pip-audit --ignore-vuln`(`mise.toml` の `py:audit`)も同じ表で追跡する —
-置き場所が違うだけで、「一時的な監査除外に再評価期限を付ける」という扱いは共通。
+Python 側の `pip-audit --ignore-vuln`(`mise.toml` の `py:audit` / `api:audit`)も同じ表で追跡する —
+置き場所が違うだけで、「一時的な監査除外に再評価期限を付ける」という扱いは共通。除外理由の本文は
+`mise.toml` の各タスクのコメントが正本で、この表はそこへの索引と再評価期限の台帳として使う。
 
-| エントリ | 種別 | 撤去条件 | 状態(2026-09-19 再検証) |
+| エントリ | 種別 | 撤去条件 | 状態(2026-09-22 再検証) |
 | --- | --- | --- | --- |
-| `PYSEC-2026-3740` (nltk) | pip-audit `--ignore-vuln` | `llama-index-core` → `nltk`(推移的)の pathsec sandbox bypass(GHSA-8mgp-746c-j5xp / CVE-2026-81726): `TransitionParser.train/parse`・`AveragedPerceptron.save/load`・`PerceptronTagger.save_to_json`・`save_maxent_params` が pathsec-aware helper ではなく組み込み `open()` を使うため、allowed root の外を読み書きできる。**修正版が存在しない**(上流が "Not yet patched" と明記、PyPI 最新 3.10.3 が該当版) = 対応 4 段階の #4。nltk の修正版が公開されたら `uv lock --upgrade-package nltk` で取り込み、このエントリを撤去する | 維持中(2026-09-11 追加。サイドカーは nltk / pathsec を一切 import せず、llama-index-core 側の nltk 利用も punkt tokenizer のみ。脆弱な 4 API は venv のどこからも参照なし。**再評価期限: 2026-12-11**) |
+| `PYSEC-2026-3740` (nltk) | pip-audit `--ignore-vuln` | `llama-index-core` → `nltk`(推移的)の pathsec sandbox bypass(GHSA-8mgp-746c-j5xp / CVE-2026-81726): `TransitionParser.train/parse`・`AveragedPerceptron.save/load`・`PerceptronTagger.save_to_json`・`save_maxent_params` が pathsec-aware helper ではなく組み込み `open()` を使うため、allowed root の外を読み書きできる。**修正版が存在しない**(上流が "Not yet patched" と明記、PyPI 最新 3.10.3 が該当版) = 対応 4 段階の #4。nltk の修正版が公開されたら `uv lock --upgrade-package nltk` で取り込み、このエントリを撤去する | 維持中(2026-09-11 追加、`py:audit` と `api:audit` の両方に存在 — どちらのレーンも `llama-index-core` 経由で同じ推移的依存を引く。サイドカーは nltk / pathsec を一切 import せず、llama-index-core 側の nltk 利用も punkt tokenizer のみ。脆弱な 4 API は venv のどこからも参照なし。2026-09-22 再検証: PyPI 最新はなお 3.10.3、`pip-audit` の Fix Versions も空。**再評価期限: 2026-12-11**) |
+| `PYSEC-2026-161` / `-248` / `-249` / `-2280` / `-2281` (starlette) | pip-audit `--ignore-vuln`(`api:audit`) | `services/api` の `starlette<1.0` は load-bearing pin(slowapi 0.1.10 が starlette 1.x と非互換 — exception-handler misdispatch で global rate limit が黙って無効化される)。修正版は starlette 1.0.1〜1.3.1 にしか存在せず、cap を上げられないため #4 扱い。reachable な 1 件(Host ヘッダが redirect Location に反映)は `TrustedHostMiddleware`(`app/main.py`)でアプリ層で封じ、残り 4 件は到達不能(`request.form()` / `HTTPEndpoint` / `StaticFiles` を使わない)。**slowapi が starlette 1.x に対応したら** cap を外し、`--ignore-vuln` なしの `pip-audit` で再確認してから撤去する | 維持中(2026-09-22 再検証: slowapi は依然 0.1.10 が PyPI 最新 = 対応リリースなし、starlette 最新は 1.6.0。除外理由の本文は `mise.toml` の `api:audit` コメント Group 1) |
+| `CVE-2026-45830` / `-45831` / `-45833` (chromadb) | pip-audit `--ignore-vuln`(`api:audit`) | chromadb 0.6.3 のマルチテナント認可欠陥 2 件 + `trust_remote_code` 経由の RCE 1 件。**3 件とも `fixed_in: []`** で、affected range は最新版まで覆うため cap(`chromadb<1.0`)を外しても解消しない = #4。`app/stores/vector_store/chroma.py` は `PersistentClient` / `Client()`(組み込み・in-process)しか構築せず、Chroma サーバ・テナント・RBAC を一切使わないため到達不能。**`HttpClient` へ切り替える / 独立 Chroma サーバに接続する変更が入る前に必ず再評価する**(その時点で 3 件すべて reachable になる) | 維持中(2026-09-22 再検証: chromadb 最新はなお 1.5.9、3 件とも修正リリースなし。除外理由の本文は `mise.toml` の `api:audit` コメント Group 2) |
 | `js-yaml@>=4.0.0 <4.3.2` → `^4.3.2` | override | **撤去済み(2026-09-19)** — `openapi-typescript` → `@redocly/openapi-core`(dev-only)の quadratic-CPU DoS 3件: merge-key(GHSA-52cp-r559-cp3m、patched 4.3.0)、`!!omap`(GHSA-5p4m-2wfm-xmqj / CVE-2026-59870、patched 4.3.1)、`maxTotalMergeKeys` が空 merge source に対して CPU を制限しない(GHSA-2883-xcg3-v3hh、patched 4.3.2)。射程は 2 度拡大したが理由は同一で、**この override が pin した patch 版がそのまま実解決版になるため、次の advisory が旧射程の外側に落ちる**(`<4.3.0` は 4.3.0 を、`<4.3.1` は 4.3.1 を取りこぼした)。宣言していた撤去条件(「`openapi-typescript` が pin する `@redocly/openapi-core` の `js-yaml` 範囲が `>=4.3.2` へ上がった時点」)が成立 | 撤去済み(2026-09-19 — `openapi-typescript` 7.13.0 が解決する `@redocly/openapi-core` が 1.34.18 → **1.34.20** に上がり、その `js-yaml` 依存が exact pin `4.3.2` になった。override を外して再解決しても js-yaml は 4.3.2 のままで 4.3.0 に戻らず、`pnpm audit --audit-level=moderate` も clean) |
 | `postcss@<8.5.18` | override | **撤去済み(2026-08-08)** — `next` 16.3.0 が `postcss` 8.5.23 を直接 pin し、宣言していた撤去条件(「next の pin が `>=8.5.18` に達したら」)が成立。override 無しで 8.5.23/8.5.25 に解決することを確認 | 撤去済み |
 | `sharp@<0.35.0` | override | **撤去済み(2026-08-08)** — `next` 16.3.0 stable の依存範囲が `^0.35.3` になり撤去条件成立。override 無しで 0.35.3 に解決 | 撤去済み |
@@ -145,10 +153,26 @@ auditConfig:
 
 ## 7. 自動依存更新ボット(Dependabot)の運用ルール
 
-**導入済み**(X-15、`.github/dependabot.yml`)。npm ワークスペース(`/`)、Python サイドカー
-(`/services/agent`、uv)、GitHub Actions pin(`/`)の 3 ecosystem を weekly で見る。
+**導入済み**(X-15、`.github/dependabot.yml`)。npm ワークスペース(`/`)、Python 2 レーン
+(`/services/agent`・`/services/api`、uv)、GitHub Actions pin(`/`)、コンテナイメージ
+(`docker` = 3 つの Dockerfile / `docker-compose` = `/docker-compose.yml`)を weekly で見る。
 `security-daily.yml` は脆弱版を**検知**するだけで更新を提案しないため、その穴を埋めるのが
 Dependabot の役割という位置づけ。
+
+コンテナイメージの 2 ecosystem は 2026-09-22 に追加した。base image は `docker build` 時に
+解決されどのロックファイルにも現れないため、`pnpm audit` / `pip-audit` / `security-daily.yml` の
+**いずれからも見えない** — Dependabot がこのカテゴリの唯一の検知経路になる。実害の証拠として、
+`docker-compose.yml` は `inngest/inngest:v1.19.3` に留まり最新 v1.45.1 との差が 26 マイナーに
+達していたが、CI の何一つそれを指摘できていなかった。`tests/repo/dependabot.spec.ts` が
+「Dockerfile を持つディレクトリはすべて `docker` ブロックで被覆されている」ことをリポジトリ実態から
+導出して検証するので、Dockerfile を新設して設定を忘れるとビルドが落ちる。
+
+ただし `apps/worker/Dockerfile` の `FROM node:${NODE_VERSION}-slim` は ARG 補間のため Dependabot が
+解決できず、この網の外にある。同ファイルの `ARG NODE_VERSION` / `ARG PNPM_VERSION` は
+`mise.toml` の `[tools] node` と root `package.json` の `packageManager` を正本とし、
+`tests/repo/container-toolchain-pins.spec.ts` がその一致を固定する。このガードは 2026-09-22 の
+pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全ゲート green だった実例に由来する
+(`mise run check` はこのイメージをビルドしないため、deploy まで露見しない)。
 
 > 本節は 2026-07-24 時点では「未導入・将来の採否基準」として書かれていた。X-15 で導入済みと
 > なったため、当時の 4 条件を**運用ルール**として書き換えてある。特に「Dependabot は
@@ -160,6 +184,12 @@ Dependabot の役割という位置づけ。
   の npm / uv ブロックに `cooldown.default-days: 1`(= 1440 分)を設定してこれを実装している。
   どちらか一方だけを緩めない — 24h を変更するなら両方を同じ PR で動かす。
   GitHub Actions ブロックには意図的に `cooldown` を置いていない(理由はファイル内コメント参照)。
+  この規約は「先に書かれたブロック」ではなく**パッケージレジストリ系の全 ecosystem**に係る:
+  `/services/api` の uv ブロックは source repo から verbatim 移植した際に `cooldown` が欠落して
+  いた(移植元に `minimumReleaseAge` 相当のポリシーが無かったため)。`cooldown` の欠落は
+  エラーではなく PR が出てしまうという形で現れ無症状なので、2026-09-22 に補い、
+  `tests/repo/dependabot.spec.ts` が全レジストリ ecosystem の `cooldown: default-days: 1` を
+  検証するようにした。
 - **`allowBuilds` との整合**: ボットが新規の install script 付き依存を追加する PR を生成した
   場合、`allowBuilds` に対応エントリ(既定 `false`)が追加されていないと `pnpm install` が
   失敗する。このゲートを迂回する設定(`--ignore-scripts` の既定化等)は行わない —

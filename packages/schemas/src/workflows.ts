@@ -121,12 +121,32 @@ export const workflowStepSchema = z.object({
 export type WorkflowStep = z.infer<typeof workflowStepSchema>;
 
 /**
+ * Upper bound on the number of steps a single supervisor plan may dispatch.
+ *
+ * OWASP Agentic T6 (Resource Overload) / LLM10 (Unbounded Consumption): the
+ * plan arrives from the client on `POST /api/jobs` and `createSupervisorWorkflow`
+ * dispatches every step in it, each one an LLM call. Without an upper bound, a
+ * single request sizes the work the worker performs, and `JOB_TOKEN_BUDGET`
+ * does not help — that budget is only consulted on the approval-resume path
+ * (`apps/web/src/lib/approvals.ts`), which a plan with no approval-gated step
+ * never reaches. This cap is the structural bound the two OWASP mapping
+ * documents cite.
+ *
+ * 20 is deliberately generous relative to real plans (the widest fixture in the
+ * repo dispatches 3) so the cap bounds abuse without constraining legitimate
+ * composition. Raising it is a reviewed, committed decision — the same
+ * governance as `MODEL_ALLOWLIST` / `RECIPIENT_ALLOWLIST`, not an env toggle.
+ */
+export const MAX_PLAN_STEPS = 20;
+
+/**
  * The supervisor's plan (R3.3): a `goal` plus at least one ordered step. `min(1)`
  * enforces that a plan actually dispatches — an empty plan is not a plan.
+ * `max(MAX_PLAN_STEPS)` bounds how much work one request can buy (T6 / LLM10).
  */
 export const supervisorPlanSchema = z.object({
 	goal: z.string().min(1),
-	steps: z.array(workflowStepSchema).min(1),
+	steps: z.array(workflowStepSchema).min(1).max(MAX_PLAN_STEPS),
 });
 
 export type SupervisorPlan = z.infer<typeof supervisorPlanSchema>;
@@ -216,3 +236,36 @@ export const jobEventTypeSchema = z.enum([
 ]);
 
 export type JobEventType = z.infer<typeof jobEventTypeSchema>;
+
+/**
+ * Single approval decision wire contract (C-7 / R5.1, R5.2, R9.1, R9.3, R9.4).
+ *
+ * `strictObject` guarantees that extra fields (conversation history, usage,
+ * model identifiers) are rejected at the edge (D1 proof).
+ */
+export const approvalDecisionSchema = z.strictObject({
+	toolCallId: z.uuid(),
+	decision: z.enum(["approve", "reject"]),
+	args: z.unknown().optional(),
+});
+
+export type ApprovalDecision = z.infer<typeof approvalDecisionSchema>;
+
+/**
+ * Set form approval decision wire contract (C-7 / R9.3).
+ *
+ * `strictObject` guarantees that root-level extra fields are rejected.
+ * `min(1)` guarantees at least one decision is submitted.
+ */
+export const approvalDecisionSetSchema = z.strictObject({
+	decisions: z.array(approvalDecisionSchema).min(1),
+});
+
+export type ApprovalDecisionSet = z.infer<typeof approvalDecisionSetSchema>;
+
+/**
+ * Discriminated approval request union accepting either single or set shape (C-7).
+ */
+export const approvalRequestSchema = z.union([approvalDecisionSchema, approvalDecisionSetSchema]);
+
+export type ApprovalRequest = z.infer<typeof approvalRequestSchema>;

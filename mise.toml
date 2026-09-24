@@ -1,10 +1,16 @@
 [tools]
 node = "24"
-pnpm = "11"
+pnpm = "12"
 # Python package manager for services/agent (py:check / openapi:gen); pinned so
 # the local toolchain and CI (.github/workflows/python.yml via mise-action)
 # provision the same major/minor.
 uv = "0.12"
+# Secret scanner (secret-scan tasks, .githooks/pre-commit, security-daily.yml).
+# Provisioned here rather than assumed on PATH for the same reason node/pnpm/uv are:
+# CI gets it from jdx/mise-action with no extra install step, and a developer's
+# `mise install` gets the identical build. Major-pinned so new detection rules land
+# on their own — a scanner frozen at a patch version silently stops finding things.
+gitleaks = "8"
 
 [hooks]
 # git clone → (mise trust &) pnpm install to resolve dependencies (NFR-2 reproducibility).
@@ -38,6 +44,13 @@ description = "Run unit tests once (all workspace projects)"
 [tasks."test:coverage"]
 run = "pnpm exec vitest run --coverage"
 description = "Run unit tests with coverage"
+
+# --- Client bundle budget (limits in .size-limit.json; brotli) ---
+# Reads apps/web/.next, so it needs `mise run build` first. Not part of `check`
+# (which never builds); CI runs it in tests.yml's `bundle-size` job.
+[tasks.size]
+run = "pnpm exec size-limit"
+description = "Check apps/web client bundle size against .size-limit.json (requires build)"
 
 # --- E2E: uses the root playwright.config.ts (webServer is scoped with --filter) ---
 [tasks."test:e2e"]
@@ -137,6 +150,36 @@ run = "uv run --frozen pip-audit --ignore-vuln PYSEC-2026-3740"
 dir = "services/agent"
 description = "Python dependency vulnerability audit (pip-audit; NFR-5 counterpart of `audit`)"
 
+# --- Secret scanning (constitution §フック負荷配分; closes spec 006 Task 6's gap) ---
+# Always `gitleaks git`, never `gitleaks dir`: `dir` walks the filesystem and so reads
+# node_modules/, .venv/ and apps/web/.next/ (456 MB, and third-party findings this repo
+# cannot act on), while `git` reads tracked git content only (9.93 MB). Confirmed by
+# running both on 2026-09-22 — `dir` reported 265 findings including apps/web/.next/cache
+# build artefacts, `git` reported 242, all of them classifiable.
+#
+# `--redact` on every scan that writes to a log a human does not control: gitleaks prints
+# the matched value by default, so an unredacted CI run turns a true positive into a
+# second disclosure in the build log. `secret-scan:report` is the deliberate exception —
+# it writes to a local file precisely so the values can be classified.
+#
+# `.gitleaksignore` (repo root, read automatically) carries the baseline of confirmed
+# false positives and the procedure for extending it.
+[tasks."secret-scan"]
+run = "gitleaks git --no-banner --redact ."
+description = "Scan full git history for secrets (gitleaks; baseline in .gitleaksignore)"
+
+# Pre-commit leg: scans the staged diff only, so it stays fast enough for every commit.
+[tasks."secret-scan:staged"]
+run = "gitleaks git --staged --no-banner --redact ."
+description = "Scan staged changes for secrets (pre-commit leg of `secret-scan`)"
+
+# Baseline regeneration input — deliberately NOT redacted, so findings can be classified
+# before any fingerprint is added to .gitleaksignore. Writes outside the repo so a report
+# full of matched values can never be committed by accident.
+[tasks."secret-scan:report"]
+run = "gitleaks git --no-banner --report-format json --report-path /tmp/gitleaks-report.json --exit-code 0 ."
+description = "Write a full gitleaks JSON report to /tmp for .gitleaksignore regeneration"
+
 # --- Python API lane (services/api) — second independent Python lane ---
 # fastapi-pydantic-ai-agent imported whole via `git subtree add --prefix=services/api`
 # (spec 006-repo-consolidation Task 6, ADR-0003). Mirrors services/agent's pattern:
@@ -217,7 +260,7 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # docs/dependency-runbook.md). Unlike the starlette group, these have no fix
 # release to upgrade into: PyPI/OSV list `fixed_in: []` for all three, and the
 # affected range ("0.4.17 or later" / "0.5.0 or later") covers even the
-# latest chromadb (still 1.5.9, re-checked 2026-09-19) - so lifting the `<1.0` cap would
+# latest chromadb (still 1.5.9, re-checked 2026-09-22) - so lifting the `<1.0` cap would
 # not close them either.
 #   CVE-2026-45830 (GHSA-2wm9-hf6c-p5cr, PYSEC-2026-3813) - a lack of
 #     authorization validation lets any authenticated user read/write/update/
@@ -229,7 +272,7 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 #     attacker with UPDATE_COLLECTION can achieve remote code execution via a
 #     malicious model repo plus `trust_remote_code=true` on the collections API.
 # The PYSEC IDs were assigned after this group was written, and as of the
-# 2026-09-19 refresh raw `pip-audit` prints *those* as the primary IDs rather
+# 2026-09-22 refresh raw `pip-audit` prints *those* as the primary IDs rather
 # than the CVEs listed in `--ignore-vuln` below. The entries still match,
 # because pip-audit resolves `--ignore-vuln` against a vulnerability's aliases
 # as well as its primary ID (verified: raw output reports 14 findings, the
@@ -257,7 +300,7 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 #     instead of the pathsec-aware helpers, so they read and write outside the
 #     allowed roots when NLTK path-security enforcement is on.
 # Like Group 2 this has no fix release: `fixed_in: []`, and 3.10.3 is the
-# latest nltk on PyPI (re-checked 2026-09-19), so no bump closes it. Unreachable
+# latest nltk on PyPI (re-checked 2026-09-22), so no bump closes it. Unreachable
 # here on two independent counts: (1) the advisory's own preconditions require
 # the application to enable `pathsec.ENFORCE` AND let untrusted input choose a
 # model import/export path - this codebase does neither; (2) none of the
@@ -270,7 +313,13 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # --ignore-vuln) after any llama-index-core bump to check for an nltk fix
 # release, and revisit this entry if any code starts calling nltk's model
 # serialization APIs.
-run = "uv run pip-audit --ignore-vuln PYSEC-2026-161 --ignore-vuln PYSEC-2026-248 --ignore-vuln PYSEC-2026-249 --ignore-vuln PYSEC-2026-2280 --ignore-vuln PYSEC-2026-2281 --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833 --ignore-vuln PYSEC-2026-3740"
+#
+# `uv run --frozen` for the same reason `py:audit` uses it: audit the committed
+# uv.lock rather than whatever resolves fresh today. `api:check` has already run
+# `uv sync` by the time it reaches here, so --frozen is a no-op on that path; the
+# security-daily job calls this task cold, and --frozen is what makes that path
+# materialise the env from the lock instead of silently re-resolving it.
+run = "uv run --frozen pip-audit --ignore-vuln PYSEC-2026-161 --ignore-vuln PYSEC-2026-248 --ignore-vuln PYSEC-2026-249 --ignore-vuln PYSEC-2026-2280 --ignore-vuln PYSEC-2026-2281 --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833 --ignore-vuln PYSEC-2026-3740"
 
 [tasks."api:hooks:install"]
 dir = "services/api"

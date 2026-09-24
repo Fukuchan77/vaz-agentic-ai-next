@@ -1,28 +1,37 @@
 #!/bin/sh
-# Pre-commit quality gate: lint/format → typecheck → unit test → dependency audit
-# → model-id gate. Monorepo-aware (apps/*, packages/*). Everything runs via mise
-# tasks (mise.toml is the source of truth / CLAUDE.md: no bare tools):
-#   lint           = biome check . (whole workspace)
-#   typecheck      = pnpm -r run typecheck (each workspace member)
-#   test:run       = vitest run (projects: web=jsdom / worker=node / packages=node)
-#   audit          = pnpm audit --audit-level=moderate
-#   lint:model-ids = scripts/forbid-model-ids.sh (R1.8/ADR-5 hardcoded-model-id gate)
+# Pre-commit quality gate: secret scan → lint/format → typecheck → unit test →
+# dependency audit → model-id gate. Monorepo-aware (apps/*, packages/*). Everything
+# runs via mise tasks (mise.toml is the source of truth / CLAUDE.md: no bare tools):
+#   secret-scan:staged = gitleaks git --staged (baseline: .gitleaksignore)
+#   lint               = biome check . (whole workspace)
+#   typecheck          = pnpm -r run typecheck (each workspace member)
+#   test:run           = vitest run (projects: web=jsdom / worker=node / packages=node)
+#   audit              = pnpm audit --audit-level=moderate
+#   lint:model-ids     = scripts/forbid-model-ids.sh (R1.8/ADR-5 hardcoded-model-id gate)
 # To skip temporarily: git commit --no-verify
 set -e
 
-echo "[pre-commit] 1/5 lint & format check (biome, whole workspace)"
+# Secret scan goes first, and not just to fail fast. A secret that reaches a commit
+# object is not undone by deleting the line in the next one — it has to be rewritten
+# out of history — so this is the only check here whose failure gets more expensive
+# the later it is caught. Staged diff only, so it costs well under a second; the
+# full-history scan is security-daily.yml's `secret-scan` job.
+echo "[pre-commit] 1/6 secret scan (gitleaks, staged changes)"
+mise run secret-scan:staged
+
+echo "[pre-commit] 2/6 lint & format check (biome, whole workspace)"
 mise run lint
 
-echo "[pre-commit] 2/5 typecheck (pnpm -r)"
+echo "[pre-commit] 3/6 typecheck (pnpm -r)"
 mise run typecheck
 
-echo "[pre-commit] 3/5 unit tests (vitest projects)"
+echo "[pre-commit] 4/6 unit tests (vitest projects)"
 mise run test:run
 
-echo "[pre-commit] 4/5 dependency audit (pnpm audit)"
+echo "[pre-commit] 5/6 dependency audit (pnpm audit)"
 mise run audit
 
-echo "[pre-commit] 5/5 hardcoded-model-id gate"
+echo "[pre-commit] 6/6 hardcoded-model-id gate"
 mise run lint:model-ids
 
 echo "[pre-commit] ✅ all checks passed"

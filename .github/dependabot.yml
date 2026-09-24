@@ -75,6 +75,14 @@ updates:
     directory: "/services/api"
     schedule:
       interval: "weekly"
+    # Was missing when this block was ported verbatim from the source repo, which had
+    # no `minimumReleaseAge` policy to mirror. docs/dependency-policy.md §7 binds the
+    # 24h publish window to every package-registry ecosystem, not to whichever ones
+    # happened to be written first — a lane without it can be handed a version pnpm's
+    # npm-side equivalent would refuse, and the inconsistency is invisible because a
+    # missing cooldown produces PRs rather than an error.
+    cooldown:
+      default-days: 1
     open-pull-requests-limit: 10
     groups:
       minor-and-patch:
@@ -134,3 +142,58 @@ updates:
     # actually binds — `minimumReleaseAge` governs package registries, not action
     # refs — and X-1's SHA pinning plus human review already gates this one.
     # Add it here once the ecosystem support is confirmed.
+
+  # Container base images had no automated detection at all until 2026-09-22: every
+  # other ecosystem here is a lockfile the audit jobs read, but a base image is
+  # resolved at `docker build` time and appears in no lockfile, so neither
+  # `pnpm audit` nor `pip-audit` nor `security-daily.yml` can see it. The evidence
+  # that this gap is real rather than theoretical: `docker-compose.yml` sat on
+  # `inngest/inngest:v1.19.3` while v1.45.1 was current — 26 minor releases, none of
+  # them surfaced by anything in CI.
+  #
+  # Two ecosystems because Dependabot separates them: `docker` reads Dockerfiles,
+  # `docker-compose` reads compose files. Both support `cooldown`, so both mirror the
+  # 24h publish-window policy the npm/uv blocks implement.
+  - package-ecosystem: "docker"
+    # `directories` (plural) is what allows more than one path per ecosystem block;
+    # the singular `directory` key takes exactly one and supports no globbing.
+    directories:
+      - "/apps/worker"
+      - "/services/agent"
+      - "/services/api"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 1
+    ignore:
+      # Both Python images are held at 3.13 on purpose, not by neglect: each lane's
+      # pyproject.toml declares `requires-python = ">=3.13"` and services/api's
+      # AGENTS.md records Python as "pinned strictly to 3.13". A runtime image moving
+      # to 3.14 ahead of that decision would diverge from the interpreter the lockfiles
+      # and `ty`/`pyright` configs target.
+      #
+      # An explicit `versions:` bound rather than `update-types:` classification, for
+      # the same reason the services/api block above gives: Dependabot reads a Docker
+      # tag like `3.13-slim` as version 3.13, so `3.13 -> 3.14` classifies as a *minor*
+      # and a major-only ignore would let it straight through — the exact misfire that
+      # let PR #36 propose starlette 0.52.1 -> 1.3.1.
+      - dependency-name: "python"
+        versions: [">=3.14"]
+    # NOT covered by this block, and deliberately so: `apps/worker/Dockerfile` writes
+    # `FROM node:${NODE_VERSION}-slim`, and Dependabot cannot resolve an ARG-interpolated
+    # tag. That image's major is governed by `mise.toml`'s `[tools] node` instead, and
+    # `tests/repo/container-toolchain-pins.spec.ts` pins the ARG to it — so the pair moves
+    # in one reviewed change rather than by bot PR.
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 1
+    # No `ignore:` here on purpose. The three services in docker-compose.yml (postgres
+    # via pgvector, redis, inngest) are local-dev provisioning, not a production
+    # topology, and each one's upgrade needs the stack actually brought up to verify —
+    # so surfacing the bump as a reviewable PR is the whole point. Add an entry here
+    # only for an image whose version is load-bearing for a documented reason, the way
+    # the `python` entry above is.
