@@ -41,7 +41,7 @@ services:
   # Redis — Inngest's durable backend (with Postgres) AND the JobEvent pub/sub
   # channel that events.ts publishes to for SSE fan-out (R3.6).
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: vaz-redis
     restart: unless-stopped
     ports:
