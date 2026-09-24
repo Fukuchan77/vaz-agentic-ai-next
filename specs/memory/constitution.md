@@ -1,16 +1,20 @@
 <!--
 SYNC IMPACT REPORT
-Version Change: 1.2.0 → 1.3.0
+Version Change: 1.3.0 → 1.3.1
 Modified Principles:
-  - 原則 7 → D1–D6 の 6 防御を具体的規則として追記
-  - 原則 5 → egress ポリシー迂回スキャン・監査単一発火点を追加
+  - none（Additional Constraints「ツールチェーン」の事実訂正のみ）
+Modified Sections:
+  - Additional Constraints → pnpm のピンを 11.24.0 から 12 系へ訂正
+    （`mise.toml` `[tools] pnpm = "12"`、root `package.json` `packageManager: pnpm@12.5.1`、
+    `apps/worker/Dockerfile` の `ARG PNPM_VERSION` と一致させる。
+    `tests/repo/container-toolchain-pins.spec.ts` が後 2 者の一致を機械検証する）
 Added Sections:
-  - 改訂履歴 1.3.0 行
+  - 改訂履歴 1.3.1 行
 Removed Sections:
   - none
 Templates Status:
   ✅ specs/memory/constitution.md - updated
-  ⚠️ AGENTS.md / CLAUDE.md - すでに spec 007 タスク 12.3 で更新済み（追加対応不要）
+  ✅ AGENTS.md / CLAUDE.md / README.md - すでに pnpm 12 を記載済み（追加対応不要）
 Deferred Items:
   - TODO(BRANCH_COVERAGE_THRESHOLD): 次回改正で確定（継続）
   - TODO(TYPESCRIPT_MAJOR): 継続。TypeScript 6.x を維持することは AGENTS.md で明記済み
@@ -262,7 +266,7 @@ allowlist を 1 か所に集約する。
 ## Additional Constraints
 
 **ツールチェーン**: バージョンは `mise.toml` で固定する。Python 3.13（3.14 では slowapi 0.1.10 が
-`DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 11.24.0、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
+`DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 12 系（`packageManager` で 12.5.1 に完全固定）、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
 `futureFlags.experimentalPythonWorkspaces` に必要）。TypeScript は 6.x 継続とし、7.x の採否は
 TODO(TYPESCRIPT_MAJOR) として `docs/adr/` で単独判断する。
 コマンドは推測せず `mise.toml` を読む。素の `ruff` / `pytest` / `biome` を直接叩かず、
@@ -343,6 +347,7 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 | 1.1.0 | 2026-08-29 | MINOR | 憲章の正本を `specs/memory/constitution.md`（git 追跡対象）へ移設。 |
 | 1.2.0 | 2026-08-31 | MINOR | 原則 7 にクライアント提出構造体への承認フラグ禁止を明記（spec §6.4.3）。原則 11 に uv workspace 単一 lock と二層バージョン方針の非両立（R14）を反映。CI / GH Actions 欄に SHA ピンと `permissions:` の対の意味を追記 |
 | 1.3.0 | 2026-09-22 | MINOR | 原則 7 に D1〜D6 の 6 防御（履歴注入封鎖・consume-once＋存在秘匿・usage 予算・監査単一 fail-soft 境界・pending set 原子性・egress ポリシー回帰スキャン）を規則として追記（spec 007-cross-repo-adoption-closeout）。原則 5 に egress 単一経路の機械検証ルール（`recordApprovalDecisions` の唯一性）を追記 |
+| 1.3.1 | 2026-09-24 | PATCH | Additional Constraints のツールチェーン記述を実態に合わせて訂正（pnpm 11.24.0 → 12 系。`mise.toml` / `packageManager` / `apps/worker/Dockerfile` がすでに 12 系へ移行済みで、憲章だけが旧値を保持していた — Governance「矛盾は両者を同時に更新する」に基づく）|
 
 ### 未決事項（Deferred）
 
@@ -355,6 +360,6 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 
 ---
 
-**Version**: 1.3.0 |
+**Version**: 1.3.1 |
 **Ratified**: 2026-08-29 |
-**Last amended**: 2026-09-22
+**Last amended**: 2026-09-24
