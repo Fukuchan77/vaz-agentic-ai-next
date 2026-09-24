@@ -23,6 +23,7 @@ from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.messages import ToolReturnPart
 from pydantic_ai.messages import UserPromptPart
 
+from app.stores.session_store._trim import shrink_for_budget_recovery
 from app.stores.session_store._trim import trim_history
 
 
@@ -298,3 +299,73 @@ class TestDegenerateCap:
         # drop the whole tail regardless of pairing validity.
         result = trim_history(messages, max_messages=max_messages)
         assert result == [head]
+
+
+class TestShrinkForBudgetRecovery:
+    """Verify `shrink_for_budget_recovery()` makes monotonic progress.
+
+    It shrinks toward a history short enough to escape a `budget_exceeded`
+    stop (context-budget recovery, see `app.api.v1.agent` and
+    `app.api.v1._stream`).
+    """
+
+    def test_halves_a_long_history(self) -> None:
+        """A long history is roughly halved, and gets shorter."""
+        messages: list[ModelMessage] = [_req(SystemPromptPart(content="sys"))]
+        for i in range(9):
+            messages.append(_req(UserPromptPart(content=f"u{i}")))
+            messages.append(_resp(TextPart(content=f"a{i}")))
+        result = shrink_for_budget_recovery(messages)
+        assert len(result) < len(messages)
+        assert len(result) == len(messages) // 2
+
+    def test_repeated_calls_converge_without_growing(self) -> None:
+        """Repeated calls never grow history, and converge at the floor.
+
+        It eventually stops shrinking once the head-pin floor is hit.
+        """
+        messages: list[ModelMessage] = [_req(SystemPromptPart(content="sys"))]
+        for i in range(9):
+            messages.append(_req(UserPromptPart(content=f"u{i}")))
+            messages.append(_resp(TextPart(content=f"a{i}")))
+        current = messages
+        for _ in range(10):
+            shrunk = shrink_for_budget_recovery(current)
+            assert len(shrunk) <= len(current)
+            current = shrunk
+        assert current == [messages[0]]
+
+    def test_short_history_is_returned_unchanged(self) -> None:
+        """Fewer than 2 messages is already at the floor - nothing to shrink."""
+        messages: list[ModelMessage] = [_req(SystemPromptPart(content="sys"))]
+        assert shrink_for_budget_recovery(messages) == messages
+        assert shrink_for_budget_recovery([]) == []
+
+    def test_never_orphans_a_tool_call_pair(self) -> None:
+        """Halving still respects `trim_history()`'s pairing invariant."""
+        head = _req(SystemPromptPart(content="sys"))
+        call = ToolCallPart(tool_name="lookup", args={}, tool_call_id="c1")
+        ret = ToolReturnPart(tool_name="lookup", content="result", tool_call_id="c1")
+        messages: list[ModelMessage] = [
+            head,
+            _req(UserPromptPart(content="q1")),
+            _resp(TextPart(content="a1")),
+            _resp(call),
+            _req(ret),
+        ]
+        result = shrink_for_budget_recovery(messages)
+        call_ids = {
+            p.tool_call_id
+            for m in result
+            if isinstance(m, ModelResponse)
+            for p in m.parts
+            if isinstance(p, ToolCallPart)
+        }
+        return_ids = {
+            p.tool_call_id
+            for m in result
+            if isinstance(m, ModelRequest)
+            for p in m.parts
+            if isinstance(p, ToolReturnPart)
+        }
+        assert return_ids <= call_ids

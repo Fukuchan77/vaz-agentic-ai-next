@@ -291,3 +291,38 @@ class TestMockToolsRegistration:
             # Should NOT be called even with enable_mock_tools check
             mock_register.assert_not_called()
             assert isinstance(agent, Agent)
+
+
+class TestMockToolDescriptionSentToModel:
+    """Verify the tool description an LLM sees reads as production content.
+
+    It must read as production prompt content (Writing tools for agents),
+    never developer-facing commentary such as a "MOCK"/warning-emoji
+    preamble or a reference to an internal test name - that content belongs
+    in a code comment, not the docstring `@agent.tool` turns into the
+    model-facing schema.
+    """
+
+    @pytest.mark.asyncio
+    async def test_description_and_param_docs_carry_no_developer_commentary(self) -> None:
+        """Dump the schema exactly as the model would see it and check it clean."""
+        from app.agents.tools_mock import register_mock_tools
+
+        test_model = TestModel()
+        agent: Agent[AgentDeps, str] = Agent(
+            model=test_model,
+            deps_type=AgentDeps,
+            output_type=str,
+        )
+        register_mock_tools(agent)
+
+        await agent.run("search for something", deps=MagicMock(spec=AgentDeps))
+
+        tools = test_model.last_model_request_parameters.function_tools
+        assert len(tools) == 1
+        tool = tools[0]
+        schema_text = f"{tool.description}\n{tool.parameters_json_schema}"
+        for banned in ("MOCK", "WARNING", "⚠️", "stub", "placeholder", "T11", "test_"):
+            assert banned.lower() not in schema_text.lower(), (
+                f"{banned!r} found in model-facing tool schema: {schema_text}"
+            )

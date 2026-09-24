@@ -48,6 +48,8 @@ from app.patterns.sse import StepStarted
 from app.patterns.sse import Token
 from app.patterns.sse import ToolCalled
 from app.patterns.sse import to_sse
+from app.stores.session_store import SessionStore
+from app.stores.session_store._trim import shrink_for_budget_recovery
 
 
 logger = logging.getLogger(__name__)
@@ -270,6 +272,9 @@ async def _run_with_lifecycle_guards(
     *,
     usage: RunUsage | None = None,
     message_length: int = 0,
+    session_store: SessionStore | None = None,
+    session_id: str | None = None,
+    history: Sequence[ModelMessage] | None = None,
 ) -> AsyncIterator[str]:
     """Enforce the SSE stream's lifecycle guarantees around a raw event source.
 
@@ -293,6 +298,16 @@ async def _run_with_lifecycle_guards(
             non-streaming path's `run_guarded()` can (Req 9.4).
         message_length: Length of the user's message, logged as metadata
             instead of the message content itself (never log raw user input).
+        session_store: The session store to persist a recovery trim to when
+            a `budget_exceeded` `UsageLimitExceeded` is raised for an
+            existing session (see the `UsageLimitExceeded` branch below).
+            `None` (the default) disables recovery, which every existing
+            caller in `tests/unit/api/v1/test_stream_lifecycle.py` relies on.
+        session_id: The session being served, if any. Required alongside
+            `session_store`/`history` for recovery to run.
+        history: The history loaded for `session_id` before this run, if
+            any. Required alongside `session_store`/`session_id` for
+            recovery to run.
 
     Yields:
         SSE wire-format strings ready to send to the client.
@@ -342,6 +357,23 @@ async def _run_with_lifecycle_guards(
                             else ""
                         )
                         yield to_sse(Error(message=f"Usage limit exceeded: {stop_reason}{detail}"))
+                        # A budget-exceeded turn contributes no new messages
+                        # (the run aborted before completion), but leaving
+                        # the *existing* stored history untouched would
+                        # brick the session: if that history alone is
+                        # already enough to trip `usage_total_tokens_limit`,
+                        # every following turn hits the same wall forever.
+                        # Mirrors the non-streaming `/agent/chat` recovery
+                        # path in `app.api.v1.agent`.
+                        if (
+                            stop_reason == "budget_exceeded"
+                            and session_store is not None
+                            and session_id
+                            and history
+                        ):
+                            recovered = shrink_for_budget_recovery(history)
+                            if len(recovered) < len(history):
+                                await session_store.save_history(session_id, recovered)
                     else:
                         logger.error(
                             "Unexpected error in agent stream",
@@ -413,5 +445,8 @@ async def event_source(
         settings,
         usage=usage,
         message_length=len(chat_request.message),
+        session_store=deps.session_store,
+        session_id=chat_request.session_id,
+        history=history,
     ):
         yield wire
