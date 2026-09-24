@@ -1,9 +1,9 @@
 {
 	"feature_name": "007-cross-repo-adoption-closeout",
 	"language": "ja",
-	"phase": "tasks-generated",
+	"phase": "implementation-complete",
 	"created_at": "2026-09-22T09:39:50+0900",
-	"updated_at": "2026-09-22T12:12:57+0900",
+	"updated_at": "2026-09-24T12:00:00+0900",
 	"project_description": "正本レビュー docs/cross-repo-adoption-review.md（§7 追記 2026-09-22 を含む）が本ハブ側の残作業として残した項目の closeout。OWASP 対応表 2 文書の欠落脅威・状態語彙・タクソノミ整合（X-17〜X-19）と引用の腐敗検知ガード（X-20）、および §7.3 が挙げる HITL 防御 6 点を apps/web の job/approval 経路へ実装する。",
 	"source_documents": {
 		"cross_repo_review": {
