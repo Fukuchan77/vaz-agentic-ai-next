@@ -59,7 +59,7 @@ services:
   # the worker executes them over the Connect (WebSocket) gateway on :8289.
   # Pinned to v1.19.3 (the release exposing `inngest alpha doctor healthcheck`).
   engine:
-    image: inngest/inngest:v1.19.3
+    image: inngest/inngest:v1.45.1
     container_name: vaz-inngest
     restart: unless-stopped
     command: ["inngest", "start"]
