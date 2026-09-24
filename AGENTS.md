@@ -10,6 +10,7 @@ Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnp
 | --- | --- | --- |
 | Dev server (Turbopack) | `mise run dev` | `pnpm --filter @vaz/web exec next dev` |
 | Build (production) | `mise run build` | `NODE_ENV=production pnpm --filter @vaz/web exec next build` |
+| Bundle size budget | `mise run size` | `pnpm exec size-limit` (limits in `.size-limit.json`; run after build) |
 | Unit tests (all workspace) | `mise run test:run` | `pnpm exec vitest run` |
 | Single Web test (jsdom) | — | `pnpm exec vitest run --project web apps/web/tests/chat-route.spec.ts` |
 | Single Package test (node) | — | `pnpm exec vitest run --project packages packages/agents/tests/chat-agent.spec.ts` |
@@ -48,6 +49,8 @@ Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnp
 
 ## Non-Obvious Architecture & Critical Constraints
 
+- **Chat providers are `anthropic` / `openai` / `ollama`** (`AI_PROVIDER`, resolved per request by `@vaz/config#resolveModel`). The env enum, `MODEL_ALLOWLIST` and `resolveModel`'s switch move together; the allow-list's `satisfies Record<AiProvider, …>` makes a missing entry a type error. API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) are read by the provider SDKs themselves.
+- **Client bundle budget**: `.size-limit.json` caps `apps/web` client JS/CSS (brotli). A Carbon wholesale import is the usual way to blow it; raise the limit only as a reviewed change with the measured size in the commit message.
 - **Single Hardcoded Model ID Rule (R1.8/ADR-5)**: Hardcoded model strings are ONLY allowed in `packages/config/src/model-allowlist.ts` (and default fallback in `@vaz/schemas/src/env.ts` / `services/agent/app/config.py`). `scripts/forbid-model-ids.sh` enforces this at build/CI time.
 - **Dependency Graph Direction**: `@vaz/schemas` and `@vaz/db` are leaf packages (zero `@vaz/*` runtime imports). Next: `@vaz/config`, `@vaz/tools`, `@vaz/rag`. Next: `@vaz/agents`. Top: `apps/web`, `apps/worker`, `@vaz/evals`. Never create circular dependencies.
 - **RAG Provenance & Embeddings**: Dimension is DDL-fixed at 768 (`EMBEDDING_DIM`). `assertNoProviderMixing` forbids mixing embedding providers/models in a single corpus without migration and full re-ingest.

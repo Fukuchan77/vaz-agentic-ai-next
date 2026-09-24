@@ -45,6 +45,13 @@ description = "Run unit tests once (all workspace projects)"
 run = "pnpm exec vitest run --coverage"
 description = "Run unit tests with coverage"
 
+# --- Client bundle budget (limits in .size-limit.json; brotli) ---
+# Reads apps/web/.next, so it needs `mise run build` first. Not part of `check`
+# (which never builds); CI runs it in tests.yml's `bundle-size` job.
+[tasks.size]
+run = "pnpm exec size-limit"
+description = "Check apps/web client bundle size against .size-limit.json (requires build)"
+
 # --- E2E: uses the root playwright.config.ts (webServer is scoped with --filter) ---
 [tasks."test:e2e"]
 run = "pnpm exec playwright test"

@@ -1,4 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { parseAiEnv } from "@vaz/schemas/env";
 import type { LanguageModel } from "ai";
@@ -10,6 +11,8 @@ import type { LanguageModel } from "ai";
  * `parseAiEnv` (no model IDs hardcoded here — R1.8/NFR-3):
  *
  * - `AI_PROVIDER=anthropic` (default): Claude (requires ANTHROPIC_API_KEY)
+ * - `AI_PROVIDER=openai`: OpenAI via the official `@ai-sdk/openai` provider
+ *   (requires OPENAI_API_KEY, read by the SDK itself like ANTHROPIC_API_KEY)
  * - `AI_PROVIDER=ollama`: local LLM, connected via the official
  *   `@ai-sdk/openai-compatible` to Ollama's OpenAI-compatible endpoint (no API key)
  */
@@ -19,6 +22,8 @@ export function resolveModel(env: Record<string, string | undefined> = process.e
 	switch (aiEnv.AI_PROVIDER) {
 		case "anthropic":
 			return anthropic(aiEnv.ANTHROPIC_MODEL);
+		case "openai":
+			return openai(aiEnv.OPENAI_MODEL);
 		case "ollama": {
 			const ollama = createOpenAICompatible({
 				name: "ollama",

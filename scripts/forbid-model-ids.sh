@@ -16,9 +16,9 @@
 #   - services/agent/app/config.py          … judge-model allowlist (Python mirror of ADR-5, NFR-2)
 #   - tests (*.spec.ts[x] / **/tests/**)    … IDs used to assert resolution results
 #
-# Only the anthropic / ollama providers are supported (provider-agnostic, no OpenAI).
-# The detection pattern centers on claude- / llama and includes other vendors
-# (gpt / gemini / qwen / mistral) as a defensive tripwire.
+# Supported chat providers: anthropic / openai / ollama. The detection pattern
+# centers on claude- / gpt- / llama and includes other vendors
+# (gemini / qwen / mistral) as a defensive tripwire.
 #
 # Assignment-form only (spec 006-repo-consolidation R6.4, ADR-0003): the match
 # must sit inside a double-quoted string immediately preceded by `:` or `=`
