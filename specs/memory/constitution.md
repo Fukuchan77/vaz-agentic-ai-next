@@ -1,3 +1,25 @@
+<!--
+SYNC IMPACT REPORT
+Version Change: 1.3.0 → 1.3.1
+Modified Principles:
+  - none（Additional Constraints「ツールチェーン」の事実訂正のみ）
+Modified Sections:
+  - Additional Constraints → pnpm のピンを 11.24.0 から 12 系へ訂正
+    （`mise.toml` `[tools] pnpm = "12"`、root `package.json` `packageManager: pnpm@12.5.1`、
+    `apps/worker/Dockerfile` の `ARG PNPM_VERSION` と一致させる。
+    `tests/repo/container-toolchain-pins.spec.ts` が後 2 者の一致を機械検証する）
+Added Sections:
+  - 改訂履歴 1.3.1 行
+Removed Sections:
+  - none
+Templates Status:
+  ✅ specs/memory/constitution.md - updated
+  ✅ AGENTS.md / CLAUDE.md / README.md - すでに pnpm 12 を記載済み（追加対応不要）
+Deferred Items:
+  - TODO(BRANCH_COVERAGE_THRESHOLD): 次回改正で確定（継続）
+  - TODO(TYPESCRIPT_MAJOR): 継続。TypeScript 6.x を維持することは AGENTS.md で明記済み
+-->
+
 # vaz-agentic-ai-next Constitution
 
 本憲章は `specs/001-agentic-ai-core-p0/spec-agenticai-core.md` §1.1 の設計原則 7 件を統治規範として
@@ -82,8 +104,16 @@ Logfire の初期化は fail-soft とし、可観測性の失敗が起動を止�
 サブエージェントからの内部呼び出しにも `app.state.limiter` と同じ limiter を使う。
 `packages/py-evals` の baseline は既存 TS baseline と同一形式に合流させ、別系統を新設しない。
 
+**egress 単一経路（v1.3.0 で追記）**: `apps/web` の job/approval 経路における監査の発火点は
+`apps/web/src/lib/approvals.ts` の `recordApprovalDecisions` の **1 か所** でなければならない（MUST）。
+`apps/web/src/app/api/jobs/**` および `apps/web/src/lib/**` 内で他のファイルが `audit.record(` を
+呼ぶことを禁ずる。この唯一性は `tests/repo/egress-policy-bypass.spec.ts` が機械的に検証する
+（走査対象に `packages/agents/**` は含めない——ツール実行監査は `audit-hook.ts` の fail-loud 経路が
+別に担う）。
+
 **検証**: 各フェーズ後の敵対的レビューで、producer 側と caller 側の両方を grep し
 「契約は定義されたが結線されていない」欠陥を探す。ガードレール E2E で未認証呼び出しが失敗することを証明する。
+`tests/repo/egress-policy-bypass.spec.ts` が機械検証する（非空アサート先行）。
 
 ### 6. コンテキストは有限のアテンション予算として扱う
 
@@ -120,8 +150,41 @@ Tool RAG（`capabilities.ToolSearch`）で対処し、上限の引き上げは�
 `allowed_file_url_force_download=frozenset()`）を変更してはならない。最後の値に `'allow-local'` を
 与える経路が CVE-2026-25580 の SSRF である。
 
+**承認経路の 6 防御（D1〜D6）— v1.3.0 で追記（spec 007-cross-repo-adoption-closeout）**:
+
+`apps/web` の job/approval 経路（`POST /api/jobs/:id/approve` ＋ `GET /api/jobs/:id/stream`）は
+以下の 6 防御を **すべて** 維持しなければならない（MUST）。
+
+- **D1 — 履歴注入のスキーマレベル封鎖**: 承認リクエストは `z.strictObject` で検証し、
+  会話履歴・`usage`・`model` を名乗るフィールドを **定義しない**。送信された場合は 400 で拒否する。
+  `approvalDecisionSchema` / `approvalDecisionSetSchema` / `approvalRequestSchema` が
+  `packages/schemas/src/workflows.ts` の単一の真実源である。
+- **D2 — consume-once ＋ 存在秘匿**: `job_step` テーブルの複合 PK `(job_id, step_id)` が
+  DB 層で consume-once 唯一性を保証する。`approval_state` は `pending` → `consumed` の一方向のみ許し、
+  逆方向 API を持たない。unknown / in-flight / consumed の 3 ケースを **区別しない単一の値**
+  `not-claimable` として返し、HTTP ステータスは `submittedAs` に基づき 1 か所のみで生成する
+  （識別子・状態語をレスポンスに載せない）。
+- **D3 — 境界を跨ぐ usage 予算**: `JOB_TOKEN_BUDGET` を `aiEnvSchema` に持ち、ジョブの累積
+  トークン使用量が上限を超えた場合は 429 を返す。予算超過時は対象を **消費済みのままコミットし**
+  再試行を防ぐ（post-claim チェック）。累積 usage は `job_step.total_tokens` の `SUM` で取得し、
+  SSE 公開契約（`jobEventTypeEnum`）には載せない。
+- **D4 — マスク済み監査の単一 fail-soft 境界**: `recordApprovalDecisions` は承認経路の
+  **唯一の監査発火点** であり、`args` にはキー名のみを記録し値は載せない（R4.7）。
+  失敗しても再開を止めず成功時と同じステータスを返す。
+- **D5 — pending set の原子性**: `claimPending` は `sum(total_tokens)` の読み出しと
+  条件付き `UPDATE` を **1 トランザクション** で実行し、影響行数が決定数と一致しないときは
+  全体をロールバックする（いずれの対象も消費しない）。
+- **D6 — egress ポリシーの回帰スキャン**: `tests/repo/egress-policy-bypass.spec.ts` が
+  `apps/*/src/**` + `packages/*/src/**` を走査し、メールアドレス形リテラルおよび許可リスト判定の
+  短絡を検出する。除外例外パスの非空性・実在をアサートし、走査ファイル数の非空アサートを先頭に置く。
+
+これらの防御は `pydantic-ai-sandbox` の `patterns/hitl/` から取り込まれた（spec 007 §7.3）。
+`/api/chat` の「サーバ側履歴が正」への転換と `services/api`（verbatim subtree）への適用は
+スコープ外である。
+
 **検証**: P4 の受け入れ基準（approve / deny / malformed の E2E ケース）とレビューでの承認範囲確認。
 承認対象ツールが取り消し不能・高リスク操作に限定されていることをレビューで確認する。
+`tests/repo/egress-policy-bypass.spec.ts` の D6 アサートが機械検証する。
 
 ### 8. 事実は実測で確定する
 
@@ -203,7 +266,7 @@ allowlist を 1 か所に集約する。
 ## Additional Constraints
 
 **ツールチェーン**: バージョンは `mise.toml` で固定する。Python 3.13（3.14 では slowapi 0.1.10 が
-`DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 11.24.0、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
+`DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 12 系（`packageManager` で 12.5.1 に完全固定）、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
 `futureFlags.experimentalPythonWorkspaces` に必要）。TypeScript は 6.x 継続とし、7.x の採否は
 TODO(TYPESCRIPT_MAJOR) として `docs/adr/` で単独判断する。
 コマンドは推測せず `mise.toml` を読む。素の `ruff` / `pytest` / `biome` を直接叩かず、
@@ -283,14 +346,20 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 | 1.0.0 | 2026-08-29 | 初版 | spec-agenticai-core.md §1.1 の 7 原則を統治規範として昇格。原則 8〜11（実測主義・TDD・段階ゲート・依存規律）を追加。Additional Constraints / Governance を新設 |
 | 1.1.0 | 2026-08-29 | MINOR | 憲章の正本を `specs/memory/constitution.md`（git 追跡対象）へ移設。 |
 | 1.2.0 | 2026-08-31 | MINOR | 原則 7 にクライアント提出構造体への承認フラグ禁止を明記（spec §6.4.3）。原則 11 に uv workspace 単一 lock と二層バージョン方針の非両立（R14）を反映。CI / GH Actions 欄に SHA ピンと `permissions:` の対の意味を追記 |
+| 1.3.0 | 2026-09-22 | MINOR | 原則 7 に D1〜D6 の 6 防御（履歴注入封鎖・consume-once＋存在秘匿・usage 予算・監査単一 fail-soft 境界・pending set 原子性・egress ポリシー回帰スキャン）を規則として追記（spec 007-cross-repo-adoption-closeout）。原則 5 に egress 単一経路の機械検証ルール（`recordApprovalDecisions` の唯一性）を追記 |
+| 1.3.1 | 2026-09-24 | PATCH | Additional Constraints のツールチェーン記述を実態に合わせて訂正（pnpm 11.24.0 → 12 系。`mise.toml` / `packageManager` / `apps/worker/Dockerfile` がすでに 12 系へ移行済みで、憲章だけが旧値を保持していた — Governance「矛盾は両者を同時に更新する」に基づく）|
 
 ### 未決事項（Deferred）
 
-- **TODO(BRANCH_COVERAGE_THRESHOLD)**: 分岐カバレッジの数値しきい値は P0 で `vitest --coverage` / `pytest` の実測ベースラインを取得したあと、次回改正（MINOR）で確定する。根拠のない数値を先に固定すると原則 8（実測主義）に反するため、意図的に保留する（REQ-7.7）。
-- **TODO(TYPESCRIPT_MAJOR)**: TypeScript 6.x 継続か 7.x 採用か（spec §12 R9）。`docs/adr/` で単独判断し、決定後に Additional Constraints へ反映する。
+- **TODO(BRANCH_COVERAGE_THRESHOLD)**: 分岐カバレッジの数値しきい値は P0 で `vitest --coverage` /
+  `pytest` の実測ベースラインを取得したあと、次回改正（MINOR）で確定する。根拠のない数値を先に固定すると
+  原則 8（実測主義）に反するため、意図的に保留する（REQ-7.7）。
+- **TODO(TYPESCRIPT_MAJOR)**: TypeScript 6.x 継続か 7.x 採用か（spec §12 R9）。`docs/adr/` で
+  単独判断し、決定後に Additional Constraints へ反映する。6.x 継続の理由は AGENTS.md に
+  「Three majors are deliberately held back」節として記録済み（2026-09-19 再実測）。
 
 ---
 
-**Version**: 1.2.0 |
+**Version**: 1.3.1 |
 **Ratified**: 2026-08-29 |
-**Last amended**: 2026-08-31
+**Last amended**: 2026-09-24

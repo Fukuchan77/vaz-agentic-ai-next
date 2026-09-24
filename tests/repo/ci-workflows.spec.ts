@@ -15,6 +15,7 @@ const SHA_PIN = /^[^@]+@[0-9a-f]{40}$/;
 
 interface WorkflowStep {
 	uses?: string;
+	run?: string;
 }
 
 interface WorkflowJob {
@@ -72,5 +73,66 @@ describe("GitHub Actions workflow hygiene (X-1)", () => {
 			.map(({ file }) => file);
 
 		expect(missing).toEqual([]);
+	});
+});
+
+/**
+ * `security-daily.yml` is the only standing detection net for an advisory that lands
+ * against an *unchanged* lockfile: every other audit path is path-filtered
+ * (`tests.yml` to the npm workspace, `python.yml` to services/agent, `api.yml` to
+ * services/api) and so never fires on that case. A lane missing from this workflow
+ * therefore fails silently — no red job, just no coverage, which is how services/api
+ * went unwatched from its import until 2026-09-22. This guard pins the mapping in the
+ * direction that matters: every audit task mise.toml defines must be reachable from
+ * security-daily.yml, so adding a fourth lane's audit task without wiring it up here
+ * fails the build instead of quietly shipping a blind spot.
+ */
+const MISE_TOML = new URL("../../mise.toml", import.meta.url);
+const SECURITY_DAILY = new URL("security-daily.yml", WORKFLOWS_DIR);
+
+/** `[tasks.audit]` and `[tasks."py:audit"]` alike — quoted or bare. */
+const TASK_HEADER = /^\[tasks\.(?:"([^"]+)"|([A-Za-z0-9:_-]+))\]/gm;
+
+/** Task name + the shell command it runs, for every `*:audit`/`audit` task. */
+async function loadAuditTasks(): Promise<Array<{ name: string; command: string }>> {
+	const text = await readFile(MISE_TOML, "utf8");
+	const headers = [...text.matchAll(TASK_HEADER)];
+
+	return headers.flatMap((header, index) => {
+		const name = header[1] ?? header[2];
+		if (name !== "audit" && !name.endsWith(":audit")) return [];
+
+		// Body runs to the next task header (or EOF for the last task).
+		const start = header.index + header[0].length;
+		const end = headers[index + 1]?.index ?? text.length;
+		const command = /^run = "(.+)"$/m.exec(text.slice(start, end))?.[1] ?? "";
+		return [{ name, command }];
+	});
+}
+
+describe("security-daily covers every audit lane", () => {
+	test("every mise `audit` task is invoked by security-daily.yml", async () => {
+		const auditTasks = await loadAuditTasks();
+		const doc = parse(await readFile(SECURITY_DAILY, "utf8")) as WorkflowDoc;
+		const runs = Object.values(doc.jobs ?? {}).flatMap((job) =>
+			(job.steps ?? []).map((step) => step.run ?? ""),
+		);
+
+		// Anti-false-green: a scan that found no tasks, or no steps, proves nothing.
+		expect(auditTasks.length).toBeGreaterThan(0);
+		expect(runs.length).toBeGreaterThan(0);
+
+		// A lane counts as covered either way it can be wired: delegated to the mise
+		// task (`mise run py:audit`) or running the task's own command inline, which
+		// is how the npm leg spells `pnpm audit --audit-level=moderate`.
+		const uncovered = auditTasks
+			.filter(
+				({ name, command }) =>
+					!runs.some((run) => run.includes(`mise run ${name}`)) &&
+					!(command !== "" && runs.some((run) => run.includes(command))),
+			)
+			.map(({ name }) => name);
+
+		expect(uncovered).toEqual([]);
 	});
 });

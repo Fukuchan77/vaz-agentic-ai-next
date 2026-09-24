@@ -14,12 +14,23 @@ Agentic AI 系 5 リポジトリを横断で突き合わせた検証の、本 re
 **横断レビューが参照する ID 体系（`[A1]`〜`[A9]` / `[I1]`〜`[I8]`、PE-1〜EV-6）の正本**。
 今回の横断レビューは、そこで単一 repo に行われた評価を 5 repo に広げたもの。
 
-- 検証日: 2026-09-06 ／ 兄弟 repo パス再検証日: 2026-09-21
-- 兄弟 repo: `beeai-agentic-ai-sandbox` / `pydantic-ai-sandbox` / `fastapi-pydantic-ai-agent` / `vaz-agentic-ai-next`
-- **`pydantic-ai-sandbox` は `agentic-ai-sandbox` へ統合済み**（`reference/` ティア配下）。
-  下表の同 repo 由来パスは統合後の実在パス（`agentic-ai-sandbox/reference/...`）へ再検証済み。
-  `beeai-agentic-ai-sandbox` / `fastapi-pydantic-ai-agent` のパスは 2026-09-06 時点の記載のまま
-  （未再検証）。
+- 検証日: 2026-09-06 ／ 兄弟 repo パス再検証日: 2026-09-21 ／ **全 5 repo 実クローン再検証日: 2026-09-22**
+- 兄弟 repo: `beeai-agentic-ai-sandbox` / `pydantic-ai-sandbox` / `agentic-ai-sandbox` /
+  `agentic-ai-bootcamp` / `fastapi-pydantic-ai-agent`
+- **2026-09-22 の再検証で下記 3 点が確定した**（根拠と実測値は
+  [`specs/review/2026-09-22-cross-repo-verification.md`](../specs/review/2026-09-22-cross-repo-verification.md)、
+  正本側の記録は `docs/cross-repo-adoption-review.md` §7）:
+  - `agentic-ai-sandbox` への統合は **2026-06-28 時点のスナップショット**であり、
+    `pydantic-ai-sandbox` 本体はその後も独立に開発が継続している（最終 2026-09-20）。
+    **「統合済み」は誤読を招くため、両者は並存する別リポジトリとして扱う。**
+    下表の同 repo 由来パスのうち、**X-9 の HITL は `pydantic-ai-sandbox` 本体が唯一の取り込み元**
+    （`agentic-ai-sandbox` 側では hitl レーンが脱落している）。
+  - `beeai-agentic-ai-sandbox` は**別プロダクトへ全面置換**された。下表が同 repo を出所とする
+    パス（`apps/frontend/tests/e2e/`、`effective_agents/`、`.github/workflows/ci.yml` ほか）は
+    **現在のツリーに存在しない**。X-14 / X-14b は本 repo 側で着地済みのため影響しないが、
+    出所として再利用はできない。
+  - `fastapi-pydantic-ai-agent` のパスは 2026-09-22 に再検証済み（workflow が 5 本→2 本に
+    統合された点以外は健在）。
 
 ---
 
@@ -44,11 +55,11 @@ Agentic AI 系 5 リポジトリを横断で突き合わせた検証の、本 re
 | **X-2** | ネットワーク遮断の**構造的保証**。`MockLanguageModelV4` 注入で実質ネットワークに出ないが、モック漏れを構造的に落とす仕組みが無い | `fastapi-pydantic-ai-agent/tests/support/hermetic.py`（47 行）／`agentic-ai-sandbox/reference/patterns/deep-research/tests/` の autouse `block_network` 版 | S | vitest setup で `fetch` / undici を落とし、ユニットテスト中の外向き通信を大声で失敗させる。ガードが空振りでないことを証明するテストを 1 本 |
 | **X-14** | E2E の CI レーン。現状 pre-push フックのみで **`--no-verify` で素通りし CI の安全網が無い**（`AGENTS.md` 自身が §12 R10 との矛盾として記載） | `beeai-agentic-ai-sandbox/apps/frontend/tests/e2e/`（10 spec、うち `09-accessibility` は `@axe-core/playwright` による a11y 検査） | M | `.github/workflows/tests.yml` にジョブを追加（**新規ワークフローを作らない** — 第 2 の CI 経路は principle 5 違反）。X-3 の非空アサート（収集テスト数 > 0）を同時に入れる |
 | **X-14b** | a11y E2E の導入。**本 repo に a11y 検査が皆無**。Carbon Design System を使う `apps/web` にこそ効く | `beeai-agentic-ai-sandbox` の `@axe-core/playwright` spec | S | 既存の Playwright 構成に追加。X-14 と同時に着地させる |
-| **X-13** | OWASP 対応表の新設（**現状皆無**） | `fastapi-pydantic-ai-agent/docs/owasp-agentic-llm-mapping.md`（LLM Top 10、全行に実装＋テストを引用）＋ `agentic-ai-sandbox/reference/patterns/SECURITY-NOTES.md`（Agentic AI Top 10 をレイヤ別に） | S | 2 表は対象タクソノミが異なり重複しない。**各行にテストを引用する**形式を採ること（無いと主張のリストに退化する） |
+| **X-13** | OWASP 対応表の新設（**現状皆無**） | `fastapi-pydantic-ai-agent/docs/owasp-agentic-llm-mapping.md`（LLM Top 10、全行に実装＋テストを引用）＋ `agentic-ai-sandbox/reference/patterns/SECURITY-NOTES.md`（Agentic AI Top 10 をレイヤ別に） | S | 2 表は対象タクソノミが異なり重複しない。**各行にテストを引用する**形式を採ること（無いと主張のリストに退化する）。**2026-09-22 訂正**: 出所側の「全行にテストを引用」は現在成立しない（同 repo の表は 2 タクソノミ 20 行へ拡張された一方、テスト引用は 8/20 行のみ）。本 repo の 2 文書は全 40 引用が解決し、テスト引用の厳格さでは**本 repo の方が上**。X-13 の残課題は引用形式ではなく**カバー範囲**に移った（[§5](#5-2026-09-22-再検証の反映) 参照） |
 | **X-15** | `.github/dependabot.yml` の新設（`security-daily.yml` はあるが更新提案が来ない） | `fastapi-pydantic-ai-agent/.github/dependabot.yml` ＋ `fastapi-pydantic-ai-agent/tests/unit/test_dependabot_config.py` | S | 意図的に据え置いている 3 メジャー（`vitest` 4.x / `typescript` 6.x / `@types/node` 24）を `ignore:` に載せ、理由をコメントで残す（`AGENTS.md` の記述と一致させる） |
 | X-3 | 空振り検知（anti-false-green）の導入 | `agentic-ai-sandbox/reference/patterns/contracts/src/patterns_contracts/pytest_live_guard.py` の TS 相当 | S | Playwright レーン・`py:check` レーンで「収集テスト数 > 0」を強制 |
 | X-5 | 停止理由語彙の写像表を参照可能にする。本 repo の `runStopReasonSchema` は `natural`/`step-cap`/`budget-exceeded`/`error` の **4 値**で、Python 側 2 repo の 5 値（`denied` / `disallowed_tool` を含む）と非対称 | 正本 §2 X-5 の写像表 → 裁定は [`ADR-0004`](adr/0004-stop-reason-vocabulary.md) | S | **統一しない**（`JobEvent` SSE 契約と `audit_log` の後方互換に影響）。`docs/context-budget.md` の停止理由節から ADR-0004 へリンクし、拒否が別経路であることを明記 |
-| X-9 | HITL の**配線**。契約はあるが動いていない: `createEmailCapability` がどのエージェントにも未登録／`Chat.tsx` に `addToolApprovalResponse` が無い／`apps/worker` の述語が `requiresApprovalForKind: () => false` | 参照実装は `agentic-ai-sandbox/reference/patterns/autonomous-agent/`（`approval_hook` で危険ツールを承認ゲートし、否認は `stop_reason="denied"` で契約に記録。3 フレームワークレーン全てに実装あり）。**2026-09-06 時点で記載していた `patterns/hitl/` レーンは統合後の同 repo に存在しない** | M | 3 箇所の配線 ＋ approve/deny/malformed の E2E。**承認は不可逆・高リスク操作のみ**（増やす方向へ行かない） |
+| X-9 | HITL の**配線**。契約はあるが動いていない: `createEmailCapability` がどのエージェントにも未登録／`Chat.tsx` に `addToolApprovalResponse` が無い／`apps/worker` の述語が `requiresApprovalForKind: () => false` | 参照実装は `agentic-ai-sandbox/reference/patterns/autonomous-agent/`（`approval_hook` で危険ツールを承認ゲートし、否認は `stop_reason="denied"` で契約に記録。3 フレームワークレーン全てに実装あり）。**2026-09-06 時点で記載していた `patterns/hitl/` レーンは統合後の同 repo に存在しない** —— ただし **2026-09-22 訂正**: 同レーンは**本家 `pydantic-ai-sandbox` に現存し拡張が続いている**（`patterns/hitl/src/patterns_hitl/`）。HITL の取り込み元はそちらが唯一 | M | 3 箇所の配線 ＋ approve/deny/malformed の E2E。**承認は不可逆・高リスク操作のみ**（増やす方向へ行かない） |
 | X-11 | ドリフト検知エラーに**直し方を書く** | `beeai-agentic-ai-sandbox/.github/workflows/ci.yml` の `schema-drift` ジョブ（`::error::` に実行コマンドを書く） | S | `codegen-check` 相当の失敗時に再生成コマンドを出力 |
 | X-16 | 6 パターン教材への参照 | `beeai-agentic-ai-sandbox/effective_agents/`（`_print_usage()` による ~15× コストの可視化）／`agentic-ai-sandbox/reference/patterns/deep-research/COMPARISON.md` | S | **実装は不要**。多エージェント検討時のゲート判断材料へのリンクのみ |
 
@@ -102,3 +113,45 @@ X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み
   が相対リンクの解決を強制するので、リンクにすれば「存在しない正本」は CI で落ちる（X-5 / 正本
   参照がまさにその事故だった）。逆に他 repo を指すリンクは必ず落ちるため、そちらはコードスパン
   で書き、名前の正しさは `tests/repo/cross-repo-reference-resolution.spec.ts` が別途見る。
+
+## 5. 2026-09-22 再検証の反映
+
+5 repo を実クローンして再検証した結果の要約。実測値と根拠は
+[`specs/review/2026-09-22-cross-repo-verification.md`](../specs/review/2026-09-22-cross-repo-verification.md)、
+正本側の時点記録は `docs/cross-repo-adoption-review.md` §7。
+
+**取り込み元が失われた項目**（本 repo 側は着地済みのため実害なし。出所としての再利用のみ不可）:
+
+- X-11 / X-14 / X-14b / X-16 が出所としていた `beeai-agentic-ai-sandbox` の資産
+  （`schema-drift` ジョブ、10 本の Playwright spec、`effective_agents/`、4 段ラダー）は、
+  同 repo が別プロダクトへ全面置換されたため**現存しない**。
+
+**取り込み元が変わった項目**:
+
+- X-9（HITL）の取り込み元は `pydantic-ai-sandbox` 本体の `patterns/hitl/` のみ。
+  同レーンは**本 repo の X-9 フィードバックを既に取り込んでおり**（`agent.py` の
+  recipient allow-list と sticky taint を "X-9a" / "X-9b" として実装、出所として
+  本 repo を明記）、相互取り込みが双方向に成立した最初の事例になっている。
+
+**新規に起票し解決した項目**（spec `007-cross-repo-adoption-closeout`、2026-09-23 完了）:
+
+- **X-17 — agentic 脅威 5 件の欠落**（優先度: 高）。
+  [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) は
+  出所タクソノミ 15 脅威のうち T1〜T10 のみを収録し、残る 5 件
+  （Unexpected RCE / Agent Communication Poisoning / Rogue Agents in Multi-Agent Systems /
+  Human Attacks on Multi-Agent Systems / Human Manipulation）を**受容と明記せずに落としていた**。
+  本 repo は `packages/agents/src/supervisor.ts` で supervisor → specialist の多エージェント
+  構成を持つため、**エージェント間脅威は単一エージェントの兄弟 repo よりむしろ該当する**。
+  → **spec 007 により解決**（X-17〜X-20 全件を本 spec が扱う。
+  [`docs/owasp-agentic-threats-mitigations-mapping.md`](owasp-agentic-threats-mitigations-mapping.md) へリネーム済み。
+  15 脅威全件収録・supervisor 保証/非保証を明記。）
+- **X-18 — 状態語彙と再評価トリガの不在**（優先度: 中）。本 repo の 2 文書は
+  「対応済み」と「未対応」しか表現できず、部分対応＋残余リスク受容（LLM05、Overwhelming HITL）を
+  区別できなかった。
+  → **spec 007 により解決**（3 値語彙 `Mitigated` / `Partial · accepted` / `Accepted` と受容行の再評価トリガを全文書に適用済み）。
+- **X-19 — タクソノミ名と内容の不一致**（優先度: 中）。
+  ファイル名が Agentic Top 10（ASI01–ASI10）を名乗るのに内容はレイヤ別 Threats and Mitigations だった。
+  → **spec 007 により解決**（ファイル名を内容に揃えてリネーム済み。両文書冒頭に ISO-8601 バージョン日付を追加）。
+- **X-20 — 引用パスの腐敗検知**（優先度: 低）。2 文書の全引用を守る仕組みがなかった。
+  → **spec 007 により解決**（[`tests/repo/owasp-mapping-citations.spec.ts`](../tests/repo/owasp-mapping-citations.spec.ts) 追加済み。
+  引用パス実在・シンボル実在・CI ステップ名・3 値語彙・バージョン日付を機械検証）。

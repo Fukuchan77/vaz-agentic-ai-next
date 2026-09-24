@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+	approvalStateEnum,
 	auditLog,
 	chunk,
 	document,
@@ -10,6 +11,7 @@ import {
 	jobEvent,
 	jobEventTypeEnum,
 	jobStatusEnum,
+	jobStep,
 } from "@vaz/db/schema";
 import { getTableColumns } from "drizzle-orm";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
@@ -139,6 +141,10 @@ function applyCreateTable(schema: ParsedSchema, statement: string): boolean {
 			schema.checkBodies.set(checkName, checkBody);
 			continue;
 		}
+		const pkMatch = clause.match(/^CONSTRAINT\s+"[^"]+"\s+PRIMARY KEY\s*\(([^)]+)\)$/i);
+		if (pkMatch) {
+			continue;
+		}
 		const [colName, col] = parseColumnClause(clause);
 		table.columns.set(colName, col);
 	}
@@ -231,13 +237,18 @@ const TABLES: Record<string, AnyPgTable> = {
 	job,
 	job_event: jobEvent,
 	audit_log: auditLog,
+	job_step: jobStep,
 };
 
 describe("DDL↔schema.ts drift (R2.2, no DB connection)", () => {
 	const applied = parseAppliedSchema();
 
-	test("applies baseline + delta files in lexical order (baseline before the locator delta)", () => {
-		expect(applied.files).toEqual(["0000_baseline.sql", "0001_add_locator.sql"]);
+	test("applies baseline + delta files in lexical order", () => {
+		expect(applied.files).toEqual([
+			"0000_baseline.sql",
+			"0001_add_locator.sql",
+			"0002_add_job_step.sql",
+		]);
 	});
 
 	test("table set matches schema.ts exactly", () => {
@@ -247,7 +258,12 @@ describe("DDL↔schema.ts drift (R2.2, no DB connection)", () => {
 	test("enum names and ordered value lists match schema.ts exactly", () => {
 		expect(applied.enums.get("job_status")).toEqual(jobStatusEnum.enumValues);
 		expect(applied.enums.get("job_event_type")).toEqual(jobEventTypeEnum.enumValues);
-		expect([...applied.enums.keys()].sort()).toEqual(["job_event_type", "job_status"]);
+		expect(applied.enums.get("approval_state")).toEqual(approvalStateEnum.enumValues);
+		expect([...applied.enums.keys()].sort()).toEqual([
+			"approval_state",
+			"job_event_type",
+			"job_status",
+		]);
 	});
 
 	for (const [dbTableName, drizzleTable] of Object.entries(TABLES)) {

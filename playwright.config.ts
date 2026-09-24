@@ -33,5 +33,13 @@ export default defineConfig({
 		reuseExistingServer: !process.env.CI,
 		// Generous timeout to allow for Next.js's initial compilation.
 		timeout: 120_000,
+		env: {
+			...process.env,
+			// Fixed, non-secret value so hitl-approval.spec.ts's forged-approval case
+			// is deterministic regardless of the developer's shell env (a real
+			// deployment secret belongs in TOOL_APPROVAL_SECRET, never here) — see
+			// packages/agents/src/chat-agent.ts's experimental_toolApprovalSecret wiring.
+			TOOL_APPROVAL_SECRET: "e2e-fixed-test-secret-not-for-production-use",
+		},
 	},
 });

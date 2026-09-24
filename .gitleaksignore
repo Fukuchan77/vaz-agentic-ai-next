@@ -1,0 +1,281 @@
+# gitleaks baseline — 242 confirmed false positives.
+#
+# Generated, never hand-written:
+#
+#     mise run secret-scan:report      # writes /tmp/gitleaks-report.json
+#     jq -r '.[].Fingerprint' /tmp/gitleaks-report.json | sort >> .gitleaksignore
+#
+# Each line is an exact `<commit>:<file>:<rule>:<line>` fingerprint. That scoping is
+# deliberate and inherited from the source repo (`services/api/AGENTS.md`): it is NOT
+# text- or path-scoped, so a *new* commit reusing the same dummy string still gets
+# flagged. Never hand-edit an existing line — regenerate instead.
+#
+# This file names no matched value, on purpose. Pasting one in here would be a real
+# new finding in the very commit that adds the baseline; read the values out of a
+# fresh report instead.
+#
+# Provenance: every entry comes from the `fastapi-pydantic-ai-agent` history that
+# spec 006 imported via `git subtree add --prefix=services/api --squash`. The squash
+# rewrote the commit SHAs, which invalidated the source repo's own 365-entry
+# `.gitleaksignore` — spec 006 Task 6 recorded that as a known gap (see
+# `specs/006-repo-consolidation/pdca/act.md`), and this file is that gap closed with a
+# baseline regenerated against *this* repo's history. That is also why the paths below
+# carry no `services/api/` prefix: the squashed import commit preserves the source
+# repo's original root-relative paths.
+#
+# Assessment (2026-09-22, `gitleaks git` over 215 commits / 9.93 MB):
+#   - 242 findings across 2 rules (generic-api-key x238, curl-auth-header x4),
+#     21 distinct matched values, every one a placeholder.
+#   - 0 findings under `app/`, `apps/`, `packages/`, or any other non-test path. Every
+#     hit sits in `tests/**`, `conftest.py`, or a curl example in `README.md`.
+#   - Re-derive the classification with `mise run secret-scan:report` and group the
+#     report by `.File` / `.Secret`; do not take this summary on faith.
+#
+# KNOWN FRICTION: the pre-commit leg (`gitleaks git --staged`) computes fingerprints
+# without a commit SHA, so these entries do not match it. Editing one of the dummy-key
+# lines in `services/api/tests/**` will therefore be flagged at commit time. That is
+# the intended trade-off of fingerprint scoping — regenerate and append the new
+# fingerprint rather than loosening the rule to a path or a literal.
+
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:README.md:curl-auth-header:153
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:README.md:curl-auth-header:187
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:README.md:curl-auth-header:210
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:README.md:curl-auth-header:240
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/conftest.py:generic-api-key:197
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/conftest.py:generic-api-key:200
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/conftest.py:generic-api-key:372
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/conftest.py:generic-api-key:375
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/e2e/test_auth.py:generic-api-key:56
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_corrective_rag_timeout.py:generic-api-key:142
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_corrective_rag_timeout.py:generic-api-key:30
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_corrective_rag_timeout.py:generic-api-key:82
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_lifespan.py:generic-api-key:18
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_lifespan_llm_fallback.py:generic-api-key:20
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_lifespan_llm_fallback.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_lifespan_shutdown_isolation.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_lifespan_startup_failure.py:generic-api-key:26
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_lifespan_startup_failure.py:generic-api-key:28
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_lifespan_task8.py:generic-api-key:16
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_shared_chain_concurrency.py:generic-api-key:77
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_store_dry_run_startup.py:generic-api-key:25
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_store_dry_run_startup.py:generic-api-key:27
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_workflow_level_timeout.py:generic-api-key:31
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/integration/test_workflow_level_timeout.py:generic-api-key:82
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_build_model_public_api.py:generic-api-key:116
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_build_model_public_api.py:generic-api-key:18
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_build_model_public_api.py:generic-api-key:20
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_build_model_public_api.py:generic-api-key:48
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_build_model_public_api.py:generic-api-key:50
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_build_model_public_api.py:generic-api-key:96
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_build_model_public_api.py:generic-api-key:98
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:116
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:118
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:153
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:155
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:272
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:274
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:37
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:39
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:79
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/agents/test_tools_mock.py:generic-api-key:81
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:102
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:104
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:155
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:173
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:175
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:220
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:238
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:240
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:281
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:293
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:295
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:329
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:41
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:43
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_endpoints.py:generic-api-key:81
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:125
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:127
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:169
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:189
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:191
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:228
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:39
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:41
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/api/v1/test_agent_tool_call_counting.py:generic-api-key:99
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:107
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:116
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:118
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:141
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:143
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:165
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:167
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:20
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:47
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:67
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:80
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:82
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:95
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth.py:generic-api-key:97
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth_logging.py:generic-api-key:20
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth_logging.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/deps/test_auth_logging.py:generic-api-key:81
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/llm/test_factory.py:generic-api-key:24
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/llm/test_factory.py:generic-api-key:26
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/stores/test_factory.py:generic-api-key:37
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/stores/test_factory.py:generic-api-key:39
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:105
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:119
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:151
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:166
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:184
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:198
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:212
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:230
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:247
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:264
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:277
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:292
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:307
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:309
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:36
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:368
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:382
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:395
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:409
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:422
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:434
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:447
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:462
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:50
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:70
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config.py:generic-api-key:72
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:100
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:109
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:118
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:126
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:129
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:19
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:28
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:37
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:46
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:59
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:68
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:77
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:84
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_api_key_strength.py:generic-api-key:87
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_env_example_placeholders.py:generic-api-key:46
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_env_example_placeholders.py:generic-api-key:47
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_env_example_placeholders.py:generic-api-key:49
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_extra_forbid.py:generic-api-key:98
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:101
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:114
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:13
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:133
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:146
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:159
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:174
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:187
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:200
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:215
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:228
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:244
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:26
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:39
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:54
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:67
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_guardrail_settings.py:generic-api-key:88
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_hsts_settings.py:generic-api-key:16
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_hsts_settings.py:generic-api-key:29
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_hsts_settings.py:generic-api-key:42
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_hsts_settings.py:generic-api-key:57
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_hsts_settings.py:generic-api-key:70
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_hsts_settings.py:generic-api-key:83
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_hsts_settings.py:generic-api-key:96
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_judge_model.py:generic-api-key:18
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_judge_model.py:generic-api-key:20
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_fallback_models.py:generic-api-key:17
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_fallback_models.py:generic-api-key:19
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_fallback_models.py:generic-api-key:93
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_timeout.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_timeout.py:generic-api-key:35
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_timeout.py:generic-api-key:48
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_timeout.py:generic-api-key:61
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_timeout.py:generic-api-key:76
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_llm_timeout.py:generic-api-key:9
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_logfire_token_validation.py:generic-api-key:103
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_logfire_token_validation.py:generic-api-key:25
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_logfire_token_validation.py:generic-api-key:44
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_logfire_token_validation.py:generic-api-key:63
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_logfire_token_validation.py:generic-api-key:79
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_logfire_token_validation.py:generic-api-key:9
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_logfire_token_validation.py:generic-api-key:91
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:21
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:23
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:40
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:42
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:58
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:60
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:76
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:78
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:90
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_mock_tools_guard.py:generic-api-key:92
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:111
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:112
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:132
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:134
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:152
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:154
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:174
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:177
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:25
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:26
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:38
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:39
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:51
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:67
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:83
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:84
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_security.py:generic-api-key:9
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_session_signing_key.py:generic-api-key:15
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_session_signing_key.py:generic-api-key:17
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_session_signing_key.py:generic-api-key:62
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:112
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:35
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:50
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:63
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:78
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:9
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_sse_settings.py:generic-api-key:91
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_store_settings.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_config_store_settings.py:generic-api-key:24
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_lifespan_trust_proxy_warning.py:generic-api-key:31
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_lifespan_trust_proxy_warning.py:generic-api-key:34
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:100
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:102
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:123
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:125
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:158
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:160
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:191
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:193
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:230
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:232
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:263
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:265
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:28
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:30
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:51
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:53
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:76
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_logging_config.py:generic-api-key:78
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_main.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_main.py:generic-api-key:24
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_main_cors_wildcard_warning.py:generic-api-key:20
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_main_cors_wildcard_warning.py:generic-api-key:22
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_middleware_order.py:generic-api-key:30
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_middleware_order.py:generic-api-key:64
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_middleware_order.py:generic-api-key:66
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/workflows/test_asyncio_timeout_no_retry.py:generic-api-key:33
+11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/workflows/test_asyncio_timeout_no_retry.py:generic-api-key:98
