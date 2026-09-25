@@ -7,10 +7,10 @@ import { z } from "zod";
  */
 export const aiEnvSchema = z.object({
 	AI_PROVIDER: z.enum(["anthropic", "openai", "ollama"]).default("anthropic"),
-	ANTHROPIC_MODEL: z.string().min(1).default("claude-opus-4-8"),
-	OPENAI_MODEL: z.string().min(1).default("gpt-5.5"),
+	ANTHROPIC_MODEL: z.string().min(1).default("claude-opus-5-5"),
+	OPENAI_MODEL: z.string().min(1).default("gpt-6-sol"),
 	OLLAMA_BASE_URL: z.url().default("http://localhost:11434/v1"),
-	OLLAMA_MODEL: z.string().min(1).default("llama3.2"),
+	OLLAMA_MODEL: z.string().min(1).default("granite4.2:latest"),
 	// Embedding provider config (R2.3, Phase 2). Default local Ollama so corpus
 	// text never leaves the host. Only `ollama` is implemented today (matching
 	// `@vaz/config#resolveEmbeddingModel`); future providers (OpenAI/Voyage)

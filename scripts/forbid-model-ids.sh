@@ -17,8 +17,8 @@
 #   - tests (*.spec.ts[x] / **/tests/**)    … IDs used to assert resolution results
 #
 # Supported chat providers: anthropic / openai / ollama. The detection pattern
-# centers on claude- / gpt- / llama and includes other vendors
-# (gemini / qwen / mistral) as a defensive tripwire.
+# centers on the allowlisted families (claude / gpt / granite / gemma) and includes
+# other vendors (llama / gemini / qwen / mistral) as a defensive tripwire.
 #
 # Assignment-form only (spec 006-repo-consolidation R6.4, ADR-0003): the match
 # must sit inside a double-quoted string immediately preceded by `:` or `=`
@@ -40,7 +40,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 # Known model-ID literals to detect, in assignment-form context only.
-PATTERN='[:=]\s*"[a-zA-Z0-9_./:-]*(claude-[a-z0-9]|llama-?[0-9]|gpt-[0-9]|gemini-[0-9]|qwen[0-9]|mistral-[a-z0-9])'
+PATTERN='[:=]\s*"[a-zA-Z0-9_./:-]*(claude-[a-z0-9]|gpt-[0-9]|granite[0-9]|gemma[0-9]|llama-?[0-9]|gemini-[0-9]|qwen[0-9]|mistral-[a-z0-9])'
 
 # Scan apps/**, packages/**, and services/**, excluding the carve-outs.
 # (grep returns exit 1 on no match, so `|| true` absorbs it under set -e / pipefail.)

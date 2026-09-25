@@ -64,7 +64,7 @@ editable install しない）。
 | `OLLAMA_BASE_URL`    | `http://localhost:11434/v1`      | `JUDGE_PROVIDER=ollama` のとき使用する OpenAI 互換エンドポイント。          |
 
 `JUDGE_MODEL` 未設定時のプロバイダ別既定値は `app/config.py` の `DEFAULT_JUDGE_MODEL`
-（`anthropic` → `claude-opus-4-8`、`ollama` → `llama3.2`）。モデル ID のハードコードは
+（`anthropic` → `claude-opus-5-5`、`ollama` → `granite4.2:latest`）。モデル ID のハードコードは
 `app/config.py` のみ許可される（`scripts/forbid-model-ids.sh` の carve-out、他の
 `services/**/*.py` にモデル ID を直書きすると lint が落ちる）。
 

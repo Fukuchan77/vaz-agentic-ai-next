@@ -122,7 +122,7 @@ async function ollamaModelAvailable(model: string): Promise<boolean> {
 /** Whether the currently configured chat provider is ready, mirroring the split anthropic/ollama gate. */
 async function chatProviderReady(): Promise<{ ready: boolean; reason: string }> {
 	if (process.env.AI_PROVIDER === "ollama") {
-		const model = process.env.OLLAMA_MODEL ?? "llama3.2";
+		const model = process.env.OLLAMA_MODEL ?? "granite4.2:latest";
 		const ready = await ollamaModelAvailable(model);
 		return { ready, reason: `${model} unavailable on Ollama at ${OLLAMA_BASE_URL}` };
 	}
