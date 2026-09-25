@@ -22,8 +22,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 JudgeProvider = Literal["anthropic", "ollama"]
 
 JUDGE_MODEL_ALLOWLIST: dict[JudgeProvider, tuple[str, ...]] = {
-    "anthropic": ("claude-opus-4-8",),
-    "ollama": ("llama3.2",),
+    "anthropic": ("claude-opus-5-5",),
+    "ollama": (
+        "granite4.2:latest",
+        "granite4.2:3b",
+        "gemma4:e2b",
+        "gemma4:e4b",
+    ),
 }
 
 DEFAULT_JUDGE_MODEL: dict[JudgeProvider, str] = {

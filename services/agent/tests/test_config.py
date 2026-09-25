@@ -38,11 +38,29 @@ def test_unset_judge_model_falls_back_to_the_selected_providers_default(
 
 def test_explicit_allowlisted_judge_model_is_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("JUDGE_PROVIDER", "ollama")
-    monkeypatch.setenv("JUDGE_MODEL", "llama3.2")
+    monkeypatch.setenv("JUDGE_MODEL", "granite4.2:latest")
 
     settings = get_settings()
 
-    assert settings.judge_model == "llama3.2"
+    assert settings.judge_model == "granite4.2:latest"
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "granite4.2:latest",
+        "granite4.2:3b",
+        "gemma4:e2b",
+        "gemma4:e4b",
+    ],
+)
+def test_each_reviewed_ollama_judge_model_is_accepted(
+    monkeypatch: pytest.MonkeyPatch, model: str
+) -> None:
+    monkeypatch.setenv("JUDGE_PROVIDER", "ollama")
+    monkeypatch.setenv("JUDGE_MODEL", model)
+
+    assert get_settings().judge_model == model
 
 
 def test_judge_model_outside_the_selected_providers_allowlist_is_rejected(
@@ -59,7 +77,7 @@ def test_judge_model_valid_for_a_different_provider_is_still_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("JUDGE_PROVIDER", "anthropic")
-    monkeypatch.setenv("JUDGE_MODEL", "llama3.2")
+    monkeypatch.setenv("JUDGE_MODEL", "granite4.2:latest")
 
     with pytest.raises(ValidationError, match="not in the allowlist"):
         get_settings()

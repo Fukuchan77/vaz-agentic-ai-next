@@ -61,11 +61,11 @@ The chat API resolves its language model at request time from environment variab
 | ------------------- | --------------------------- | -------------------------------------- |
 | `AI_PROVIDER`       | `anthropic`                 | `anthropic`, `openai`, or `ollama`    |
 | `ANTHROPIC_API_KEY` | —                           | Required when `AI_PROVIDER=anthropic` |
-| `ANTHROPIC_MODEL`   | `claude-opus-4-8`           | Claude model ID                       |
+| `ANTHROPIC_MODEL`   | `claude-opus-5-5`           | Claude model ID                       |
 | `OPENAI_API_KEY`    | —                           | Required when `AI_PROVIDER=openai`    |
-| `OPENAI_MODEL`      | `gpt-5.5`                   | OpenAI model ID                       |
+| `OPENAI_MODEL`      | `gpt-6-sol`                 | OpenAI model ID                       |
 | `OLLAMA_BASE_URL`   | `http://localhost:11434/v1` | Ollama's OpenAI-compatible endpoint   |
-| `OLLAMA_MODEL`      | `llama3.2`                  | Any model pulled into Ollama          |
+| `OLLAMA_MODEL`      | `granite4.2:latest`             | Balanced default; override per workload |
 
 OpenAI:
 
@@ -79,9 +79,13 @@ The provider only changes the chat / supervisor / judge model. Embeddings stay o
 Local LLM (no API key needed):
 
 ```bash
-ollama pull llama3.2
+ollama pull granite4.2:latest
 AI_PROVIDER=ollama pnpm dev
 ```
+
+Ollama は `granite4.2:latest` を汎用の既定値とし、リソース制約時は
+`granite4.2:3b` / `gemma4:e2b`、品質優先の代替は `gemma4:e4b` を
+`OLLAMA_MODEL` に指定します。
 
 ### Tasks
 
@@ -214,14 +218,18 @@ durable job・承認フローを試すには Postgres/Redis/Inngest が必要な
 
 チャット API は環境変数からモデルをリクエスト時に解決します(Zod で検証 — `packages/schemas/src/env.ts`)。
 
-- **Anthropic(デフォルト)**: `.env.local` に `ANTHROPIC_API_KEY` を設定(モデルは `claude-opus-4-8`)
-- **OpenAI**: `AI_PROVIDER=openai` と `OPENAI_API_KEY` を設定(モデルは `OPENAI_MODEL`、既定 `gpt-5.5`)。切り替わるのはチャット / supervisor / judge のモデルのみで、埋め込みは `AI_EMBEDDING_PROVIDER`(Ollama のみ)のまま
+- **Anthropic(デフォルト)**: `.env.local` に `ANTHROPIC_API_KEY` を設定(モデルは `claude-opus-5-5`)
+- **OpenAI**: `AI_PROVIDER=openai` と `OPENAI_API_KEY` を設定(モデルは `OPENAI_MODEL`、既定 `gpt-6-sol`)。切り替わるのはチャット / supervisor / judge のモデルのみで、埋め込みは `AI_EMBEDDING_PROVIDER`(Ollama のみ)のまま
 - **ローカル LLM(Ollama、API キー不要)**:
 
 ```bash
-ollama pull llama3.2
+ollama pull granite4.2:latest
 AI_PROVIDER=ollama pnpm dev
 ```
+
+Ollama は `granite4.2:latest` を汎用の既定値とし、リソース制約時は
+`granite4.2:3b` / `gemma4:e2b`、品質優先の代替は `gemma4:e4b` を
+`OLLAMA_MODEL` に指定します。
 
 ### mise タスク
 
