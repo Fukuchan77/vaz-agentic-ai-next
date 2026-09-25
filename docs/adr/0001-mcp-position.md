@@ -149,4 +149,4 @@ MCP を採用する際、ゲートウェイ（複数 MCP サーバを集約す�
   （`createToolApprovalPolicy`、既存 2 ゲート方式の正本）
 - [`packages/tools/src/allowlist.ts`](../../packages/tools/src/allowlist.ts)（`RECIPIENT_ALLOWLIST`）
 - [`pnpm-workspace.yaml`](../../pnpm-workspace.yaml)（`allowBuilds`、供給網審査の既存前例）
-- [`docs/agentops.md`](../agentops.md) — Req 6.1、本文書と対をなすガバナンス文書
+- [`docs/guide/agentops.md`](../guide/agentops.md) — Req 6.1、本文書と対をなすガバナンス文書

@@ -7,7 +7,7 @@ import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 
 /**
  * Auth.js (`next-auth@5`, JWT session strategy) integration — R5.1.
- * IdP integration method and provider decided in `docs/spikes/phase5-idp.md`.
+ * IdP integration method and provider decided in `docs/adr/0006-idp-integration.md`.
  *
  * Provider credentials (`AUTH_MICROSOFT_ENTRA_ID_ID`/`_SECRET`, `AUTH_GOOGLE_ID`/
  * `_SECRET`) and the session-signing `AUTH_SECRET` are auto-detected by Auth.js
@@ -18,7 +18,7 @@ import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
  * Role is never read from an IdP claim directly: Entra ID App Roles and Google
  * Workspace's OIDC id_token are asymmetric (the latter has no built-in
  * app-role claim), so `resolveJwtRole` maps the authenticated email through
- * `@vaz/config`'s own allowlist instead (docs/spikes/phase5-idp.md §7).
+ * `@vaz/config`'s own allowlist instead (docs/adr/0006-idp-integration.md §7).
  */
 
 declare module "next-auth" {

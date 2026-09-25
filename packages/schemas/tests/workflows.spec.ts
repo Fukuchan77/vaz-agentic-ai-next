@@ -26,8 +26,8 @@ import {
  *
  * These schemas fix the supervisor→specialist step I/O and the streamed
  * `JobEvent` discriminated union in `@vaz/schemas` (the dep-graph leaf) so the
- * durable engine chosen in the Phase 3 spike (Inngest — `docs/spikes/
- * phase3-durable-engine.md`) can be wired via `EventSchemas.fromZod(...)`
+ * durable engine chosen in the Phase 3 spike (Inngest — `docs/adr/
+ * 0005-durable-workflow-engine.md`) can be wired via `EventSchemas.fromZod(...)`
  * WITHOUT this module ever importing the engine.
  */
 
