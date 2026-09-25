@@ -12,7 +12,7 @@ import { runMetricsSchema, runUsageSchema } from "./run-metrics";
  *
  * This module lives in `@vaz/schemas`, the dependency-graph leaf, and is
  * deliberately **engine-agnostic**: it never imports the durable engine chosen
- * in the Phase 3 spike (Inngest — see `docs/spikes/phase3-durable-engine.md`).
+ * in the Phase 3 spike (Inngest — see `docs/adr/0005-durable-workflow-engine.md`).
  * The engine binding happens downstream — the Inngest worker types
  * its events via `EventSchemas.fromZod(...)` against these contracts, and the
  * supervisor / SSE route consume them — so swapping the

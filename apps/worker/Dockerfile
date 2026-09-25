@@ -12,7 +12,7 @@
 #
 # NOTE (env FLAG, spike §1): base-image pull + `docker build` are blocked in the
 # current sandbox (Task 8.1). This Dockerfile is authored against the pnpm-deploy
-# and Inngest Connect self-hosting references (docs/spikes/phase3-durable-engine.md
+# and Inngest Connect self-hosting references (docs/adr/0005-durable-workflow-engine.md
 # §7/§9) and validated structurally via `docker compose config`; a live build +
 # restart-crossing run is exercised once the FLAG is lifted (durable E2E, Task 15).
 

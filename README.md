@@ -191,7 +191,9 @@ anything that calls a real model is manual or opt-in.
 
 ### For AI Coding Agents
 
-Repository-specific conventions live in [AGENTS.md](AGENTS.md).
+Repository-specific conventions live in [AGENTS.md](AGENTS.md). Documentation is organized by
+role (learning guide, ADRs, cross-cutting reviews) — see [docs/README.md](docs/README.md) for
+the map and the single-source-of-truth rules.
 
 The pre-001 root `src/`/`tests/` layout was migrated into `apps/web`; see
 [`specs/001-vaz-ai-update/`](specs/001-vaz-ai-update/) for that decision record.
