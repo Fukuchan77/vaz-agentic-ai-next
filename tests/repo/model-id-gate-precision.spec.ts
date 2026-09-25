@@ -68,6 +68,20 @@ describe("scripts/forbid-model-ids.sh precision (R6.4/R6.5)", () => {
 		}
 	});
 
+	test("new Ollama-family assignments are flagged outside the allowlist", () => {
+		const dir = mkdtempSync(join(tmpdir(), "model-id-gate-ollama-"));
+		try {
+			const scriptCopy = copyScriptInto(dir);
+			const targetDir = join(dir, "apps", "sandbox");
+			mkdirSync(targetDir, { recursive: true });
+			writeFileSync(join(targetDir, "models.ts"), 'const model = "granite4.2:latest";\n');
+
+			expect(() => execFileSync("bash", [scriptCopy], { cwd: dir, stdio: "pipe" })).toThrow();
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
 	test("docstring-prose services/api-style mentions are not flagged (false positive guard)", () => {
 		const dir = mkdtempSync(join(tmpdir(), "model-id-gate-fp-"));
 		try {

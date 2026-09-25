@@ -42,7 +42,7 @@ Agentic AI 系 5 リポジトリを横断で突き合わせた検証の、本 re
 | コンテキスト予算の段階導入設計 | `docs/context-budget.md`（146 行） | Stage 0（全履歴＋停止述語）→ Stage 1（`prepareStep` 窓化シーム、**未指定時 byte 等価**）→ Stage 2（自動 compaction）。`totalTokens` が reasoning を含みうるため `inputTokens + outputTokens` を自前合算する理由まで記録 |
 | AgentOps ランブック | `docs/agentops.md`（148 行） | 可観測性・評価・最適化の 3 本柱を実コードへ写像。**未実装の項目を要件 ID 付きで明示する**書き方（実装済みのように描く事故を避ける） |
 | 3 層 evals ＋ PR ゲート | `packages/evals/`（`src/pr-gate.ts` / `src/nightly.ts` / `src/judge.ts` / `src/unit/`） | ベースライン差分・over-under-trigger balance・case あたりトークン/所要時間・**20 件未満は `reportOnly`**。5 repo 中で最も成熟した eval 運用 |
-| MCP ポジション ADR | `docs/adr/0001-mcp-position.md` | 5 repo 中**唯一の MCP 資産**。不採用の理由 ＋ 採用トリガ条件 ＋ `needsApproval` ↔ MCP `destructiveHint` の写像方針 ＋ サーバの供給網審査 |
+| MCP ポジション ADR | `docs/adr/0001-mcp-position.md` | 5 repo 中**唯一の MCP 採否 ADR**。不採用の理由 ＋ 採用トリガ条件 ＋ `needsApproval` ↔ MCP `destructiveHint` の写像方針 ＋ サーバの供給網審査 |
 | 境界契約の 2 脚 | `mise run openapi:gen` → `packages/schemas/src/generated/` ＋ 手書き Zod ラッパ | `satisfies z.ZodType<Generated>` は**余剰フィールドを捕まえない**ので JSON-Schema 形状比較と併用する、という記録（`AGENTS.md`） |
 | durable HITL | `packages/agents/src/supervisor.ts` ＋ `apps/worker/src/inngest.ts` | エンジン非依存の `WorkflowStepRunner` seam で**ワーカー再起動を跨ぐ** suspend/resume。承認ゲートと `RECIPIENT_ALLOWLIST` の**独立 2 ゲート**、sticky taint（外部由来コンテンツ注入後は run 終端まで latch） |
 | 単一発火点の監査 | `packages/agents/src/audit-hook.ts` | 承認ゲート通過後・`execute` 直前の 1 箇所のみ。web/worker 両パスを覆う。R4.7 プライバシー契約（raw prompt / tool args をログに出さない） |

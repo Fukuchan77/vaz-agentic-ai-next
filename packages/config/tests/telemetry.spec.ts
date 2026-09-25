@@ -39,10 +39,47 @@ test("does not warn about Langfuse when both credentials are present", async () 
 	const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 	const { initTelemetry } = await import("@vaz/config/telemetry");
 
-	initTelemetry({ LANGFUSE_PUBLIC_KEY: "pk", LANGFUSE_SECRET_KEY: "sk" });
+	initTelemetry({
+		LANGFUSE_PUBLIC_KEY: "pk",
+		LANGFUSE_SECRET_KEY: "sk",
+		OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.example.test",
+	});
 
 	expect(registerTelemetry).toHaveBeenCalledTimes(1);
-	expect(warn.mock.calls.filter((c) => String(c[0]).includes("Langfuse"))).toHaveLength(0);
+	expect(warn).not.toHaveBeenCalled();
+
+	warn.mockRestore();
+});
+
+// Credentials alone do not export anything: the host exporter is keyed off
+// OTEL_EXPORTER_OTLP_*, so silence here would falsely signal a working export.
+test("warns once when Langfuse credentials are set but no OTLP endpoint is configured", async () => {
+	const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+	const { initTelemetry } = await import("@vaz/config/telemetry");
+
+	const env = { LANGFUSE_PUBLIC_KEY: "pk", LANGFUSE_SECRET_KEY: "sk" };
+	initTelemetry(env);
+	initTelemetry(env);
+
+	const endpointWarnings = warn.mock.calls.filter((c) =>
+		String(c[0]).includes("OTEL_EXPORTER_OTLP_ENDPOINT"),
+	);
+	expect(endpointWarnings).toHaveLength(1);
+
+	warn.mockRestore();
+});
+
+test("accepts the traces-specific OTLP endpoint as a configured exporter", async () => {
+	const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+	const { initTelemetry } = await import("@vaz/config/telemetry");
+
+	initTelemetry({
+		LANGFUSE_PUBLIC_KEY: "pk",
+		LANGFUSE_SECRET_KEY: "sk",
+		OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://otlp.example.test/v1/traces",
+	});
+
+	expect(warn).not.toHaveBeenCalled();
 
 	warn.mockRestore();
 });

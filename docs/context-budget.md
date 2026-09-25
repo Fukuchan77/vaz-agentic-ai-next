@@ -59,8 +59,10 @@ stopWhen: [isStepCount(MAX_STEPS), buildBudgetStopCondition(budget)]
 - OTel span 属性 `vaz.stop_reason` / `vaz.raw_finish_reason`
 - `deps.audit.recordRun`（token 数・stepCount・stopReason のみ。raw プロンプト／tool 引数は出さない。R4.7）
 
-いずれも fail-soft（トレーサ欠如や sink 未実装でランを壊さない。NFR-4）。この記録が、予算・cap の
-実測に基づく将来のチューニング（次節）の観測基盤になる。
+いずれも fail-soft（トレーサ欠如や sink 未実装でランを壊さない。NFR-4）。現行の Web/worker DB
+sink はツール実行用の `record` だけを持ち、optional な `recordRun` は実装していないため、標準構成で
+run metrics を観測できるのは OTel span 側だけである。DB 永続化を観測基盤に使うには、別途
+`recordRun` sink と保存先を実装する必要がある。
 
 **5 repo 横断での停止理由語彙（X-5）**: 本 repo の `runStopReasonSchema` は 4 値
 （`natural`/`step-cap`/`budget-exceeded`/`error`）だが、Python 側 2 repo
@@ -83,8 +85,8 @@ stopWhen: [isStepCount(MAX_STEPS), buildBudgetStopCondition(budget)]
 ### Stage 0 — 全履歴 + 停止述語（現行・実装済み）
 
 上記「現行方針」そのもの。会話が短い運用では全履歴送信で十分に機能し、コストの上限は
-step-cap と `CHAT_TOKEN_BUDGET` で画定される。`deps.audit.recordRun` の run-metrics で
-`stop_reason` 分布・トークン消費を観測し、閾値の妥当性を実測で見直す。
+step-cap と `CHAT_TOKEN_BUDGET` で画定される。OTel の run-metrics 属性で `stop_reason` 分布・
+トークン消費を観測し、閾値の妥当性を実測で見直す。Postgres 集計を行う場合は、未実装の `deps.audit.recordRun` sink を先に追加する。
 
 ### Stage 1 — `prepareStep` 履歴窓化シーム（opt-in・シーム実装済み / 既定は無効）
 

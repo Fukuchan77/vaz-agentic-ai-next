@@ -266,7 +266,7 @@ allowlist を 1 か所に集約する。
 ## Additional Constraints
 
 **ツールチェーン**: バージョンは `mise.toml` で固定する。Python 3.13（3.14 では slowapi 0.1.10 が
-`DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 12 系（`packageManager` で 12.5.1 に完全固定）、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
+`DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 12 系（厳密なビルドは root `package.json` の `packageManager` で完全固定し、これを正本とする）、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
 `futureFlags.experimentalPythonWorkspaces` に必要）。TypeScript は 6.x 継続とし、7.x の採否は
 TODO(TYPESCRIPT_MAJOR) として `docs/adr/` で単独判断する。
 コマンドは推測せず `mise.toml` を読む。素の `ruff` / `pytest` / `biome` を直接叩かず、

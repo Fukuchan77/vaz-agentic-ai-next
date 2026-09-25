@@ -1,13 +1,19 @@
 #!/bin/sh
 # Pre-push quality gate: E2E tests (Playwright).
-# playwright.config.ts starts the webServer via `--filter @vaz/web`.
+# playwright.config.ts starts the webServer by invoking Next directly
+# (`node node_modules/next/dist/bin/next ...` with `cwd: "apps/web"`), not
+# through `pnpm --filter ... exec` — see that file's webServer.command comment
+# for why (pnpm 12 detaches the child into its own process group, so
+# Playwright's teardown SIGKILL only reaches the pnpm wrapper and the server
+# never exits).
 # E2E runs via mise tasks (mise.toml is the source of truth / CLAUDE.md: no bare tools).
 # If a local Ollama is running, it runs with AI_PROVIDER=ollama, which also exercises
 # the real local-LLM chat round-trip (apps/web/tests/e2e/chat-ollama.spec.ts).
 #
-# This hook is the ONLY place E2E runs — tests.yml has no `e2e` job (hosted runners
-# cannot host a local LLM without pulling a multi-GB model per run). `--no-verify`
-# therefore skips E2E entirely, with no CI safety net behind it.
+# This hook is the fuller of the two E2E gates — tests.yml's `e2e` job (X-14) runs
+# a partial CI-side safety net (chromium only, no infra-gated specs), but only this
+# hook covers the full chromium+firefox matrix and the real Ollama round-trip.
+# `--no-verify` skips this hook, leaving only that partial CI safety net.
 set -e
 
 OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://localhost:11434/v1}"
@@ -25,7 +31,7 @@ else
 	echo "[pre-push]   (start Ollama and re-push to exercise chat-ollama.spec.ts)"
 fi
 
-echo "[pre-push] E2E tests (playwright, webServer=@vaz/web)"
+echo "[pre-push] E2E tests (playwright, webServer=apps/web)"
 mise run test:e2e
 
 echo "[pre-push] ✅ all checks passed"

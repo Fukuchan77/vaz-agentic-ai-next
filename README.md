@@ -8,7 +8,7 @@
 
 ## English
 
-At its core (**VAZ**), the project harmonizes **V**ercel AI SDK for robust LLM streaming, Next.js 16 **A**pp Router for unified server/client architecture, and **Z**od v4 for rigorous runtime type validation — across a pnpm monorepo of two apps and seven source-only `@vaz/*` packages, plus an optional Python sidecar for document parsing and LLM-judge evaluation.
+At its core (**VAZ**), the project harmonizes **V**ercel AI SDK for robust LLM streaming, Next.js 16 **A**pp Router for unified server/client architecture, and **Z**od v4 for rigorous runtime type validation — across a pnpm monorepo of two apps and seven source-only `@vaz/*` packages, plus two independent Python services: an optional document-parsing/evaluation sidecar and a standalone agent API lane.
 
 By eliminating boilerplate optimization via the React Compiler and leveraging a lightning-fast, Rust-powered toolchain (Turbopack, Biome, and Vitest), this repository achieves the absolute pinnacle of developer experience and production execution speed.
 
@@ -34,23 +34,27 @@ By eliminating boilerplate optimization via the React Compiler and leveraging a 
 
 ### Getting Started
 
-Prerequisite: [mise](https://mise.jdx.dev) installed (it provides Node 24 LTS, pnpm 12, `uv`, and gitleaks, all pinned in `mise.toml`; the exact pnpm build is `package.json`'s `packageManager`, currently 12.5.1).
+Prerequisite: [mise](https://mise.jdx.dev) installed (it provides Node 24 LTS, pnpm 12, `uv`, and gitleaks, all pinned in `mise.toml`; `package.json#packageManager` is the source of truth for the exact pnpm build).
 
 ```bash
-mise install         # Node 24 / pnpm 12 / uv / gitleaks
-pnpm install         # install dependencies (also activates git hooks)
-cp .env.example .env.local   # then set ANTHROPIC_API_KEY (or switch to OpenAI / Ollama — see below)
-docker compose up -d # Postgres+pgvector, Redis, the Inngest engine, and the worker
-mise run db:migrate  # apply packages/db/drizzle/*.sql (idempotent)
-mise run dev         # http://localhost:3000
+mise install                    # Node 24 / pnpm 12 / uv / gitleaks
+pnpm install                    # install dependencies (also activates git hooks)
+cp .env.example .env.local      # set provider/auth values; host URLs use localhost
+docker compose --env-file .env.local up -d  # Postgres, Redis, Inngest, worker
+(set -a; . ./.env.local; set +a; mise run db:migrate)  # apply packages/db/drizzle/*.sql (idempotent)
+mise run dev                    # http://localhost:3000
 ```
 
-`docker compose up -d` + `mise run db:migrate` are required for anything beyond a bare
+`docker compose --env-file .env.local up -d` + `mise run db:migrate` are required for anything beyond a bare
 chat round-trip (RAG ingest, durable jobs, approval flows all need Postgres/Redis/Inngest
 running). Plain chat only needs an `AI_PROVIDER` + provider credential in `.env.local`;
 OIDC login needs the `AUTH_*` variables documented in `.env.example`. The Python sidecar
 (`services/agent`, needed for `--via-parser` ingest and tier2 evals) is opt-in behind a
-compose profile: `docker compose --profile sidecar up -d`.
+compose profile: `docker compose --env-file .env.local --profile sidecar up -d`.
+
+`db:migrate` does not read `.env.local` itself, so the migrate line loads it in a subshell.
+Keep it scoped that way: values exported into your interactive shell take precedence over
+`.env.local` for both Next.js and `docker compose`, so later edits would be silently ignored.
 
 ### Choosing an AI provider
 
@@ -61,11 +65,11 @@ The chat API resolves its language model at request time from environment variab
 | ------------------- | --------------------------- | -------------------------------------- |
 | `AI_PROVIDER`       | `anthropic`                 | `anthropic`, `openai`, or `ollama`    |
 | `ANTHROPIC_API_KEY` | —                           | Required when `AI_PROVIDER=anthropic` |
-| `ANTHROPIC_MODEL`   | `claude-opus-4-8`           | Claude model ID                       |
+| `ANTHROPIC_MODEL`   | `claude-opus-5-5`           | Claude model ID                       |
 | `OPENAI_API_KEY`    | —                           | Required when `AI_PROVIDER=openai`    |
-| `OPENAI_MODEL`      | `gpt-5.5`                   | OpenAI model ID                       |
+| `OPENAI_MODEL`      | `gpt-6-sol`                 | OpenAI model ID                       |
 | `OLLAMA_BASE_URL`   | `http://localhost:11434/v1` | Ollama's OpenAI-compatible endpoint   |
-| `OLLAMA_MODEL`      | `llama3.2`                  | Any model pulled into Ollama          |
+| `OLLAMA_MODEL`      | `granite4.2:latest`             | Balanced default; override per workload |
 
 OpenAI:
 
@@ -79,9 +83,13 @@ The provider only changes the chat / supervisor / judge model. Embeddings stay o
 Local LLM (no API key needed):
 
 ```bash
-ollama pull llama3.2
+ollama pull granite4.2:latest
 AI_PROVIDER=ollama pnpm dev
 ```
+
+Ollama は `granite4.2:latest` を汎用の既定値とし、リソース制約時は
+`granite4.2:3b` / `gemma4:e2b`、品質優先の代替は `gemma4:e4b` を
+`OLLAMA_MODEL` に指定します。
 
 ### Tasks
 
@@ -107,12 +115,13 @@ equivalents also work.
 | Apply DB baseline DDL           | `mise run db:migrate`        | `packages/db/drizzle/*.sql` → `DATABASE_URL`, idempotent   |
 | **Aggregate quality gate**      | `mise run check`             | lint + typecheck + test:run + audit + lint:model-ids       |
 | Python sidecar quality gate     | `mise run py:check`          | `services/agent`; NOT a dependency of `check` (NFR-1)      |
+| Python API quality gate         | `mise run api:check`         | `services/api`; NOT a dependency of `check` (NFR-1)        |
 | Regenerate agent-service types  | `mise run openapi:gen`       | FastAPI OpenAPI → `packages/schemas/src/generated/*`       |
 
 ### Project Structure
 
-A monorepo of two apps over seven source-only `@vaz/*` packages, plus an optional Python
-sidecar. **[AGENTS.md](AGENTS.md) is the source of truth for the full tree and dependency
+A monorepo of two apps over seven source-only `@vaz/*` packages, plus two independent
+Python services. **[AGENTS.md](AGENTS.md) is the source of truth for the full tree and dependency
 graph — this section is a summary and must not drift from it.**
 
 ```text
@@ -127,6 +136,7 @@ packages/
   agents/             # @vaz/agents — createChatAgent, createSupervisorWorkflow
   evals/              # @vaz/evals — tier1 unit evals + tier3 LLM judge + nightly run
 services/agent/    # Python sidecar (FastAPI) — /eval/*, /parse; stateless, opt-in
+services/api/      # Standalone Python agent API lane with an independent quality gate
 ```
 
 ### Git Hooks (quality gates)
@@ -138,8 +148,9 @@ services/agent/    # Python sidecar (FastAPI) — /eval/*, /parse; stateless, op
 - **pre-push** — Playwright E2E; if a local Ollama is detected, it automatically runs with
   `AI_PROVIDER=ollama`, including a real chat round-trip against the local LLM
 
-Bypass in an emergency with `--no-verify` — but note that E2E runs **only** in the pre-push
-hook (CI has no `e2e` job), so `--no-verify` leaves the browser tests entirely unrun.
+Bypass in an emergency with `--no-verify`. CI still runs the infrastructure-free Chromium
+E2E lane, but the local-Ollama real chat round-trip runs only from the pre-push hook;
+`--no-verify` skips that live-model coverage.
 
 ### Supply-Chain Hardening
 
@@ -158,16 +169,19 @@ Workflows fire on **pushes to `main` and on pull requests** (not on feature-bran
 anything that calls a real model is manual or opt-in.
 
 - **lint** (`main` + PR) — hardcoded-model-ID gate → `biome check` → `tsc --noEmit`
-- **tests** (`main` + PR) — `unit` (`vitest run --coverage`) and `audit` (`pnpm audit`) run
-  independently; `gate` is the single required status check that fails if either did.
-  `bundle-size` builds `apps/web` and runs `size-limit` against `.size-limit.json`
-  (also required by `gate`). The `e2e` job runs chromium-only without infra; the
-  local-Ollama chat round-trip stays with the pre-push hook
+- **tests** (`main` + PR) — `unit` (`vitest run --coverage`), `audit` (`pnpm audit`),
+  `e2e`, and `bundle-size` run independently; `gate` is the single required status check and
+  fails if any of the four jobs fails. `bundle-size` builds `apps/web` and runs `size-limit`
+  against `.size-limit.json`. The `e2e` job runs Chromium-only without infra; the local-Ollama
+  chat round-trip stays with the pre-push hook
 - **python** (`main` + PR) — `services/agent`'s `mise run py:check`; path-filtered to only
   run when `services/agent/**` changes
+- **api** (`main` + PR) — `services/api`'s `mise run api:check` plus its live Redis lane;
+  path-filtered to `services/api/**` and its workflow inputs
 - **security-daily** (`cron "0 17 * * *"` + manual) — the only scheduled workflow:
-  `pnpm audit --audit-level=moderate` against the committed lockfile, so a newly published
-  advisory is caught even on days with no commits
+  audits the pnpm workspace, `services/agent`, and `services/api` dependency locks in separate
+  jobs, and runs a full-history gitleaks scan, catching newly published advisories or new
+  detection rules even on days with no commits
 - **eval-pr** (PR, opt-in) — tier3 LLM-judge eval gate; runs only on PRs carrying the
   **`run-eval`** label (it calls a real model per golden-set case). Skips gracefully
   without a provider API key
@@ -186,42 +200,50 @@ The pre-001 root `src/`/`tests/` layout was migrated into `apps/web`; see
 
 ## 日本語
 
-**VAZ** = **V**ercel AI SDK(堅牢な LLM ストリーミング)× Next.js 16 **A**pp Router(サーバー/クライアント統合アーキテクチャ)× **Z**od v4(厳格なランタイム型検証)。2 apps + 7 つの source-only `@vaz/*` パッケージからなる pnpm monorepo に、文書解析と LLM judge 評価を担う Python サイドカーを opt-in で組み合わせています。
+**VAZ** = **V**ercel AI SDK(堅牢な LLM ストリーミング)× Next.js 16 **A**pp Router(サーバー/クライアント統合アーキテクチャ)× **Z**od v4(厳格なランタイム型検証)。2 apps + 7 つの source-only `@vaz/*` パッケージからなる pnpm monorepo に、opt-in の文書解析・評価サイドカーと、独立した agent API レーンの 2 つの Python サービスを組み合わせています。
 
 React Compiler による最適化ボイラープレートの排除と、Rust 製高速ツールチェーン(Turbopack・Biome・Vitest)により、開発体験と実行速度の最高峰を目指すリポジトリです。
 
 ### はじめに
 
-前提: [mise](https://mise.jdx.dev) をインストール済みであること(Node 24 LTS・pnpm 12・`uv`・gitleaks は `mise.toml` の固定バージョンで mise が用意します。pnpm の厳密なビルドは `package.json` の `packageManager`、現在 12.5.1)。
+前提: [mise](https://mise.jdx.dev) をインストール済みであること(Node 24 LTS・pnpm 12・`uv`・gitleaks は `mise.toml` の固定バージョンで mise が用意します。pnpm の厳密なビルドは `package.json#packageManager` を正本とします)。
 
 ```bash
-mise install                  # Node 24 / pnpm 12 / uv / gitleaks を用意
-pnpm install                  # 依存をインストール(git フックも自動で有効化)
-cp .env.example .env.local     # ANTHROPIC_API_KEY を設定(または下記の OpenAI / Ollama へ切替)
-docker compose up -d           # Postgres+pgvector・Redis・Inngest engine・worker を起動
-mise run db:migrate            # packages/db/drizzle/*.sql を適用(冪等)
-mise run dev                   # 開発サーバーを http://localhost:3000 で起動
+mise install                       # Node 24 / pnpm 12 / uv / gitleaks を用意
+pnpm install                       # 依存をインストール(git フックも自動で有効化)
+cp .env.example .env.local         # provider/auth を設定。ホスト向け URL は localhost
+docker compose --env-file .env.local up -d  # Postgres・Redis・Inngest・worker
+(set -a; . ./.env.local; set +a; mise run db:migrate)  # packages/db/drizzle/*.sql を適用(冪等)
+mise run dev                       # http://localhost:3000
 ```
 
-チャット単体の動作確認だけなら `docker compose up -d` は不要ですが、RAG ingest・
+チャット単体の動作確認だけなら `docker compose --env-file .env.local up -d` は不要ですが、RAG ingest・
 durable job・承認フローを試すには Postgres/Redis/Inngest が必要なため
-`docker compose up -d` + `mise run db:migrate` が前提になります。OIDC ログインを
+`docker compose --env-file .env.local up -d` + `mise run db:migrate` が前提になります。OIDC ログインを
 試す場合は `.env.example` に記載の `AUTH_*` 系変数を設定してください。Python サイドカー
 (`services/agent`。`--via-parser` ingest や tier2 評価に必要)は opt-in で
-`docker compose --profile sidecar up -d` で起動します。
+`docker compose --env-file .env.local --profile sidecar up -d` で起動します。
+
+`db:migrate` は `.env.local` を自動では読まないため、上記ではサブシェル内で読み込んでいます。
+対話シェルへ export したままにすると、Next.js と `docker compose` のどちらでもシェルの値が
+`.env.local` より優先され、後から `.env.local` を編集しても反映されなくなるため避けてください。
 
 ### AI プロバイダーの切替
 
 チャット API は環境変数からモデルをリクエスト時に解決します(Zod で検証 — `packages/schemas/src/env.ts`)。
 
-- **Anthropic(デフォルト)**: `.env.local` に `ANTHROPIC_API_KEY` を設定(モデルは `claude-opus-4-8`)
-- **OpenAI**: `AI_PROVIDER=openai` と `OPENAI_API_KEY` を設定(モデルは `OPENAI_MODEL`、既定 `gpt-5.5`)。切り替わるのはチャット / supervisor / judge のモデルのみで、埋め込みは `AI_EMBEDDING_PROVIDER`(Ollama のみ)のまま
+- **Anthropic(デフォルト)**: `.env.local` に `ANTHROPIC_API_KEY` を設定(モデルは `claude-opus-5-5`)
+- **OpenAI**: `AI_PROVIDER=openai` と `OPENAI_API_KEY` を設定(モデルは `OPENAI_MODEL`、既定 `gpt-6-sol`)。切り替わるのはチャット / supervisor / judge のモデルのみで、埋め込みは `AI_EMBEDDING_PROVIDER`(Ollama のみ)のまま
 - **ローカル LLM(Ollama、API キー不要)**:
 
 ```bash
-ollama pull llama3.2
+ollama pull granite4.2:latest
 AI_PROVIDER=ollama pnpm dev
 ```
+
+Ollama は `granite4.2:latest` を汎用の既定値とし、リソース制約時は
+`granite4.2:3b` / `gemma4:e2b`、品質優先の代替は `gemma4:e4b` を
+`OLLAMA_MODEL` に指定します。
 
 ### mise タスク
 
@@ -240,6 +262,7 @@ AI_PROVIDER=ollama pnpm dev
 | DB baseline DDL の適用         | `mise run db:migrate`         |
 | **集約品質ゲート**              | `mise run check`              |
 | Python サイドカー品質ゲート      | `mise run py:check`(`check` 非依存、NFR-1) |
+| Python API 品質ゲート            | `mise run api:check`(`check` 非依存、NFR-1) |
 | `agent-service.ts` 再生成      | `mise run openapi:gen`        |
 
 ### 品質ゲート(git フック)
@@ -249,7 +272,7 @@ AI_PROVIDER=ollama pnpm dev
 - **pre-commit** — lint/format(biome)→ 型チェック(全ワークスペース)→ 単体テスト → `pnpm audit` → モデル ID ハードコード検出ゲート(`scripts/forbid-model-ids.sh`)
 - **pre-push** — Playwright E2E。ローカルで Ollama を検出すると自動的に `AI_PROVIDER=ollama` で実行し、ローカル LLM とのチャット実往復テストも走ります
 
-緊急時は `--no-verify` でスキップできます。ただし E2E は **pre-push フックでしか実行されない**(CI に `e2e` ジョブはありません)ため、`--no-verify` するとブラウザテストは一切実行されない点に注意してください。
+緊急時は `--no-verify` でスキップできます。CI ではインフラ不要の Chromium E2E が実行されますが、ローカル Ollama との実往復は pre-push フックだけが担当するため、`--no-verify` するとその実モデル検証は省略されます。
 
 ### サプライチェーン対策
 
@@ -265,9 +288,10 @@ AI_PROVIDER=ollama pnpm dev
 ランナー使用量を抑えるため、GitHub Actions は **`main` への push と pull request** でのみ発火します(作業ブランチへの中間 push では走りません。ローカルの git フックが一次防衛線です)。実モデルを叩くワークフローは手動 / opt-in です。
 
 - `lint`(`main`+PR)— モデル ID ゲート→biome→tsc
-- `tests`(`main`+PR)— `unit`+`audit` が独立実行、`gate` が唯一の必須ステータスチェック。`bundle-size` は `apps/web` をビルドして `.size-limit.json` の上限(JS 420 kB / CSS 22 kB、brotli)を検査し、`gate` の必須対象に含まれます。`e2e` ジョブはインフラなしの chromium のみで、ローカル Ollama との実往復は pre-push フックの担当です
+- `tests`(`main`+PR)— `unit`・`audit`・`e2e`・`bundle-size` を独立実行し、4 ジョブのいずれかが失敗すると唯一の必須ステータス `gate` が失敗します。`bundle-size` は JS 420 kB / CSS 22 kB(brotli)を検査し、`e2e` はインフラなしの Chromium のみです。ローカル Ollama との実往復は pre-push フックが担当します
 - `python`(`main`+PR)— `services/agent/**` の変更時のみ path-filter 発火
-- `security-daily`(`cron "0 17 * * *"` + 手動)— 唯一のスケジュール実行。`pnpm audit --audit-level=moderate` のみを回し、コミットが無い日でも新規アドバイザリを検知します
+- `api`(`main`+PR)— `services/api/**` の変更時に `mise run api:check` と Redis live lane を path-filter 実行
+- `security-daily`(`cron "0 17 * * *"` + 手動)— 唯一のスケジュール実行。pnpm・`services/agent`・`services/api` の 3 依存レーンを別ジョブで監査し、full-history gitleaks も実行します。コミットが無い日でも新規アドバイザリや検出ルール追加を検知します
 - `eval-pr`(PR、opt-in)— **`run-eval` ラベル**が付いた PR でのみ実行する LLM judge ゲート(golden set の case ごとに実モデルを呼ぶため)
 - `eval-nightly`(`workflow_dispatch` のみ)— golden set の回帰比較。名前に反してスケジュール実行は廃止済みで、リリース前やプロンプト/モデル/ツール変更後に手動で起動します
 
