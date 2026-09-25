@@ -1,6 +1,6 @@
 /**
  * `apps/web/src/lib/auth.ts` (R5.1) wires Auth.js (`next-auth@5`,
- * JWT session strategy — docs/spikes/phase5-idp.md decision) and maps the
+ * JWT session strategy — docs/adr/0006-idp-integration.md decision) and maps the
  * authenticated session to the `{ userId, role }` runtime context tool
  * execution is scoped by (ADR-3).
  *

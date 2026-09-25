@@ -887,3 +887,19 @@ scripts/forbid-model-ids.sh   : clean
 - **予算ゲートの並行性**: `claimPending` の `sum()` と UPDATE は同一トランザクション内だが
   READ COMMITTED なので、**互いに素な step 集合**への同時 approve 2 本は両方とも予算チェックを
   通過し得る。consume-once は行ロックが守るため実害は予算の超過のみ。
+
+---
+
+## §10 文書配置の正規化（2026-09-25）
+
+§1〜§9 は時点固定の記録として変更しない。そのため、同節内の旧パスは当時の配置を表す。
+現在の正本は次のとおり。
+
+| 旧パス | 現在の正本 | 理由 |
+| --- | --- | --- |
+| `docs/agentops.md` | [`docs/guide/agentops.md`](guide/agentops.md) | 学習案内と運用ランブックを統合 |
+| `docs/context-budget.md` | [`docs/guide/context-engineering.md`](guide/context-engineering.md) | CE ガイドと予算方針を統合 |
+| Phase 3 durable-engine spike | [`ADR-0005`](adr/0005-durable-workflow-engine.md) | 採用判断が実装済み |
+| Phase 5 IdP spike | [`ADR-0006`](adr/0006-idp-integration.md) | 採用判断が実装済み |
+
+この再配置では本文を複製せず、現行コード・ガイド・検証スクリプトの参照先だけを正本へ更新した。

@@ -8,6 +8,10 @@ Agentic AI アプリ開発の学習パス。骨格は
 合流させる」）。各手法の定義・検証済みベストプラクティス（PE-1〜EV-6）そのものは一次情報レビュー
 （`docs/agentic-engineering-review.md` §1.1〜§1.8）を読むこと。
 
+例外は [AgentOps (AO)](./agentops.md) と [コンテキストエンジニアリング (CE)](./context-engineering.md)
+の 2 ページ。旧 `docs/agentops.md`／`docs/context-budget.md`（独立文書）をこの 2 ページへ統合したため、
+(a) の節が実装マッピングの本文そのものを保持する唯一の正本になっている（`docs/README.md` 参照）。
+
 8 手法は階層になっている: プロンプト ⊂ コンテキスト ⊂ ループ ⊂ ハーネス ⊂
 エージェンティックエンジニアリング（内側から外側へスコープが広がる）。AgentOps は運用横断、
 MCP は接続標準、評価は品質保証としてこの階層を貫く。

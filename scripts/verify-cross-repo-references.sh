@@ -70,7 +70,7 @@ fi
 echo ""
 echo "=== Reachable from this hub alone (2 references) ==="
 check_ref "$HUB_ROOT/docs/cross-repo-adoption-backlog.md" "vaz-ai-next/docs/cross-repo-adoption-backlog.md"
-check_ref "$HUB_ROOT/docs/context-budget.md" "vaz-ai-next/docs/context-budget.md"
+check_ref "$HUB_ROOT/docs/guide/context-engineering.md" "vaz-ai-next/docs/guide/context-engineering.md"
 
 echo ""
 echo "=== Vendored into services/api by Task 6's subtree import (3 references) ==="

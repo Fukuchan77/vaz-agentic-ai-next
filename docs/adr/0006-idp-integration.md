@@ -1,11 +1,15 @@
-# Phase 5 スパイク — IdP 連携方式確定（Auth.js vs 社内標準ハンドロール OIDC）
+# ADR-0006: IdP 連携方式 — Auth.js の採用
 
-> **Status**: ✅ Decided — **Auth.js（`next-auth@5`, JWT session strategy）を採用**
-> **Resolves**: Clarification Q5（`spec.md` L62）/ Task 18.1
-> **Requirements**: R5.1
-> **Date**: 2026-07-11
+- **Status**: Accepted（Auth.js / `next-auth@5`, JWT session strategy）
+- **Date**: 2026-07-11
+- **仕様根拠**: Clarification Q5（`specs/001-vaz-ai-update/spec.md`）/ Task 18.1; R5.1
 
 散文は日本語、識別子・型・パス・コードは英語（`spec.json` `language: ja`）。
+
+## 文書の位置づけ
+
+この比較は 2026-07-11 に結論へ到達し、現在は `apps/web/src/lib/auth.ts` と
+`apps/web/tests/auth.spec.ts` に採用結果が実装されている。未決の実験ではないため、旧 Phase 5 スパイク文書を本 ADR に昇格し、比較根拠と撤退基準をそのまま保持する。
 
 ---
 
@@ -15,7 +19,7 @@ R5.1: 「VAZ platform は社内 IdP OIDC（Entra ID / Google Workspace）でユ�
 経由でツール実行をユーザー権限にスコープする。IdP 連携方式（Auth.js か社内標準）は Phase 5 開始時に
 決定する」（`spec.md` Q5 は当初 deferred）。
 
-本スパイクは「Auth.js（`next-auth`）」と「社内標準（`openid-client`/`oauth4webapi` 等のプリミティブを
+本比較は「Auth.js（`next-auth`）」と「社内標準（`openid-client`/`oauth4webapi` 等のプリミティブを
 直接使うハンドロール OIDC Relying Party 実装）」の 2 択を、Next.js 16 App Router / 既存アーキ規約
 （`resolveModel()` の env 切替パターン、ADR-3 の deps 注入、Phase 1 の `db: null` 前提）への適合度で
 比較し確定する。確定結果は Task 18.2（`apps/web/src/lib/auth.ts`）の実装方針になる。
@@ -26,7 +30,7 @@ R5.1: 「VAZ platform は社内 IdP OIDC（Entra ID / Google Workspace）でユ�
 `peerDependencies` 実測・既存コードの `resolveModel()`/`model-allowlist.ts` パターンを根拠に、
 実装レベルのコードスケッチで比較する（Phase 3 スパイクと同じ「ドキュメント + ソース根拠」の手法。
 実 IdP テナント（Entra ID/Google Workspace）は用意されていないため、実 OAuth ラウンドトリップの
-PoC は本スパイクの範囲外——構造比較に留める）。
+PoC は本比較の範囲外——構造比較に留める）。
 
 ---
 
@@ -202,7 +206,7 @@ Phase 5 の IdP 連携方式は **Auth.js（`next-auth@5`）を JWT session stra
 配線を自前で保守し続ける負荷**、(b) Entra ID / Google Workspace 両対応時の実装が 2 系統に分岐する
 こと、(c) App Router 三形態（Server Component/Middleware/Route Handler）への統合を都度自前実装する
 コストが、VAZ の要件規模（内部業務ツール、IdP 2 種）に対して不釣り合い。**強い理由がない限り採らない**
-（Inngest スパイクの § 7 と同じ「過剰設計の回避」原則）。
+（ADR-0005 §9 の却下理由と同じ「過剰設計の回避」原則）。
 
 ### 受入基準 → 採用プリミティブ 対応表
 
@@ -267,4 +271,5 @@ Phase 5 の IdP 連携方式は **Auth.js（`next-auth@5`）を JWT session stra
 - VAZ 側根拠: `packages/config/src/model-allowlist.ts`（社内 allowlist の配置パターン, ADR-5）;
   `packages/config/src/telemetry.ts`（既存 `runtimeContext: {jobId, userId, agentName}` 形状）;
   `packages/schemas/src/deps.ts`（`AgentDeps<DB = unknown>`, Phase 1 `db: null`）;
-  `spec.md` Q5（IdP 連携方式 deferred）; `plan.md` §Phase 5（`docs/spikes/phase5-idp.md` / R5.1）。
+  `spec.md` Q5（IdP 連携方式 deferred）; `plan.md` §Phase 5（`docs/spikes/phase5-idp.md` / R5.1、
+本 ADR に昇格済み）。
