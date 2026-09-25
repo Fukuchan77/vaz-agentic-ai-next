@@ -15,13 +15,18 @@
 
 [`apps/web/instrumentation.ts`](../apps/web/instrumentation.ts) の `register()` が
 `registerOTel({ serviceName: "vaz-web" })`（`@vercel/otel`）→ `initTelemetry()`
-（`@vaz/config/telemetry`）の順で呼ばれる。`registerOTel` が OTel SDK + OTLP exporter を
-起動し（`OTEL_EXPORTER_OTLP_*` 未設定時は warn one-shot、fail-soft）、`initTelemetry` が
-AI SDK↔OTel のブリッジを登録するため、`streamText`/`generateText` 呼び出しは自動的に span を
-発行する。同じ `initTelemetry()` 呼び出しは
+（`@vaz/config/telemetry`）の順で呼ばれる。`registerOTel` が Web プロセスの OTel SDK + exporter を
+起動し、`initTelemetry` が AI SDK↔OTel のブリッジを登録するため、`streamText`/`generateText`
+呼び出しは自動的に span を発行する。`LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` が未設定なら
+`initTelemetry` が one-shot warning を出すが、起動は継続する（fail-soft）。実際の外部 export には
+ホスト側 exporter の接続設定も必要である。
+
+同じ `initTelemetry()` 呼び出しは
 [`packages/evals/src/nightly.ts`](../packages/evals/src/nightly.ts) と
 [`packages/evals/src/pr-gate.ts`](../packages/evals/src/pr-gate.ts) の CLI エントリポイントにも
-存在し、nightly/PR ゲート実行時も span がエクスポートされる。
+存在する。ただし両 CLI は Web の `registerOTel()` に相当する provider/exporter の bootstrap を
+リポジトリ内では行わないため、標準構成で保証されるのは AI SDK ブリッジの登録までである。
+外部への span export は、CLI プロセスに別途 OTel provider/exporter を設定した場合に限られる。
 
 停止理由（`stop_reason`）は span 属性 `vaz.stop_reason` / `vaz.raw_finish_reason` として
 併記される（下記「Req 1.4 metrics」節、`docs/context-budget.md` の該当節と同一の記述を参照）。
@@ -60,17 +65,21 @@ raw prompt・raw tool args はログに出さない（R4.7 プライバシー契
 [`packages/schemas/src/deps.ts`](../packages/schemas/src/deps.ts) の
 `runAuditEntrySchema`（`runMetricsSchema` + `userId`/`jobId`/`ts`）と、対応する
 `AuditSink.recordRun?(entry)`（optional — 未実装 sink は no-op、ADR-D）が
-「ラン終了ごとに 1 回、集約トークン数のみを記録する」経路。raw prompt / tool args は含まない
-（R4.7）。詳細な方針とチャット本線での挙動は `docs/context-budget.md` の
+「ラン終了ごとに 1 回、集約トークン数のみを渡す」拡張点。raw prompt / tool args は含まない
+（R4.7）。ただし現行の Web/worker DB sink はツール実行用の `record` だけを実装し、`recordRun` は
+実装していない。このため run metrics は OTel span には付くが、標準構成では Postgres に永続化
+されない。詳細な方針とチャット本線での挙動は `docs/context-budget.md` の
 「停止理由の監査（stop_reason）」節を正本とする。
 
 ### 未実装（Req 6.1 の可観測性側で未達な部分）
 
-- **ダッシュボードは存在しない。** `recordRun` / audit-hook が書き込むのは Postgres の
-  `audit_log` テーブルのみで、その上に可視化を載せる Grafana provisioning・ダッシュボード定義は
-  リポジトリ内に一切ない（`docker-compose.yml` の Inngest dev UI は無関係）。
-  Langfuse への OTLP エクスポート自体は上記の通り実装済みだが、閾値付きダッシュボードとしての
-  運用は未着手 — 次節「最適化」の未実装記述と合わせて Req 6.1 の cost-latency-loop 部分として扱う。
+- **run metrics の DB sink とダッシュボードは存在しない。** audit-hook のツール実行記録だけが
+  Postgres の `audit_log` テーブルへ書き込まれ、`recordRun` は現行 sink で未実装である。
+  Grafana provisioning・ダッシュボード定義もリポジトリ内に一切ない
+  （`docker-compose.yml` の Inngest dev UI は無関係）。Web プロセスには Langfuse/OTLP へ接続できる
+  exporter bootstrap がある一方、eval CLI は bridge 登録だけなので追加の OTel ホスト設定が必要。
+  閾値付きダッシュボードとしての運用は未着手であり、次節「最適化」の未実装記述と合わせて
+  Req 6.1 の cost-latency-loop 部分として扱う。
 
 ---
 
@@ -132,7 +141,7 @@ regression / case-failure だけで決まる — コスト・レイテンシが�
 - **閾値付きの cost-latency ダッシュボードは未実装。** `pr-gate.ts` / `nightly.ts` が算出する
   cost/latency は CI ログとベースライン JSON に出力されるのみで、これを消費する可視化
   （Grafana 等）・閾値アラート・自動チューニングループは本 spec のスコープに含まれていない。
-  将来実装する場合は、`docs/context-budget.md` の Stage 0（`recordRun` の実測に基づく
+  将来実装する場合は、`docs/context-budget.md` の Stage 0（OTel run-metrics の実測に基づく
   `CHAT_TOKEN_BUDGET` 見直し）と `pr-gate.ts` の per-case 平均を入力源として想定するのが自然だが、
   これは仕様化されていない拡張であり、着手時は本 spec の Req 5.3 / Req 6.1 を参照して
   スコープを切ること。
