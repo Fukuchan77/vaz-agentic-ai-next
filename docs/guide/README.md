@@ -28,9 +28,10 @@ MCP は接続標準、評価は品質保証としてこの階層を貫く。
 ## 書籍原稿（`pydantic-ai-agentic-patterns`）との対応
 
 `pydantic-ai-agentic-patterns/docs/part{1..5}/ch{01..14}.md` は書籍『Agentic AI アプリ開発入門』の
-原稿で、`src/` の実装と 1 対 1 対応する。**Phase 1（本ガイド）時点ではリンク参照のみ** — 実体を
-このリポジトリへ移設するかどうかは Phase 3（パターンカタログの取捨選択、`specs/006-repo-consolidation/`
-Requirement 7）の裁定に従う。
+原稿で、`src/` の実装と 1 対 1 対応する。Phase 3（パターンカタログの取捨選択、
+`specs/006-repo-consolidation/` Requirement 7）は完了済みで、**教材コードは物理的に移設せず、
+upstream の原稿・実装へのリンクを正本とする**と裁定した。コードだけを引き剥がすと解説と実装が
+分裂するためであり、本ガイドはその決定に従ってリンク参照を維持する。
 
 | 章 | タイトル | 対応する手法 |
 |---|---|---|
