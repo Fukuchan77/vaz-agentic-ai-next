@@ -5,9 +5,10 @@
 # Multi-stage: the `build` stage installs the whole pnpm workspace and uses
 # `pnpm deploy` to emit a self-contained, pruned deployment of just @vaz/worker
 # and its (workspace + prod) dependencies; the `runtime` stage runs it as a
-# non-root, long-running process. The @vaz/* packages are source-only (raw TS),
-# and Node 24 strips types at runtime — the same mechanism as `node bin/ingest.ts`
-# in @vaz/rag — so there is no compile step.
+# non-root, long-running process. The @vaz/* packages are source-only (raw TS).
+# `pnpm deploy` places them under node_modules, where Node's default TypeScript
+# loader refuses to strip types, so typescript-loader.mjs explicitly applies
+# Node's own transformer before evaluation. There is still no compile step.
 #
 # NOTE (env FLAG, spike §1): base-image pull + `docker build` are blocked in the
 # current sandbox (Task 8.1). This Dockerfile is authored against the pnpm-deploy
@@ -51,7 +52,7 @@ COPY --from=build /out .
 USER node
 
 # The worker connects OUTBOUND to the Inngest Connect gateway (engine:8289) and
-# exposes no inbound port. Node 24 executes the TypeScript entry directly. The
-# entry (start.ts) builds the Postgres/Redis stores + Inngest engine and connects
-# via the Connect gateway (Task 13.9).
-CMD ["node", "src/start.ts"]
+# exposes no inbound port. The loader permits source-only @vaz/* packages in
+# pnpm's deployed node_modules layout; start.ts then builds the Postgres/Redis
+# stores + Inngest engine and connects via the Connect gateway (Task 13.9).
+CMD ["node", "--import", "./register-typescript-loader.mjs", "src/start.ts"]
