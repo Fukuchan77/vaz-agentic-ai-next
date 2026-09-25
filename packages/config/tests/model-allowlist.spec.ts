@@ -26,6 +26,15 @@ describe("model-ID single-source drift guard (ADR-5)", () => {
 		expect(MODEL_ALLOWLIST.ollama).toContain(DEFAULT_MODEL_ID.ollama);
 	});
 
+	test("exposes the reviewed Ollama workload choices", () => {
+		expect(MODEL_ALLOWLIST.ollama).toEqual([
+			"granite4.2:latest",
+			"granite4.2:3b",
+			"gemma4:e2b",
+			"gemma4:e4b",
+		]);
+	});
+
 	test("the resolved default provider is anthropic", () => {
 		expect(envDefaults.AI_PROVIDER).toBe("anthropic");
 	});

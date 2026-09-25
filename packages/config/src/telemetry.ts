@@ -64,11 +64,13 @@ export function buildTelemetryAttributes(
  * making a whole multi-step, multi-tool workflow filterable as a single trace
  * in Langfuse. Callers opt in per call; this module only wires the mechanism.
  *
- * Langfuse OTLP export is opt-in via env (R4.3): the OTLP exporter (configured
- * at the host, keyed off `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY`) ships the
- * emitted spans to Langfuse. When those are unset we warn exactly once and keep
- * running — OpenTelemetry spans are still emitted locally (fail-soft, NFR-4);
- * this function never throws.
+ * Langfuse OTLP export is opt-in via env (R4.3): `LANGFUSE_PUBLIC_KEY` /
+ * `LANGFUSE_SECRET_KEY` are the credentials, but spans only leave the process
+ * through an OTLP exporter the host configures from `OTEL_EXPORTER_OTLP_*`
+ * (e.g. `registerOTel()` in `apps/web/instrumentation.ts`). We warn exactly once
+ * when the credentials are unset, or when they are set without an OTLP endpoint
+ * (which would otherwise look like a working export), and keep running
+ * (fail-soft, NFR-4); this function never throws.
  *
  * Idempotent: safe to call multiple times (registers and warns at most once).
  *
@@ -106,6 +108,19 @@ export function initTelemetry(env: Record<string, string | undefined> = process.
 			"[telemetry] Langfuse OTLP export not configured " +
 				"(LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY unset); " +
 				"OpenTelemetry spans are still emitted locally. Continuing without Langfuse.",
+		);
+		return;
+	}
+
+	// Credentials alone export nothing: the host exporter reads OTEL_EXPORTER_OTLP_*.
+	const otlpEndpointConfigured = Boolean(
+		env.OTEL_EXPORTER_OTLP_ENDPOINT || env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+	);
+	if (!otlpEndpointConfigured) {
+		console.warn(
+			"[telemetry] LANGFUSE_* credentials are set but no OTLP endpoint is configured " +
+				"(OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_TRACES_ENDPOINT unset); " +
+				"spans are not exported until the host configures an OTLP exporter.",
 		);
 	}
 }

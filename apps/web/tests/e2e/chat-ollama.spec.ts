@@ -10,7 +10,7 @@ import { expect, test } from "@playwright/test";
  * Example: `AI_PROVIDER=ollama pnpm test:e2e` / `mise run test:e2e:ollama`
  */
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llama3.2";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "granite4.2:latest";
 
 /**
  * True only when Ollama is reachable AND the target model is pulled. Checking
@@ -26,7 +26,7 @@ async function ollamaModelAvailable(): Promise<boolean> {
 		}
 		const body = (await res.json()) as { data?: Array<{ id?: string }> };
 		const ids = (body.data ?? []).map((m) => m.id).filter((id): id is string => Boolean(id));
-		// Ollama reports models as `name:tag` (e.g. llama3.2:latest); match the base name.
+		// Ollama reports models as `name:tag` (e.g. granite4.2:latest); match the base name.
 		const base = OLLAMA_MODEL.split(":")[0];
 		return ids.some((id) => id === OLLAMA_MODEL || id.split(":")[0] === base);
 	} catch {

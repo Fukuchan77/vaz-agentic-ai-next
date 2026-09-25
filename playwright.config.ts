@@ -24,11 +24,13 @@ export default defineConfig({
 		},
 	],
 	webServer: {
-		// Targets only apps/web (@vaz/web). In CI, starts the production server
-		// that `mise run build` (= --filter @vaz/web build) already built.
-		command: process.env.CI
-			? `pnpm --filter @vaz/web exec next start --port ${PORT}`
-			: `pnpm --filter @vaz/web exec next dev --port ${PORT}`,
+		// Invoke Next directly instead of through `pnpm --filter ... exec`. pnpm 12
+		// detaches the Next child into a separate process group, so Playwright kills
+		// only the pnpm wrapper during teardown and waits forever while Next keeps
+		// port 3000 open. Keeping Next in Playwright's process group makes teardown
+		// deterministic and prevents a stale server from poisoning the next run.
+		command: `node node_modules/next/dist/bin/next ${process.env.CI ? "start" : "dev"} --port ${PORT}`,
+		cwd: "apps/web",
 		url: `http://localhost:${PORT}`,
 		reuseExistingServer: !process.env.CI,
 		// Generous timeout to allow for Next.js's initial compilation.

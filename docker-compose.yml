@@ -41,7 +41,7 @@ services:
   # Redis — Inngest's durable backend (with Postgres) AND the JobEvent pub/sub
   # channel that events.ts publishes to for SSE fan-out (R3.6).
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: vaz-redis
     restart: unless-stopped
     ports:
@@ -57,9 +57,9 @@ services:
   # Inngest — self-hosted durable workflow engine (ADR-2 / spike §9). Single
   # binary backed by the shared Postgres + Redis. web submits jobs via events;
   # the worker executes them over the Connect (WebSocket) gateway on :8289.
-  # Pinned to v1.19.3 (the release exposing `inngest alpha doctor healthcheck`).
+  # Version-pinned; the health check below is verified against this release.
   engine:
-    image: inngest/inngest:v1.19.3
+    image: inngest/inngest:v1.45.1
     container_name: vaz-inngest
     restart: unless-stopped
     command: ["inngest", "start"]

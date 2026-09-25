@@ -24,9 +24,12 @@ type AiProvider = AiEnv["AI_PROVIDER"];
  * `DEFAULT_MODEL_ID` can safely take the first entry.
  */
 export const MODEL_ALLOWLIST = {
-	anthropic: ["claude-opus-4-8"],
-	openai: ["gpt-5.5"],
-	ollama: ["llama3.2"],
+	anthropic: ["claude-opus-5-5"],
+	openai: ["gpt-6-sol"],
+	// Granite 4.2 latest is the balanced default for agent/tool workloads.
+	// Keep smaller and Gemma variants opt-in so deployments can choose their
+	// resource/quality trade-off without silently changing the default model.
+	ollama: ["granite4.2:latest", "granite4.2:3b", "gemma4:e2b", "gemma4:e4b"],
 } as const satisfies Record<AiProvider, readonly [string, ...string[]]>;
 
 /**
