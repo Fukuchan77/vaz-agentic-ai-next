@@ -72,7 +72,7 @@ export interface CreateChatAgentOptions {
  * helper — or an equivalent compaction strategy — in directly:
  * `windowMessages: (messages) => pruneMessages({ messages, toolCalls: "before-last-3-messages" })`.
  * Omitted (the default) keeps `buildPrepareStep` byte-equivalent to before
- * this seam existed (`docs/context-budget.md`).
+ * this seam existed (`docs/guide/context-engineering.md`).
  */
 export type WindowMessages = (messages: ModelMessage[]) => ModelMessage[];
 

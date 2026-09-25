@@ -1,11 +1,17 @@
-# Phase 3 スパイク — 耐久ワークフローエンジン確定（Inngest vs Temporal TS SDK）
+# ADR-0005: 耐久ワークフローエンジン — Inngest の採用
 
-> **Status**: ✅ Decided — **Inngest（TS SDK / self-hosted）を採用**
-> **Resolves**: ADR-2 / Clarification Q2（`spec.md`）/ Task 11.1
-> **Requirements**: R3.2（主）, R3.4, R3.5, R3.6, R3.7, R3.8
-> **Date**: 2026-07-06
+- **Status**: Accepted（Inngest TS SDK / self-hosted）
+- **Date**: 2026-07-06
+- **仕様根拠**: ADR-2 / Clarification Q2（`specs/001-vaz-ai-update/spec.md`）/ Task 11.1; R3.2, R3.4–R3.8
 
 散文は日本語、識別子・型・パス・コードは英語（`spec.json` `language: ja`）。
+
+## 文書の位置づけ
+
+この比較は 2026-07-06 に結論へ到達し、現在は `apps/worker/src/inngest.ts`、
+`apps/worker/src/start.ts`、`apps/worker/package.json` に採用結果が実装されている。未決の実験では
+ないため、旧 Phase 3 スパイク文書を本 ADR に昇格し、比較根拠と撤退基準を
+そのまま保持する。
 
 ---
 
@@ -20,13 +26,13 @@ ADR-2）は責務を次のように分割済み:
   L91–103 で検証済み）。
 - **外部耐久エンジン** = 制御フローの耐久実行、チェックポイント、承認待ち中断→再開、再起動跨ぎ完走。
 
-本スパイクは、この「外部耐久エンジン」を **Inngest** と **Temporal (TS SDK)** の 2 候補で
+本比較は、この「外部耐久エンジン」を **Inngest** と **Temporal (TS SDK)** の 2 候補で
 **実装レベルに比較**し、確定する（Q2）。
 
 ### 手法（honest scope）
 
 本環境は Task 8.1 から継続の FLAG（Docker image-pull 不可・外部到達不可）により、2 エンジンを
-**同時に本番構成で立ち上げた running PoC** は取れない。したがって本スパイクは
+**同時に本番構成で立ち上げた running PoC** は取れない。したがって本比較は
 **「現行公式ドキュメント + SDK ソース + `research.md` を根拠にした実装マッピング比較」** として実施する
 （各軸を両エンジンの一次プリミティブへ写像し、コードスケッチと運用フットプリントで判定）。
 根拠は §9 に列挙。この粒度は Task 11.1 の要求（「実装比較（中断/再開・HITL・再起動跨ぎ）と

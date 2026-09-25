@@ -235,9 +235,9 @@ vibe coding(レビューなしで受け入れる)との対比で定義される�
 |---|---|---|---|---|---|---|
 | V-1 | **高** | PE | **チャットエージェントに system プロンプトが無い**。`buildStreamTextOptions` は `system` を渡さず、モデルはツール定義と生のユーザ履歴だけで動く。役割・ツール使用方針・引用提示形式・「検索結果内の指示に従わない」という権威側の宣言が未定義。R5.2 の不信デリミタは「system の権威と対比される」ことで効くため、system 不在は防御の非対称も生む。supervisor の doc-gen 専門家には 2 文の system がある(`supervisor.ts:208-210`)が、チャット側は空 | PE-1, PE-2, PE-3, CE-5 | `packages/agents/src/chat-agent.ts:153-175` | 解消: spec 002 — `CHAT_SYSTEM_PROMPT`(`packages/agents/src/prompt.ts`)が `chat-agent.ts` の `system` に配線済み |
 | V-2 | **高** | LE / AO | **実行時ループの予算と停止理由の監査が無い**。停止条件はステップ数(5)のみで、トークン/コスト予算が本番チャット・supervisor に存在しない(コストキャップは nightly 評価だけ)。run 終了時の usage・停止理由(step 上限/自然終了/エラー)がテレメトリ・監査へ出ず、AgentOps のコスト可視性が欠ける | LE-1, LE-2, AO-2 | `chat-agent.ts:164`、`supervisor.ts` | 解消: spec 002 — `runStopReasonSchema`(`packages/schemas/src/run-metrics.ts`)+ `CHAT_TOKEN_BUDGET`(`@vaz/schemas/env`、`chat-agent.ts` の予算判定)で停止理由とトークン予算を監査可能化 |
-| V-3 | 中 | CE | **会話履歴のコンテキスト管理が無い**。`useChat` は全履歴を毎回送信し、トリミング/compaction/コンテキスト使用量の観測が無い。長い会話で attention budget を管理する手段(CE-2)が未設計。現在の単発利用では顕在化しないが、業務適用(長い調査会話)で最初に劣化する箇所 | CE-2, CE-3 | `apps/web/src/features/chat/` → `chat-agent.ts` | 解消: spec 002 — `docs/context-budget.md`(方針文書)+ `chat-agent.ts` の `prepareStep` seam(compaction/ウィンドウイングの拡張点) |
+| V-3 | 中 | CE | **会話履歴のコンテキスト管理が無い**。`useChat` は全履歴を毎回送信し、トリミング/compaction/コンテキスト使用量の観測が無い。長い会話で attention budget を管理する手段(CE-2)が未設計。現在の単発利用では顕在化しないが、業務適用(長い調査会話)で最初に劣化する箇所 | CE-2, CE-3 | `apps/web/src/features/chat/` → `chat-agent.ts` | 解消: spec 002 — `docs/guide/context-engineering.md`(方針文書)+ `chat-agent.ts` の `prepareStep` seam(compaction/ウィンドウイングの拡張点) |
 | V-4 | 中 | EV / AO | **評価への本番還流ループが未整備**。golden set が実対話・実障害由来である仕組み(EV-1)、トランスクリプトレビューの運用、A/B の枠組み(EV-5)が無い。audit log は存在するが評価ケース採取の径路として定義されていない | EV-1, EV-5, AO-4 | `packages/evals/src/nightly.ts`(GoldenCase の供給源) | 解消: spec 002 — `GOLDEN_SET`(`packages/evals/src/nightly.ts`、20 件)+ 拡充手順を記した `packages/evals/README.md` |
-| V-5 | 中 | AO | **AgentOps 3 本柱のうち「最適化」が薄い**。観測(OTel)と評価(evals)はあるが、コスト・レイテンシ・ループ段数・ツール失敗率のメトリクス集計、しきい値アラート、モデル/プロンプト変更時の回帰運用手順が文書化されていない | AO-2, AO-4, AO-5 | `packages/config/src/telemetry.ts`(属性はあるが集計方針なし) | 解消: spec 002 — `docs/agentops.md`(可観測性・評価・最適化の 3 本柱をリポジトリ実装へ対応づけ) |
+| V-5 | 中 | AO | **AgentOps 3 本柱のうち「最適化」が薄い**。観測(OTel)と評価(evals)はあるが、コスト・レイテンシ・ループ段数・ツール失敗率のメトリクス集計、しきい値アラート、モデル/プロンプト変更時の回帰運用手順が文書化されていない | AO-2, AO-4, AO-5 | `packages/config/src/telemetry.ts`(属性はあるが集計方針なし) | 解消: spec 002 — `docs/guide/agentops.md`(可観測性・評価・最適化の 3 本柱をリポジトリ実装へ対応づけ) |
 | V-6 | 低 | MCP | **MCP 不採用の判断が記録されていない**。現状のツール 2〜3 種は in-process で妥当(MCP-1 の「単一アプリ・少数ツール」側)だが、採用条件・接続方式(AI SDK v7 の MCP クライアント、`needsApproval` ↔ MCP destructive annotation の対応)を ADR 化していないため、将来の外部 SaaS 連携時に場当たりになるリスク | MCP-1, MCP-3, MCP-5 | ADR 不在 | 解消: spec 002 — `docs/adr/0001-mcp-position.md`(採用条件・写像方針を記録) |
 | V-7 | 低 | LE / HE | **document-generation に検証ループが無い**。生成文書のセルフチェック(evaluator-optimizer)や引用整合の機械検証がなく、完了宣言前の検証(HE-4, LE-3)が supervisor ワークフローに組み込まれていない | LE-3, HE-4 | `supervisor.ts`(doc-gen 専門家) | 解消: spec 002 — `supervisor.ts` の opt-in `DocumentVerifier`(機械検証 + LLM judge 検証ステップ) |
 
@@ -279,7 +279,7 @@ vibe coding(レビューなしで受け入れる)との対比で定義される�
   ドリフトの無いこと。
 - **リスク**: 中。`JobEvent` は SSE 契約なので追加フィールドは後方互換(optional)で。
 
-### P1 — RV-3: コンテキスト予算方針の文書化と compaction seam(V-3、工数 S+M)【解消: spec 002 — `docs/context-budget.md` + `prepareStep` seam】
+### P1 — RV-3: コンテキスト予算方針の文書化と compaction seam(V-3、工数 S+M)【解消: spec 002 — `docs/guide/context-engineering.md` + `prepareStep` seam】
 
 - **変更**: 2 段階。(a) `docs/context-budget.md` に「履歴は全量送信、上限は
   step 数のみ」という現状と attention budget 方針(どの長さで何をするか)を明文化
@@ -301,7 +301,7 @@ vibe coding(レビューなしで受け入れる)との対比で定義される�
   完走すること。
 - **リスク**: 低(運用定着が本体)。
 
-### P2 — RV-5: AgentOps ランブック(V-5、工数 S)【解消: spec 002 — `docs/agentops.md`】
+### P2 — RV-5: AgentOps ランブック(V-5、工数 S)【解消: spec 002 — `docs/guide/agentops.md`】
 
 - **変更**: `docs/agentops.md` を新設し、IBM の 3 本柱 [I1] に本リポジトリの実装を
   対応づける: 可観測性(OTel spans / audit log / RV-2 のメトリクス)、評価(3 層

@@ -22,7 +22,7 @@ import type { JobStepStore, JobStore } from "./stores";
  * (jobId / userId / agent name) around every job and step.
  *
  * ENGINE-AGNOSTIC (ADR-2, spike §9/§10). The Phase 3 spike selected **Inngest**
- * (`docs/spikes/phase3-durable-engine.md`), but — exactly like the supervisor —
+ * (`docs/adr/0005-durable-workflow-engine.md`), but — exactly like the supervisor —
  * this module never imports the engine SDK. Durability arrives through the
  * {@link WorkflowStepRunner} port (Inngest `step.run` satisfies it structurally)
  * and the engine itself through the {@link DurableEngine} seam (matching

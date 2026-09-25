@@ -8,7 +8,7 @@
  * has no equivalent app-specific role claim (would require a separate Admin
  * SDK Directory API call). That asymmetry is why role resolution lives here,
  * keyed off the authenticated email, instead of reading a provider claim
- * (see docs/spikes/phase5-idp.md §7).
+ * (see docs/adr/0006-idp-integration.md §7).
  */
 export type VazRole = "admin" | "member";
 

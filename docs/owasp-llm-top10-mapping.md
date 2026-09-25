@@ -159,7 +159,7 @@ Tier2 eval（faithfulness/relevancy）が golden set の各ケースについて
 ## LLM10: Unbounded Consumption
 
 チャットは `stopWhen: [isStepCount(MAX_STEPS), buildBudgetStopCondition(budget)]` で
-ステップ数とトークン予算の両方に上限を持つ（`docs/context-budget.md` Stage 0）。
+ステップ数とトークン予算の両方に上限を持つ（`docs/guide/context-engineering.md` Stage 0）。
 Nightly eval にはコストキャップ（`EVAL_NIGHTLY_COST_CAP_TOKENS`）があり、超過を検知して
 非ゼロ終了する。CI 側は全ジョブに `timeout-minutes` を設定している。
 

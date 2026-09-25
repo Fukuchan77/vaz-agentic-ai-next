@@ -112,7 +112,7 @@ Supervisor が承認拒否を検知した際は、続く specialist を呼び出
 ## オーケストレーション/リソースレイヤ — Resource Overload（Unbounded Consumption）
 
 Chat は `stopWhen: [isStepCount(MAX_STEPS), buildBudgetStopCondition(budget)]` で
-ステップ数・トークン予算の双方に上限を持つ（`docs/context-budget.md` Stage 0）。
+ステップ数・トークン予算の双方に上限を持つ（`docs/guide/context-engineering.md` Stage 0）。
 Supervisor はプランを自分で生成せず固定の typed step 列をディスパッチするだけなので、
 エージェント自身が無限ループへ発散する経路はない。その step 列の長さは
 `MAX_PLAN_STEPS`（`supervisorPlanSchema` の `max()`）が縛る。
