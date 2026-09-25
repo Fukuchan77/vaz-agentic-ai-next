@@ -23,7 +23,7 @@ ARG NODE_VERSION=24
 # silently re-resolves it — neither of which is a reproducible image. Guarded by
 # tests/repo/container-toolchain-pins.spec.ts, because nothing in the TS gate builds
 # this image and the drift is therefore invisible until a deploy.
-ARG PNPM_VERSION=12.5.1
+ARG PNPM_VERSION=12.6.0
 
 # --- build: install the workspace, then prune to a standalone worker deploy ---
 FROM node:${NODE_VERSION}-slim AS build
