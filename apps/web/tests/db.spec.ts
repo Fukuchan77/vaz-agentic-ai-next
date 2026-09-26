@@ -51,12 +51,20 @@ describe("getWebDb — lazily builds and process-caches the Drizzle client", () 
 		expect(PoolMock).not.toHaveBeenCalled();
 	});
 
-	test("builds the Pool from the resolved connectionString and wraps it with drizzle", async () => {
+	test("builds the Pool with the resolved connectionString and a finite connect timeout", async () => {
 		const { getWebDb } = await import("@/lib/db");
 
 		const db = await getWebDb(env);
 
-		expect(PoolMock).toHaveBeenCalledWith({ connectionString: env.DATABASE_URL });
+		expect(PoolMock).toHaveBeenCalledWith({
+			connectionString: env.DATABASE_URL,
+			connectionTimeoutMillis: expect.any(Number),
+		});
+		const poolOptions = PoolMock.mock.calls[0]?.[0] as {
+			connectionTimeoutMillis: number;
+		};
+		expect(Number.isFinite(poolOptions.connectionTimeoutMillis)).toBe(true);
+		expect(poolOptions.connectionTimeoutMillis).toBeGreaterThan(0);
 		expect(drizzleMock).toHaveBeenCalledTimes(1);
 		expect(db).toBe(drizzleMock.mock.results[0]?.value);
 	});
