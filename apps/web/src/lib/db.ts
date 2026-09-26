@@ -28,6 +28,10 @@ export function resolveWebDbEnv(env: Record<string, string | undefined> = proces
 	}
 }
 
+// Bound connection establishment so a half-alive local Docker forward cannot stall requests
+// indefinitely while still allowing brief startup delays.
+const WEB_DB_CONNECTION_TIMEOUT_MILLIS = 5_000;
+
 let cachedDb: PgDatabase<PgQueryResultHKT> | undefined;
 
 /** Lazily build (and process-cache) the Drizzle client shared by every `apps/web` DB consumer. */
@@ -38,7 +42,12 @@ export async function getWebDb(
 		const { databaseUrl } = resolveWebDbEnv(env);
 		const { Pool } = await import("pg");
 		const { drizzle } = await import("drizzle-orm/node-postgres");
-		cachedDb = drizzle(new Pool({ connectionString: databaseUrl }));
+		cachedDb = drizzle(
+			new Pool({
+				connectionString: databaseUrl,
+				connectionTimeoutMillis: WEB_DB_CONNECTION_TIMEOUT_MILLIS,
+			}),
+		);
 	}
 	return cachedDb;
 }

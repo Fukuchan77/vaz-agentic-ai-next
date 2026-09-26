@@ -52,7 +52,9 @@ describe("findJobOwnerUserId — composes @vaz/worker's port over the shared Pos
 
 		const owner = await findJobOwnerUserId(JOB_ID, env);
 
-		expect(PoolMock).toHaveBeenCalledWith({ connectionString: env.DATABASE_URL });
+		expect(PoolMock).toHaveBeenCalledWith(
+			expect.objectContaining({ connectionString: env.DATABASE_URL }),
+		);
 		expect(drizzleMock).toHaveBeenCalledTimes(1);
 		expect(createJobStoreMock).toHaveBeenCalledTimes(1);
 		expect(findOwnerUserIdMock).toHaveBeenCalledWith(JOB_ID);
