@@ -60,7 +60,9 @@ describe("createAuditSink (web) — composes @vaz/worker's port over a lazily-bu
 
 		const sink = await createAuditSink(deps, env);
 
-		expect(PoolMock).toHaveBeenCalledWith({ connectionString: env.DATABASE_URL });
+		expect(PoolMock).toHaveBeenCalledWith(
+			expect.objectContaining({ connectionString: env.DATABASE_URL }),
+		);
 		expect(drizzleMock).toHaveBeenCalledTimes(1);
 		expect(createAuditLogStoreMock).toHaveBeenCalledTimes(1);
 		expect(createSinkMock).toHaveBeenCalledWith(deps, {
