@@ -45,9 +45,34 @@
 	color: var(--cds-text-secondary, #525252);
 }
 
+.error {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
+// Stays in view at the bottom of the viewport while the message list scrolls.
 .form {
+	position: sticky;
+	inset-block-end: 0;
 	display: flex;
 	flex-direction: row;
-	align-items: flex-end;
+	align-items: flex-start;
 	gap: 0.5rem;
+	padding-block: 0.75rem 1rem;
+	background: var(--cds-background, #f4f4f4);
+}
+
+.composerInput {
+	flex: 1;
+	min-inline-size: 0;
+
+	textarea {
+		// Grow with the text (where supported) up to a cap, then scroll.
+		field-sizing: content;
+		min-block-size: 3rem;
+		max-block-size: 12rem;
+		resize: none;
+	}
 }
