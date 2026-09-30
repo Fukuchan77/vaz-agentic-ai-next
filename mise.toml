@@ -260,7 +260,7 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # docs/dependency-runbook.md). Unlike the starlette group, these have no fix
 # release to upgrade into: PyPI/OSV list `fixed_in: []` for all three, and the
 # affected range ("0.4.17 or later" / "0.5.0 or later") covers even the
-# latest chromadb (still 1.5.9, re-checked 2026-09-22) - so lifting the `<1.0` cap would
+# latest chromadb (still 1.5.9, re-checked 2026-09-30) - so lifting the `<1.0` cap would
 # not close them either.
 #   CVE-2026-45830 (GHSA-2wm9-hf6c-p5cr, PYSEC-2026-3813) - a lack of
 #     authorization validation lets any authenticated user read/write/update/
@@ -300,7 +300,7 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 #     instead of the pathsec-aware helpers, so they read and write outside the
 #     allowed roots when NLTK path-security enforcement is on.
 # Like Group 2 this has no fix release: `fixed_in: []`, and 3.10.3 is the
-# latest nltk on PyPI (re-checked 2026-09-22), so no bump closes it. Unreachable
+# latest nltk on PyPI (re-checked 2026-09-30), so no bump closes it. Unreachable
 # here on two independent counts: (1) the advisory's own preconditions require
 # the application to enable `pathsec.ENFORCE` AND let untrusted input choose a
 # model import/export path - this codebase does neither; (2) none of the

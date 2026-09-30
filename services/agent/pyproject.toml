@@ -7,12 +7,12 @@ requires-python = ">=3.13"
 # a new major, or (for 0.x projects, where the minor carries breaking changes) a
 # new minor. Same-major drift is left alone so the floors stay permissive.
 dependencies = [
-	"fastapi>=0.141.1",
+	"fastapi>=0.142.1",
 	"pydantic>=2.13.5",
 	"pydantic-settings>=2.15.0",
 	"pydantic-ai-slim[anthropic,openai]>=2.40.0",
 	"llama-index-core>=0.14.24",
-	"uvicorn[standard]>=0.53.0",
+	"uvicorn[standard]>=0.54.0",
 	"httpx>=0.28.1",
 	"docling>=2.126.0",
 	"docling-core[chunking]>=2.95.0",
