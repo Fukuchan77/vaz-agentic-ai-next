@@ -15,8 +15,8 @@ dependencies = [
     # recursively; `tests/e2e/test_rate_limiting_enforcement.py` is the canary.
     "fastapi>=0.136.3,<0.137",
     "httpx>=0.28.1,<1.0",
-    "llama-index-core>=0.14.24,<1.0",
-    "llama-index-workflows>=2.24.0,<3.0",
+    "llama-index-core>=0.14.25,<1.0",
+    "llama-index-workflows>=2.25.0,<3.0",
     "opentelemetry-instrumentation-fastapi>=0.65b0,<1.0",
     # Capped below its next minor, not its next major: this is a 0.x package
     # reaching into six private pydantic-ai APIs, so its minors are its
@@ -42,7 +42,7 @@ dependencies = [
     # by `tests/unit/agents/test_build_model_public_api.py`, which imports
     # `OpenAIResponsesModel` directly). Re-add the extra only once litellm's
     # own openai floor reaches 3.0.
-    "pydantic-ai-slim[logfire]>=2.46.0,<3.0",
+    "pydantic-ai-slim[logfire]>=2.52.0,<3.0",
     "pydantic-settings>=2.15.0,<3.0",
     # Bumped 5.3.1 -> 8.1.0 on 2026-09-05, retiring the "shelved major" status
     # that `.github/dependabot.yml` and docs/dependency-runbook.md recorded for
@@ -89,7 +89,7 @@ dependencies = [
     # closed by TrustedHostMiddleware in main.py, and the rest are unreachable here
     # (no request.form(), no HTTPEndpoint, no StaticFiles).
     "starlette>=0.52.1,<1.0",
-    "uvicorn[standard]>=0.53.0,<1.0",
+    "uvicorn[standard]>=0.54.0,<1.0",
 ]
 
 [dependency-groups]
@@ -99,8 +99,8 @@ dev = [
     "pytest>=9.1.1,<10.0",
     "pytest-asyncio>=1.4.0,<2.0",
     "pytest-cov>=7.1.0,<8.0",
-    "ruff>=0.16.8,<1.0",
-    "ty>=0.0.82,<0.1.0",
+    "ruff>=0.16.9,<1.0",
+    "ty>=0.0.84,<0.1.0",
 ]
 
 # ============================================================================
