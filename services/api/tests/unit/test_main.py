@@ -7,7 +7,6 @@ from unittest.mock import patch
 import httpx
 import pytest
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from pydantic_ai.models.test import TestModel
 
@@ -86,7 +85,10 @@ def test_health_router_registered() -> None:
     """Test that health router is registered on the app."""
     app = create_app(settings=_build_settings(), model=TestModel())
 
-    routes = [route.path for route in app.routes if isinstance(route, APIRoute)]
+    # Read the OpenAPI paths rather than `app.routes`: since fastapi 0.137,
+    # included routers sit in `app.routes` as `_IncludedRouter` wrappers, not
+    # as flattened `APIRoute`s.
+    routes = app.openapi()["paths"]
     assert "/health" in routes
 
 

@@ -65,7 +65,7 @@ jobs:
       - name: Python API Lane Quality Gate (lint + test + audit)
         run: mise run api:check
 
-      - name: Redis session store live lane
+      - name: Redis live lane (session store + rate limiter)
         env:
-          EXPECT_LIVE_TESTS: "7"
+          EXPECT_LIVE_TESTS: "9"
         run: mise run api:test:redis

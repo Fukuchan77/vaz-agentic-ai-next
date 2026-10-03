@@ -1,5 +1,10 @@
 # Rate Limiting Implementation Guide
 
+> **Superseded (2026-10-03).** This is the original planning guide and recommends
+> `slowapi`, which this lane no longer uses. Rate limiting is now implemented directly
+> on `limits` in `app/middleware/rate_limit.py`; see [CLAUDE.md](../CLAUDE.md) ("Dependency pins
+> that are load-bearing") for why slowapi was removed. Kept as a historical record.
+
 ## Overview
 
 This guide provides instructions for implementing rate limiting on API endpoints to prevent DoS attacks and control API costs.

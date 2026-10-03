@@ -6,15 +6,19 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "chromadb>=0.6.3,<1.0",
-    # Capped below 0.137 (bisected: 0.136.3 flattens, 0.137.2 does not) because
-    # 0.137 wraps included routers in `_IncludedRouter` instead of flattening them
-    # into `app.routes`. slowapi's `_find_route_handler` scans `app.routes`
-    # non-recursively for a `.endpoint` attribute, finds none, and `_should_exempt`
-    # then treats every request as exempt - silently disabling the global rate
-    # limit rather than failing loudly. Revisit when slowapi resolves routes
-    # recursively; `tests/e2e/test_rate_limiting_enforcement.py` is the canary.
-    "fastapi>=0.136.3,<0.137",
+    # Floor at 0.137: that release wraps included routers in `_IncludedRouter`
+    # instead of flattening them into `app.routes`. The rate limiter
+    # (`app/middleware/rate_limit.py`) counts every request in a plain ASGI
+    # middleware before routing and never walks `app.routes`, so the router's
+    # internal shape cannot switch it off; `tests/e2e/test_rate_limiting_enforcement.py`
+    # and `test_global_rate_limit_counts_included_router_routes` are the canary.
+    # Capped below 1.0 as a 0.x package whose minors are its breaking releases.
+    "fastapi>=0.137,<1.0",
     "httpx>=0.28.1,<1.0",
+    # The counting engine behind `app/middleware/rate_limit.py`. Its `redis`
+    # extra is not needed: Redis storage goes through `limits.aio`'s `redispy`
+    # implementation, i.e. the `redis` package declared below.
+    "limits>=5.8.0,<6.0",
     "llama-index-core>=0.14.25,<1.0",
     "llama-index-workflows>=2.25.0,<3.0",
     "opentelemetry-instrumentation-fastapi>=0.65b0,<1.0",
@@ -51,9 +55,9 @@ dependencies = [
     # -m redis` passed all 7 cases (RedisSessionStore save/load/trim/TTL plus the
     # v1-wire-format serializer pin), and the full unit+integration+e2e suite came
     # back 1526 passed / 16 skipped at 96% coverage. Both consumers were exercised:
-    # `RedisSessionStore` directly, and slowapi's `limits` storage indirectly (the
-    # `redis` extra of `limits` is what the rate limiter uses when `redis_url` is
-    # set). Capped below the next major, which is shelved in turn until its own
+    # `RedisSessionStore` directly, and slowapi's `limits` storage indirectly (at the time;
+    # the rate limiter now reaches the same `redis` package through `limits.aio`'s
+    # `redispy` implementation when `redis_url` is set). Capped below the next major, which is shelved in turn until its own
     # pass -- see the redis entry in `.github/dependabot.yml`.
     "redis>=8.1.0,<9.0",
     # Cap moved <6.0 -> <7.0 on 2026-09-21 (PR #37, 5.7.0 -> 6.1.0) after the
@@ -77,18 +81,12 @@ dependencies = [
     # below -- the lane failed 6/6 on 5.7.0 *and* 6.1.0 before it, which is how
     # that blocker was established as pre-existing rather than caused by the bump.
     "sentence-transformers>=6.1.0,<7.0",
-    "slowapi>=0.1.10,<1.0",
-    # Pinned below 1.0 because slowapi 0.1.10 is not compatible with starlette 1.x:
-    # exception-handler dispatch misroutes (a ValidationError reaches slowapi's
-    # _rate_limit_exceeded_handler and dies on the missing .detail), and
-    # SlowAPIMiddleware stops emitting X-RateLimit-* headers, silently disabling the
-    # global rate limit. Revisit when slowapi supports starlette 1.x.
-    #
-    # The starlette advisories fixed only in 1.x are handled at the app layer
-    # instead: the reachable one (Host header reflected into redirect Location) is
-    # closed by TrustedHostMiddleware in main.py, and the rest are unreachable here
-    # (no request.form(), no HTTPEndpoint, no StaticFiles).
-    "starlette>=0.52.1,<1.0",
+    # Declared directly, not left to fastapi's own `starlette>=0.46.0`, so the
+    # resolver can never fall back below 1.3.1: every release before it carries
+    # at least one of PYSEC-2026-161 / -248 / -249 / -2280 / -2281, all fixed
+    # only in the 1.x line (1.3.1 closes the last of them). The `<1.0` cap that
+    # used to sit here existed only for slowapi, which is gone.
+    "starlette>=1.3.1,<2.0",
     "uvicorn[standard]>=0.54.0,<1.0",
 ]
 
@@ -169,6 +167,13 @@ markers = [
 # since this is process-wide pytest config: unit, integration, e2e,
 # benchmark, and the Ollama-gated local lane. `mise run evals` is out of
 # scope by construction -- it invokes evals.runner directly, not pytest.
+# Re-censused 2026-10-03 for the slowapi removal (starlette 0.52.1 -> 1.7.0,
+# fastapi 0.136.3 -> 0.142.2) across unit, integration, e2e, and the live
+# `-m redis` lane: 1608 passed / 16 skipped, plus 9 redis cases. The
+# `starlette.testclient` DeprecationWarning entry (anyio's BlockingPortal alias)
+# is gone with starlette 0.52.1. starlette 1.x reports its own deprecations as
+# `StarletteDeprecationWarning`, a UserWarning, so it is promoted explicitly
+# below. Benchmark and the Ollama-gated lane were not run this round.
 # Re-censused 2026-09-05 against pydantic-ai-slim 2.40.0, pydantic-ai-litellm
 # 0.2.8, litellm 1.99.0, and anyio 4.15.0 (the dependency refresh that also
 # retired the redis shelved major). Lanes actually run: unit, integration, e2e,
@@ -205,20 +210,18 @@ markers = [
 # constraint bump.
 filterwarnings = [
     "error::DeprecationWarning",
-    # Emitter: `starlette.testclient` (0.52.1). anyio 4.15.0 deprecated the
-    # `anyio.abc.BlockingPortal` alias, and starlette's `testclient.py` still
-    # reads it at module import to build `_PortalFactoryType`. The warning is
-    # attributed (stacklevel=3) to `starlette.testclient`, not to anyio, so this
-    # entry names the module the filter actually matches. It fires at COLLECTION
-    # time for every module that imports `TestClient`, which is why the whole
-    # unit lane errors out without it.
-    #
-    # Not fixable by upgrading: starlette moved off the alias in 1.x, and this
-    # project is held at `starlette<1.0` because slowapi 0.1.10 is incompatible
-    # with starlette 1.x (see the pin comment in [project].dependencies). Remove
-    # this entry the moment that cap can be lifted -- it is scoped to the single
-    # emitting module, so a deprecation raised anywhere else still hard-fails.
-    "ignore::DeprecationWarning:starlette.testclient",
+    # starlette 1.x raises its own deprecations as `StarletteDeprecationWarning`,
+    # a `UserWarning` subclass that `error::DeprecationWarning` above does NOT
+    # catch. Promote it explicitly so a starlette deprecation hard-fails like
+    # any other. (The `ignore::DeprecationWarning:starlette.testclient` entry that
+    # used to sit here is gone: it covered starlette 0.52.1 reading anyio's
+    # deprecated `BlockingPortal` alias, which 1.x no longer does.)
+    "error::starlette.exceptions.StarletteDeprecationWarning",
+    # Emitter: `starlette.testclient` (1.7.0) at import time, when it falls back
+    # to `httpx` because `httpx2` is not installed. Scoped to that one message,
+    # so every other starlette deprecation still fails. Remove it when the test
+    # suite's `TestClient` users move to `httpx2` (or to `httpx.ASGITransport`).
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
     # Emitter: `chromadb.types` (0.6.3). pydantic 2.11 deprecated reading
     # `model_fields` off an *instance*, and chromadb's `types.py` still does
     # exactly that in `get_model_fields()` (called from `Collection.__getitem__`).

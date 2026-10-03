@@ -9,7 +9,6 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from pydantic_ai.models import Model
-from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.errors import register_error_handlers
@@ -83,7 +82,7 @@ def create_app(
         },
     )
 
-    # Initialize rate limiting (slowapi) with quick workaround
+    # Initialize rate limiting (app/middleware/rate_limit.py) with quick workaround
     # Quick workaround (Option C): Accept that health endpoints will be rate limited,
     # but set a very high limit (1000/minute) that effectively exempts them in practice.
     # Trade-off: Health checks get rate limited, but at such a high threshold they won't
@@ -97,18 +96,21 @@ def create_app(
     # routes. What bounds it is `ReadinessProbeCache` (`app/api/health.py`), not this
     # limit. Any future unauthenticated route that touches a metered dependency needs
     # its own bound for the same reason.
+    #
+    # The 1000/minute bucket is one per client across ALL routes (and 404s), not
+    # per (client, endpoint) as under slowapi - the middleware counts before routing,
+    # which is what keeps fastapi>=0.137's `_IncludedRouter` from switching it off.
+    # `add_rate_limiting` installs that middleware itself, at this position in the
+    # stack (innermost of the middleware added below), where `SlowAPIMiddleware` sat.
     add_rate_limiting(
         app,
-        default_limits=["1000/minute"],
+        default_limit="1000/minute",
         storage_uri=resolved_settings.redis_url,
     )
     logger.info(
         "Initialized rate limiting (1000/minute default, storage=%s)",
         "redis" if resolved_settings.redis_url else "memory",
     )
-
-    # Add SlowAPIMiddleware to enforce rate limiting on all routes
-    app.add_middleware(SlowAPIMiddleware)  # type: ignore[arg-type]
 
     # Add security headers middleware
     # Added first so it applies to all responses (executes last in the middleware chain)
