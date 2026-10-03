@@ -173,7 +173,7 @@ createChatAgent(deps, {
 
 ## (b) 兄弟リポジトリの教材
 
-- `pydantic-ai-agentic-patterns` [第3章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part1/ch03.md) — Prompt Caching と ContextManager（prune・compact・JIT）
+- `pydantic-ai-agentic-patterns` 第3章 — Prompt Caching と ContextManager（prune・compact・JIT）
 - `fastapi-pydantic-ai-agent` [`app/stores/session_store/_trim.py`](https://github.com/Fukuchan77/fastapi-pydantic-ai-agent/blob/main/app/stores/session_store/_trim.py) — 機械的トリムの不変条件（メッセージ境界のみで切る、tool-call ペアを孤児化しない）
 - `pydantic-ai-sandbox` [`patterns/deep-research/src/patterns_deep_research/notes.py`](https://github.com/Fukuchan77/pydantic-ai-sandbox/blob/main/patterns/deep-research/src/patterns_deep_research/notes.py) — 構造化ノートテイキング（CE-3、外部メモ）
 

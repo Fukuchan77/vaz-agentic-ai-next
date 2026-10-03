@@ -11,7 +11,7 @@
 
 ## (b) 兄弟リポジトリの教材
 
-- `pydantic-ai-agentic-patterns` [第2章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part1/ch02.md) — Claude API と Anthropic Python SDK
+- `pydantic-ai-agentic-patterns` 第2章 — Claude API と Anthropic Python SDK
 - `fastapi-pydantic-ai-agent` [`docs/tool-design-conventions.md`](https://github.com/Fukuchan77/fastapi-pydantic-ai-agent/blob/main/docs/tool-design-conventions.md) — ツール description の規約（PE-5: 「いつ呼ぶか」を規範的に書く）
 - `pydantic-ai-sandbox` [`patterns/TOOL-DESIGN-NOTES.md`](https://github.com/Fukuchan77/pydantic-ai-sandbox/blob/main/patterns/TOOL-DESIGN-NOTES.md) — 同上の実装
 

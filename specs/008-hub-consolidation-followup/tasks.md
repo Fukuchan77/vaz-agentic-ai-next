@@ -79,14 +79,21 @@
       （推移依存ごと 82 行減）。`.pre-commit-config.yaml` を指していた 2 か所の記述を、現在の置き場所に直した。
 - [x] **検証**: `services/api` で ruff / ty が clean、pytest は 1591 passed / 23 skipped（coverage 96.56%）、
       `api:audit` は「No known vulnerabilities found, 14 ignored」。ハブ側は biome clean、`repo` プロジェクト 65 passed。
-- [ ] **ユーザ判断待ち**: `pydantic-ai-agentic-patterns` の所在（下記）。
+- [x] `pydantic-ai-agentic-patterns` は非公開でアーカイブ済みと確認した（ユーザ回答）。`docs/guide/` の 7 ページから
+      同リポジトリへのリンク 30 本を外し、章名とパスは記録として残した。`docs/guide/README.md` と
+      `agentic-engineering.md` に日付つきの注記を入れた。ADR・spec 内の言及は時点の記録なので変更していない。
+- [x] `agentic-ai-sandbox/reference/`（`pydantic-ai-sandbox` の旧版コピー）を削除し、`pydantic-ai-sandbox` を正本とした
+      （ユーザ判断）。移転先を案内する `reference/README.md` だけを残し、文書のリンクを `pydantic-ai-sandbox` の URL に
+      付け替え（リンク先の実在を確認済み）、`reference:*`・`patterns:*` の mise タスク、reference 専用の
+      ワークフロー 5 本、Dependabot の uv ブロック 2 つ、`security.yml` の pip-audit ジョブを外した。
+      同リポジトリの `claude/gracious-turing-1xd2gg` にコミット `b09d764` を作成済み。
+- [ ] **push 待ち**: このセッションには `agentic-ai-sandbox` への書き込み権限が無い（Claude GitHub App が未導入）。
+      権限を付与したうえで push するか、ユーザが手元で取り込む。
 
 ## 申し送り
 
-- ハブの [`docs/guide/README.md`](../../docs/guide/README.md) は `pydantic-ai-agentic-patterns` の書籍原稿 14 章へリンクしている。
-  2026-10-03 時点で、このリポジトリは本アカウントのリポジトリ一覧に無く、匿名の HTTPS 取得も 403 だった。
-  `agentic-ai-sandbox` に統合された形跡も無い（同リポジトリの `learn/` は旧 `agentic-ai-bootcamp`、
-  `reference/` は `pydantic-ai-sandbox` の旧版コピー）。リネーム・非公開化・削除のどれかをユーザが確認したうえで、
-  リンクを付け替えるか、対応表を「参照不能」と注記する。
-- `agentic-ai-sandbox/reference/` が `pydantic-ai-sandbox` の旧版（spec 011 まで。012・013 が無い）を
-  丸ごと抱えている。ADR-0007 で解消した FastAPI レーンと同じ二重保守の形なので、どちらを正本にするかの判断が要る。
+- `agentic-ai-sandbox/learn/` のロックファイルには、修正版のある既知の脆弱性が 11 パッケージ・106 件ある
+  （`nltk` 53 件、`pillow` 25 件ほか。いずれも修正版あり）。同ティアは Dependabot の対象外と明記されており、
+  `security.yml` の pip-audit も `reference/` だけを見ていたため、これまで検知されていなかった。
+  pip-audit をこのティアへ向けるかどうかは方針の変更になるため、今回の削除には含めていない。
+  ロックを更新してから監視対象に加えるのが順序として安全。

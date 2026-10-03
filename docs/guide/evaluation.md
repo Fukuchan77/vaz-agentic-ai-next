@@ -15,7 +15,7 @@
 
 - `pydantic-ai-sandbox` [`patterns/contracts/src/patterns_contracts/eval_graders.py`](https://github.com/Fukuchan77/pydantic-ai-sandbox/blob/main/patterns/contracts/src/patterns_contracts/eval_graders.py) — `Judge[SubjectT]` Protocol（judge をモデルから切り離す DI シーム）、`Rating` に `"unknown"` を持つ（証拠不足を無理に数値化しない）
 - `fastapi-pydantic-ai-agent` [`evals/graders.py`](https://github.com/Fukuchan77/fastapi-pydantic-ai-agent/blob/main/evals/graders.py)（Outcome/Behavior 2 軸）・[`evals/pr_gate.py`](https://github.com/Fukuchan77/fastapi-pydantic-ai-agent/blob/main/evals/pr_gate.py)（このハブの `pr-gate.ts` の設計を Python へ移植したもの）
-- `pydantic-ai-agentic-patterns` [第13章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part5/ch13.md) — 長期記憶・3 層評価・Tool Guardrails（`EvalSuite` 3 層）
+- `pydantic-ai-agentic-patterns` 第13章 — 長期記憶・3 層評価・Tool Guardrails（`EvalSuite` 3 層）
 
 ## (c) 正本レビューの関連項目
 

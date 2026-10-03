@@ -18,7 +18,7 @@
   の `_print_usage()`（マルチエージェント構成の ~15 倍コスト可視化）と
   `pydantic-ai-sandbox/patterns/deep-research/COMPARISON.md`（6 パターンの比較表）。
   マルチエージェント化を検討する際の判断材料（実装は不要、読み物としての参照）
-- `pydantic-ai-agentic-patterns` [第1章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part1/ch01.md)・[第8章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part3/ch08.md)・[第10章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part4/ch10.md)・[第12章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part4/ch12.md) — AI エージェント序章、デザインパターン、Orchestrator-Workers、総合実践
+- `pydantic-ai-agentic-patterns` 第1章・第8章・第10章・第12章 — AI エージェント序章、デザインパターン、Orchestrator-Workers、総合実践
 
 ### Anthropic 6 パターンの正本（Phase 3・spec `006` R7.1/R7.2）
 
@@ -29,14 +29,17 @@
 引き剥がすと、対応する章の解説から実装が分離し、書籍としての一体性を壊す）。代わりに
 **リンク先の使い分けを固定する**:
 
+> 2026-10-03 以降、下表の `pydantic-ai-agentic-patterns` 側の列は非公開アーカイブのためリンクを外している
+> （記録として残す。[`README.md`](./README.md) の書籍原稿の節を参照）。
+
 | パターン | 教材用の単純版（正本） | 比較版（3 FW、参照のみ） |
 |---|---|---|
-| Prompt Chaining | [`src/part3_workflows/prompt_chaining.py`](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/src/part3_workflows/prompt_chaining.py) | [`patterns/prompt-chaining/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/prompt-chaining) |
-| Routing | [`src/part3_workflows/routing_workflow.py`](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/src/part3_workflows/routing_workflow.py) | [`patterns/routing/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/routing) |
-| Parallelization | [`src/part3_workflows/parallel_workflow.py`](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/src/part3_workflows/parallel_workflow.py) | [`patterns/parallelization/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/parallelization) |
-| Evaluator-Optimizer | [`src/part3_workflows/evaluator_optimizer.py`](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/src/part3_workflows/evaluator_optimizer.py) | [`patterns/evaluator-optimizer/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/evaluator-optimizer) |
-| Orchestrator-Workers | [`src/part4_multi_agent_rag/research_system/orchestrator.py`](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/src/part4_multi_agent_rag/research_system/orchestrator.py) | [`patterns/orchestrator-workers/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/orchestrator-workers) |
-| Autonomous Agent | [`src/part5_production/guarded_agent.py`](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/src/part5_production/guarded_agent.py)（**部分的** — ガードレール付きの自律エージェントであり、独立パターンとしての実装ではない） | [`patterns/autonomous-agent/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/autonomous-agent) |
+| Prompt Chaining | `src/part3_workflows/prompt_chaining.py` | [`patterns/prompt-chaining/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/prompt-chaining) |
+| Routing | `src/part3_workflows/routing_workflow.py` | [`patterns/routing/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/routing) |
+| Parallelization | `src/part3_workflows/parallel_workflow.py` | [`patterns/parallelization/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/parallelization) |
+| Evaluator-Optimizer | `src/part3_workflows/evaluator_optimizer.py` | [`patterns/evaluator-optimizer/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/evaluator-optimizer) |
+| Orchestrator-Workers | `src/part4_multi_agent_rag/research_system/orchestrator.py` | [`patterns/orchestrator-workers/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/orchestrator-workers) |
+| Autonomous Agent | `src/part5_production/guarded_agent.py`（**部分的** — ガードレール付きの自律エージェントであり、独立パターンとしての実装ではない） | [`patterns/autonomous-agent/`](https://github.com/Fukuchan77/pydantic-ai-sandbox/tree/main/patterns/autonomous-agent) |
 
 `I-H10`（`pydantic-ai-agentic-patterns/specs/review/integrated/findings.md`）— 教材側が
 まだ持たない停止理由の語彙化・トークン予算は、`services/api`（`app/agents/guardrails.py`）の
