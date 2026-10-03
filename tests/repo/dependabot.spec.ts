@@ -6,7 +6,7 @@ import { parse } from "yaml";
  * X-15 guard: `.github/dependabot.yml` must exist, cover every ecosystem this
  * workspace actually has (npm/pnpm workspace, the uv-managed Python sidecar,
  * GitHub Actions), and keep its `ignore:` list for the npm ecosystem in sync
- * with the 3 majors AGENTS.md/CLAUDE.md record as deliberately held back —
+ * with the majors AGENTS.md/CLAUDE.md record as deliberately held back —
  * so a bump to one of those ranges in root `package.json` doesn't silently
  * leave a stale (or missing) `ignore:` entry behind. Modeled on
  * `fastapi-pydantic-ai-agent/tests/unit/test_dependabot_config.py`
@@ -34,8 +34,6 @@ const ROOT = new URL("../../", import.meta.url);
 // Deliberately-held-back majors (AGENTS.md / CLAUDE.md): package.json pins the
 // range below; dependabot.yml must ignore the next major and above.
 const HELD_BACK: ReadonlyArray<{ name: string; heldMajor: number }> = [
-	{ name: "vitest", heldMajor: 4 },
-	{ name: "@vitest/coverage-v8", heldMajor: 4 },
 	{ name: "typescript", heldMajor: 6 },
 	{ name: "@types/node", heldMajor: 24 },
 ];

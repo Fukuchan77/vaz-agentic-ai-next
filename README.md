@@ -23,7 +23,7 @@ By eliminating boilerplate optimization via the React Compiler and leveraging a 
 | Runtime validation       | [Zod v4](https://zod.dev)                                                                                                                      |
 | Language                 | [TypeScript 6](https://www.typescriptlang.org)                                                                                                 |
 | Lint / Format            | [Biome 2.5+](https://biomejs.dev)                                                                                                              |
-| Unit testing             | [Vitest 4](https://vitest.dev) + [Testing Library](https://testing-library.com)                                                                |
+| Unit testing             | [Vitest 5](https://vitest.dev) + [Testing Library](https://testing-library.com)                                                                |
 | E2E testing              | [Playwright](https://playwright.dev) (Chromium / Firefox)                                                                                      |
 | UI components            | [Carbon Design System](https://carbondesignsystem.com) (`@carbon/react`, per-component SCSS)                                                   |
 | Database                 | [PostgreSQL](https://www.postgresql.org) + [pgvector](https://github.com/pgvector/pgvector) via [Drizzle ORM](https://orm.drizzle.team)        |
