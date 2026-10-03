@@ -33,6 +33,7 @@ from app.models.agent import ChatResponse
 from app.security.principal import Principal
 from app.services.session_service import authorize_session
 from app.services.session_service import start_session
+from app.stores.session_store._trim import shrink_for_budget_recovery
 
 
 logger = logging.getLogger(__name__)
@@ -116,12 +117,22 @@ async def chat(
 
     # Save updated message history back to session store, only for a
     # completed turn - a refused/denied/budget-blocked turn has no new
-    # messages to persist and must not overwrite existing history.
+    # messages to persist and must not overwrite existing history with them.
     if guarded.stop_reason == "completed":
         await deps.session_store.save_history(
             session_id,
             guarded.messages,
         )
+    elif guarded.stop_reason == "budget_exceeded" and history:
+        # A budget-exceeded turn contributes no new messages, but leaving the
+        # *existing* stored history untouched would brick the session: if
+        # that history alone is already enough to trip
+        # `usage_total_tokens_limit`, every future turn hits the same wall
+        # forever (until the session's TTL expires). Halve it so a following
+        # turn has a chance to fit under budget.
+        recovered = shrink_for_budget_recovery(history)
+        if len(recovered) < len(history):
+            await deps.session_store.save_history(session_id, recovered)
 
     # Count ToolCallPart instances in ModelResponse messages
     tool_calls_made = sum(

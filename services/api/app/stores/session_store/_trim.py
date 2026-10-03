@@ -31,6 +31,33 @@ type is Stage 1 of.
 """
 
 
+def shrink_for_budget_recovery(history: Sequence[ModelMessage]) -> list[ModelMessage]:
+    """Halve `history` after a `budget_exceeded` stop so the session can recover.
+
+    `session_max_messages` only bounds runaway *growth* — a session whose
+    already-persisted history alone is enough to trip
+    `Settings.usage_total_tokens_limit` stays stuck at `budget_exceeded`
+    forever otherwise, since `trim_history()` only runs on a save and a
+    budget-exceeded turn persists no new messages (there is nothing to
+    trigger one). Each call here halves the retained message count, subject
+    to the same tool-call-pairing invariant `trim_history()` enforces, so
+    repeated budget-exceeded turns make monotonic progress toward a history
+    short enough to fit, rather than looping at a fixed size until the
+    session's TTL expires.
+
+    Args:
+        history: The session's currently persisted history (loaded before
+            the budget-exceeded run).
+
+    Returns:
+        The halved history, or `history` unchanged (as a list) once it is
+        too short (fewer than 2 messages) to shrink further.
+    """
+    if len(history) < 2:
+        return list(history)
+    return trim_history(history, len(history) // 2)
+
+
 def trim_history(messages: Sequence[ModelMessage], max_messages: int) -> list[ModelMessage]:
     """Return at most `max_messages` of the most recent messages.
 

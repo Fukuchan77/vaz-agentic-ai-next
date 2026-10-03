@@ -19,11 +19,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 >   hub workflows, `api.yml` included.
 > - `.github/dependabot.yml` → merged into the hub's root `.github/dependabot.yml` as a second `uv`
 >   ecosystem entry (`directory: "/services/api"`), carrying this repo's `ignore:` list verbatim.
-> - `.pre-commit-config.yaml` / `.githooks/pre-push` → **not yet wired into the hub's shared
->   `.githooks/pre-push`**. This is a known, deliberate gap (not a defect this note is hiding): the
->   hub's single shared pre-push hook currently runs Playwright E2E only, and folding this lane's
->   Ollama-gated `test:local` + `evals` probe into it is a follow-up, not part of Task 6's boundary.
->   Run `mise run api:test:local` / `mise run api:evals` manually until that lands.
+> - `.pre-commit-config.yaml` / `.githooks/pre-push` → **wired into the hub's shared hooks** (spec
+>   `008`, 2026-10-03) as two leg scripts the hub's `.githooks/pre-commit` / `.githooks/pre-push` call:
+>   [`scripts/hooks/pre-commit.sh`](scripts/hooks/pre-commit.sh) (`api:lint`, the
+>   `real-tool-conventions-guard`, and `api:audit` when `pyproject.toml`/`uv.lock` is staged — a no-op
+>   unless `services/api/` is staged; gitleaks and the model-id guard are the hub's own steps) and
+>   [`scripts/hooks/pre-push.sh`](scripts/hooks/pre-push.sh) (the Ollama-gated
+>   `EXPECT_LIVE_TESTS=6 api:test:local` + `api:evals`, run only when a pushed commit touches
+>   `services/api/`; it probes `API_OLLAMA_BASE_URL`, default `http://localhost:11434`, *not* the
+>   hub's `/v1`-suffixed `OLLAMA_BASE_URL`). `tests/unit/test_pre_commit_hook.py` and
+>   `tests/unit/test_pre_push_hook.py` cover both, and `mise run hooks:install` no longer exists.
 > - `mise.toml` → its tasks were ported into the hub's root `mise.toml`, each `api:`-prefixed and
 >   `dir = "services/api"`-scoped (`api:check` mirrors `services/agent`'s `py:check`: `uv sync` →
 >   `ruff check` → `ty check` → `pytest` (unit+integration+e2e, coverage gate) → `api:audit`,
@@ -59,7 +64,6 @@ mise run evals               # offline LLM-judge golden set; makes REAL LLM call
 mise run lint                # ruff check + ty check (type checker is `ty`, NOT mypy)
 mise run format              # ruff format
 mise run audit               # pip-audit dependency vulnerability scan
-mise run hooks:install       # install the pre-commit hook
 mise run build               # docker build
 ```
 
@@ -104,8 +108,8 @@ A fourth coupling is not a version bound but a private-API dependency: `rate_lim
 
 - **PR CI** (`.github/workflows/pr.yml`): lint → `test:ci` → `test:redis` → `audit`. Never runs live LLM or Ollama tests, nor the `chroma`-marked tests (they self-skip unless `RUN_CHROMA_INTEGRATION_TESTS` is set, since they download a Hugging Face embedding model). The `redis`-marked lane does run here — CI starts a `redis:7-alpine` service container and the step sets `EXPECT_LIVE_TESTS=7` so a broken container fails the run instead of passing as a silent zero-collected green. `asyncio_mode = "auto"` means an unmarked coroutine test in this lane still runs instead of silently passing unawaited.
 - **Nightly** (`.github/workflows/security.yml`): `pip-audit` + gitleaks, cron `37 3 * * *`. Steps run sequentially, so a red `pip-audit` step means gitleaks never runs at all that night — this hid a real problem for months: every run from 2026-08-16 through 2026-08-28 failed on `pip-audit` alone, so gitleaks (last in the job) silently never executed. The first time it did run (2026-08-29, once the audit failure was fixed), it surfaced 365 pre-existing findings across `main`'s full history, all confirmed false positives (dummy `test-`/`sk-test-`-style API keys in `tests/**` fixtures, plus 4 placeholder `-H "X-API-Key: ..."` lines in `README.md`'s curl examples) — none in `app/`. `.gitleaksignore` at the repo root lists all 365 by their exact `<commit>:<file>:<rule>:<line>` fingerprint (gitleaks' own `Fingerprint` field), generated via `gitleaks detect --source . --report-format json`. This is scoped per-fingerprint, not per-secret-text or per-path: reusing an already-ignored dummy string in a *new* commit still gets a fresh, unlisted fingerprint and still fails the scan (verified) — so this file cannot mask a newly introduced secret, only the 365 specific historical lines it names. Regenerate by re-running the same command and appending new fingerprints; don't hand-edit existing ones.
-- **pre-commit** (`.pre-commit-config.yaml`): gitleaks, `pip-audit`, a pygrep `no-hardcoded-model-id` guard, and an inert `real-tool-conventions-guard` that fires the moment a non-mock `@agent.tool` appears under `app/agents/` (forcing a read of `docs/tool-design-conventions.md`).
-- **pre-push** (`.githooks/pre-push`, enable with `git config core.hooksPath .githooks`): availability-gated — probes `${OLLAMA_BASE_URL}/api/tags`, runs `EXPECT_LIVE_TESTS=6 mise run test:local` + `evals` when reachable (the pinned count guards against a lane that silently collects zero live cases), warns and lets the push through when not.
+- **pre-commit** (`scripts/hooks/pre-commit.sh`, called by the hub's `.githooks/pre-commit`): `ruff`+`ty`, `pip-audit` when the dependency set changed, and an inert `real-tool-conventions-guard` that fires the moment a non-mock `@agent.tool` appears under `app/agents/` (forcing a read of `docs/tool-design-conventions.md`). gitleaks and the model-id guard run as the hub's own pre-commit steps for every commit.
+- **pre-push** (`scripts/hooks/pre-push.sh`, called by the hub's `.githooks/pre-push`): availability-gated — probes `${API_OLLAMA_BASE_URL}/api/tags`, runs `EXPECT_LIVE_TESTS=6 mise run test:local` (`api:test:local` from the hub root) + `evals` when reachable (the pinned count guards against a lane that silently collects zero live cases), warns and lets the push through when not. Skips entirely when no pushed commit touches `services/api/`.
 - **Dependabot** (`.github/dependabot.yml`): weekly `uv` and `github-actions` updates, with the `uv` ecosystem's minors and patches grouped into one PR. Its `ignore:` list is what keeps it from proposing the bumps the pins above forbid: `starlette` majors, **`fastapi` minors *and* majors** (Dependabot classifies fastapi's 0.x releases by patch position, so `0.136 → 0.137` is a *minor* — ignoring only majors would let the rate-limit-breaking bump through), plus `chromadb` and `redis` majors, which are shelved pending a client-compatibility pass rather than forbidden (redis's pass was run on 2026-09-05 and its client is now on 8.x; the entry now shelves redis 9.x). `tests/unit/test_dependabot_config.py` is the guard that keeps those entries present; `docs/dependency-runbook.md` is the process for accepting or shelving anything that does arrive.
 
 ## Architecture

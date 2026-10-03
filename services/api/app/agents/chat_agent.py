@@ -87,19 +87,50 @@ def build_model(settings: Settings) -> Model:
     )
 
 
-async def _build_system_prompt(ctx: RunContext[AgentDeps]) -> str:
-    """Build dynamic system prompt for the chat agent.
+def _has_registered_tools(settings: Settings) -> bool:
+    """Report whether `build_chat_agent(settings=settings)` registers any tools.
+
+    Mirrors the exact gate `build_chat_agent` uses to decide whether to call
+    `register_mock_tools` (Req: mock tools double-guarded by `app_env` and
+    `enable_mock_tools`). A production build, or one with mock tools
+    disabled, registers zero tools - `_build_instructions` must not claim
+    otherwise.
+    """
+    return settings.app_env != "production" and settings.enable_mock_tools
+
+
+async def _build_instructions(ctx: RunContext[AgentDeps]) -> str:
+    """Build dynamic agent instructions, accurate to whether any tool is registered.
+
+    Registered via `agent.instructions()`, not `agent.system_prompt()`:
+    `system_prompt` is invoked once per conversation and its output is
+    persisted as part of `message_history` (`messages[0]`'s
+    `SystemPromptPart`) - once a session has history, pydantic-ai replays
+    that persisted text instead of calling the builder again, so an updated
+    prompt never reaches an existing session until it expires.
+    `instructions` is re-evaluated on every request regardless of history
+    and is never itself written into persisted messages, so a prompt change
+    (or, here, a per-build tool-availability fact) takes effect on a
+    session's very next turn.
 
     Args:
         ctx: RunContext with AgentDeps providing access to settings.
 
     Returns:
-        System prompt string.
+        Instructions string. Only claims tool access when
+        `_has_registered_tools` says a tool was actually registered on this
+        build - the production build (no mock tools) gets a tool-free
+        prompt instead of an inaccurate one.
     """
+    if _has_registered_tools(ctx.deps.settings):
+        return (
+            "You are a helpful AI assistant with access to tools. "
+            "Use the available tools when needed to answer user questions accurately. "
+            "Be concise and informative in your responses."
+        )
     return (
-        "You are a helpful AI assistant with access to tools. "
-        "Use the available tools when needed to answer user questions accurately. "
-        "Be concise and informative in your responses."
+        "You are a helpful AI assistant. "
+        "Answer user questions accurately and concisely from your own knowledge."
     )
 
 
@@ -114,7 +145,9 @@ def build_chat_agent(
     - str output when the model's profile doesn't support JSON-schema output,
       or NativeOutput(ChatOutput) when it does (Req 10.2/10.3)
     - Configurable output retries for validation failures
-    - Dynamic system prompt builder
+    - Dynamic instructions builder, re-evaluated every request (not baked
+      into persisted session history) and accurate to whether any tool is
+      actually registered on this build
     - Registered mock tools (when enabled in non-production environments)
 
     The agent is instrumented with Logfire for observability, automatically
@@ -174,14 +207,16 @@ def build_chat_agent(
         end_strategy="early",
     )
 
-    # Register dynamic system prompt builder
-    agent.system_prompt(_build_system_prompt)
+    # Register dynamic instructions builder. `_has_registered_tools` below
+    # uses the exact same gate as the tool registration a few lines down, so
+    # the two can never drift out of sync with each other.
+    agent.instructions(_build_instructions)
 
     # Register mock tools only in non-production environments
     # CRITICAL: Mock tools are separated into tools_mock.py and only imported
     # when app_env is NOT production. This prevents accidental mock tool usage
     # in production even if enable_mock_tools is misconfigured.
-    if settings.app_env != "production" and settings.enable_mock_tools:
+    if _has_registered_tools(settings):
         from app.agents.tools_mock import register_mock_tools
 
         register_mock_tools(agent)

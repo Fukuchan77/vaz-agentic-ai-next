@@ -14,11 +14,15 @@ on:
     branches: [main]
     paths:
       - "services/api/**"
+      # Compared against the live app by tests/unit/test_hub_contract_snapshot.py (spec 008).
+      - "packages/schemas/src/generated/api-service.*"
       - "mise.toml"
       - ".github/workflows/api.yml"
   pull_request:
     paths:
       - "services/api/**"
+      # Compared against the live app by tests/unit/test_hub_contract_snapshot.py (spec 008).
+      - "packages/schemas/src/generated/api-service.*"
       - "mise.toml"
       - ".github/workflows/api.yml"
 
