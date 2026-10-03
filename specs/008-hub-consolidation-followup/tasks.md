@@ -60,7 +60,7 @@
 
 - [x] `pydantic-ai-sandbox/docs/slowapi-replacement-plan.md` を作成した。3 つの据え置きの共通原因を特定し、
       候補を比較（`limits` 直結の自前実装を推奨）し、Python 3.15 の検証レーンとハブへの取り込み条件を定めた。
-- [ ] 検証レーン `patterns/rate-limit/` の実装（計画の第 4 節）。
+- [x] 検証レーン `patterns/rate-limit/` の実装（計画の第 4 節）→ `pydantic-ai-sandbox` PR #40。ハブへの取り込みは #76。
 
 ## 6. 教材とガイド・UI 標準（R6）
 
@@ -68,7 +68,7 @@
 - [x] ハブの [`docs/guide/README.md`](../../docs/guide/README.md) に、逆向きの対応表と
       「教材コードを第 3 の本番実装にしない」規則を追加した。
 - [x] [ADR-0008](../../docs/adr/0008-ui-component-standard.md)（shadcn/ui + Tailwind）を起票した。
-- [ ] Carbon → shadcn/ui の移行 spec の起票（ADR-0008 Consequences）。
+- [x] Carbon → shadcn/ui の移行 spec の起票（ADR-0008 Consequences）→ [spec `009`](../009-agent-ui-and-beta-intake/spec.md) R1〜R4（2026-10-03）。
 
 ## 7. 後始末（2026-10-03、#64 マージ後）
 
