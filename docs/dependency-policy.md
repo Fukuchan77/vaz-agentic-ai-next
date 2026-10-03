@@ -194,9 +194,10 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
   場合、`allowBuilds` に対応エントリ(既定 `false`)が追加されていないと `pnpm install` が
   失敗する。このゲートを迂回する設定(`--ignore-scripts` の既定化等)は行わない —
   ボット PR も人間の PR と同じ audited-decision フローに従う。
-- **保留中メジャーとの整合**: AGENTS.md の「Three majors are deliberately held back」
-  (vitest / typescript / @types/node)は `.github/dependabot.yml` の `ignore` に写してある。
-  据え置き判断を追加・撤回するときは両方を同じ PR で更新する。
+- **保留中メジャーとの整合**: AGENTS.md / CLAUDE.md の据え置き記述
+  (typescript / @types/node)は `.github/dependabot.yml` の `ignore` と
+  `tests/repo/dependabot.spec.ts` の `HELD_BACK` 表に写してある。
+  据え置き判断を追加・撤回するときは 3 つを同じ PR で更新する。
 - **レビュー負荷**: 自動生成 PR が `pnpm-workspace.yaml`(overrides/allowBuilds)を触る場合、
   §6 の撤去条件表・レビュー運用と重複しないよう、「ボット PR も `pnpm-workspace.yaml`
   変更時レビュー対象」の運用に一本化する。
@@ -217,7 +218,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 
 | レーン | リポジトリ | 検証対象（2026-10-03 時点） |
 |---|---|---|
-| TypeScript ベータ | `Fukuchan77/next-agentic-stack` | TypeScript 7.1 nightly、Next.js canary、Vitest 5、Node 26、Playwright alpha |
+| TypeScript ベータ | `Fukuchan77/next-agentic-stack` | TypeScript 7.1 nightly、Next.js canary、Node 26、Playwright alpha |
 | Python ベータ | `Fukuchan77/pydantic-ai-sandbox` | Python 3.15、pydantic-ai のベータ機能、slowapi を外した starlette 1.x / 最新 FastAPI |
 
 ### 8.1 据え置き中のメジャーと、取り込みに必要な証拠
@@ -227,7 +228,6 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 
 | 据え置き | 障害（正本） | ベータレーンで示すべきこと |
 |---|---|---|
-| `vitest` 4.x | 5.x はテスト間でモック状態をリセットする。`apps/web/tests/auth.spec.ts` がテストをまたいで `NextAuthMock.mock.calls` を読むため壊れる（[`AGENTS.md`](../AGENTS.md)） | Vitest 5 下で、テストをまたいだモック参照を持たない書き方。ハブに持ち込める差分として示す |
 | `typescript` 6.x | TS 7 はネイティブ移植で、JS の compiler API が無い（[`CLAUDE.md`](../CLAUDE.md)） | ハブが使う compiler API 依存のツール（`openapi-typescript`、`next typegen` など）が TS 7 下で通ること |
 | `@types/node` `^24` | ランタイムの Node 24 LTS に合わせている | Node のランタイム側を上げる判断が先。型だけを先行させない |
 | `fastapi<0.137` / `starlette<1.0` / Python 3.13 固定 | 3 つとも slowapi が根本原因（`services/api/CLAUDE.md`「Dependency pins that are load-bearing」） | `pydantic-ai-sandbox` の slowapi 置き換え計画（`docs/slowapi-replacement-plan.md`）の検証レーンが green であること |
@@ -239,6 +239,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 2. **ハブ側は 1 メジャーにつき 1 PR。** PR 本文にベータレーンの記録をリンクする。
    同じ PR で次をまとめて更新する。
    - `.github/dependabot.yml` の `ignore`（§7「保留中メジャーとの整合」）
+   - `tests/repo/dependabot.spec.ts` の `HELD_BACK` 表（該当行を削除しないと repo ガードが落ちる）
    - `CLAUDE.md` / `AGENTS.md` の据え置き記述（ペアで）
    - 8.1 の表の該当行（削除）
 3. **プレリリース版はハブのロックファイルに入れない。** 正式版の公開を待つ。

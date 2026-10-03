@@ -36,18 +36,10 @@ updates:
         patterns:
           - "ai"
           - "@ai-sdk/*"
-    # The 3 majors AGENTS.md/CLAUDE.md record as deliberately held back — each
-    # is a decision (see the "Three majors are deliberately held back" bullet
-    # there), not a stale range Dependabot should try to close.
+    # The majors AGENTS.md/CLAUDE.md record as deliberately held back — each
+    # is a decision (see the "held on purpose" bullet there), not a stale
+    # range Dependabot should try to close.
     ignore:
-      # Vitest 5 resets mock state between tests by default, which breaks
-      # apps/web/tests/auth.spec.ts's cross-test `NextAuthMock.mock.calls`
-      # read. Adopting it needs `clearMocks: false` or a spec rewrite —
-      # neither belongs in an automated bump.
-      - dependency-name: "vitest"
-        versions: [">=5"]
-      - dependency-name: "@vitest/coverage-v8"
-        versions: [">=5"]
       # TypeScript 7.0 is the native port; adopting it is an ADR-level
       # decision, not a range refresh.
       - dependency-name: "typescript"
