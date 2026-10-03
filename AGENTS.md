@@ -2,6 +2,8 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+The authoritative project constitution is [`.sdd/memory/constitution.md`](.sdd/memory/constitution.md).
+
 ## Commands
 
 Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnpm` / `uv` commands when mise is unavailable.
