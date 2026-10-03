@@ -41,12 +41,13 @@ Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnp
 - **Globals**: Vitest globals (`test`, `expect`, `vi`, `describe`, `beforeEach`) require no imports.
 - **Dependency Injection**: Always pass `deps: AgentDeps` (`db`, `logger`, `now: Clock`, optional `audit`, `runtimeContext`). Never invoke `new Date()` in agents/tools — use `deps.now()`.
 - **React 19 & Next.js**: React Compiler is enabled (`reactCompiler: true`); do not add manual `useMemo` or `useCallback`.
-- **Carbon Design System**: Never import `@carbon/react` wholesale (800kB+ bundle); add per-component `@use` to `apps/web/src/assets/styles/global.scss`. Any component using Carbon must declare `"use client"`.
+- **Carbon Design System**: Never import `@carbon/react` wholesale (800kB+ bundle); add per-component `@use` to `apps/web/src/assets/styles/global.scss`. Any component using Carbon must declare `"use client"`. Being phased out per [ADR-0008](docs/adr/0008-ui-component-standard.md): new agent UI components use shadcn/ui + Tailwind; these rules apply to existing Carbon screens until migrated.
 - **`next-auth` stays on v5 beta**: `next-auth@5.0.0-beta.*` is intentionally pinned (v5 is the only release with `peerDependencies: next ^14||^15||^16`). Do not upgrade to stable without checking peer compat. In Vitest, `next-auth` must be fully mocked via `vi.mock("next-auth", ...)` — its `lib/env.js` imports a bare `next/server` specifier that Vite/Vitest cannot resolve without Turbopack. The canonical mock pattern is in `apps/web/tests/auth.spec.ts`.
 
 ### Python (`services/agent` & `services/api`)
 - **`services/agent`**: `from __future__ import annotations` required on every module; ruff (line length 100, py313); pyright in strict mode. Snake_case for Pydantic schema fields.
 - **`services/api`**: Type checker is `ty` in strict mode (not mypy); Ruff with `S`, `ANN`, `D` (Google-style docstrings), `B`, `SIM`. `force-single-line = true` imports. Python pinned strictly to 3.13. All env access must go through `Settings` / `get_settings()`.
+- **`services/api` is the single source of truth for the FastAPI + Pydantic AI lane** ([ADR-0007](docs/adr/0007-fastapi-single-source-of-truth.md)). The former standalone `fastapi-pydantic-ai-agent` repository is archived (read-only); fix and evolve the lane here only. Its git-hook checks run as legs of the root `.githooks/` via `services/api/scripts/hooks/{pre-commit,pre-push}.sh`.
 
 ## Non-Obvious Architecture & Critical Constraints
 
