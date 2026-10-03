@@ -29,7 +29,7 @@ Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnp
 | Python API lane (`services/api`) | `mise run api:check` | `cd services/api && uv sync && uv run ruff check app/ evals/ tests/ && uv run ty check app/ evals/ && uv run pytest tests/unit/ tests/integration/ tests/e2e/ -v` |
 | Single Python test (`services/agent`) | — | `cd services/agent && uv run pytest tests/test_eval.py::test_name -v` |
 | Single Python test (`services/api`) | — | `cd services/api && uv run pytest tests/unit/stores/test_session_store.py::test_name -v` |
-| OpenAPI TS Codegen | `mise run openapi:gen` | Regenerates `packages/schemas/src/generated/agent-service.ts` from FastAPI Pydantic models |
+| OpenAPI TS Codegen | `mise run openapi:gen` | Regenerates `packages/schemas/src/generated/{agent-service,api-service}.ts` (+ snapshots, incl. `services/api`'s SSE-event JSON Schema) from both FastAPI lanes' Pydantic models |
 
 ## Code Style & Language Conventions
 
@@ -58,6 +58,7 @@ Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnp
 - **Dependency Graph Direction**: `@vaz/schemas` and `@vaz/db` are leaf packages (zero `@vaz/*` runtime imports). Next: `@vaz/config`, `@vaz/tools`, `@vaz/rag`. Next: `@vaz/agents`. Top: `apps/web`, `apps/worker`, `@vaz/evals`. Never create circular dependencies.
 - **RAG Provenance & Embeddings**: Dimension is DDL-fixed at 768 (`EMBEDDING_DIM`). `assertNoProviderMixing` forbids mixing embedding providers/models in a single corpus without migration and full re-ingest.
 - **Hermetic Unit Tests**: TypeScript unit tests block real network requests via `tests/setup/hermetic-network.ts` (unmocked network calls throw immediately). Python unit tests use in-process ASGI transports or `FunctionModel`.
+- **TS ⇔ `services/api` bridge** (spec 008): `POST /api/agent-api/stream` (`apps/web`) relays `services/api`'s `/v1/agent/stream` through `@/lib/agent-api`, holding `API_SERVICE_KEY` server-side (`@vaz/schemas/api-service-env`; default URL port **8001**, since `services/agent` owns 8000). It requires a signed-in session and deliberately accepts **no `session_id`**: every web user shares one service key, hence one `services/api` principal, so a forwarded id would cross users. The 5-event SSE union lives in `@vaz/schemas/api-service`; a change on either side is caught by `packages/schemas/tests/api-service-contract-drift.spec.ts` (TS vs snapshots) and `services/api/tests/unit/test_hub_contract_snapshot.py` (live app vs snapshots) — fix with `mise run openapi:gen`.
 - **Single-Writer DB Principle**: pgvector embeddings are written exclusively by TS (`packages/rag`). Python sidecars are stateless and never write to the database.
 - **AI SDK v7 Conventions**: Use `createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) })`. Multi-step tool use uses `stopWhen: isStepCount(n)`. Tool definition takes `inputSchema:` (not `parameters:`).
 - **Zod v4 Usage**: Use `z.looseObject()`, `z.url()`, `z.email()`, `z.iso.datetime()`, `z.uuid()`.

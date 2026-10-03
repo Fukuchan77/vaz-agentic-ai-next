@@ -1,0 +1,127 @@
+{
+  "$defs": {
+    "Completed": {
+      "additionalProperties": false,
+      "description": "Emitted once when the agent run reaches its final result.",
+      "properties": {
+        "type": {
+          "const": "completed",
+          "default": "completed",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "Completed",
+      "type": "object"
+    },
+    "Error": {
+      "additionalProperties": false,
+      "description": "Emitted as the terminal event when the stream fails.\n\nAttributes:\n    message: A generic, safe-to-expose error message (never a stack trace).",
+      "properties": {
+        "type": {
+          "const": "error",
+          "default": "error",
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "title": "Error",
+      "type": "object"
+    },
+    "StepStarted": {
+      "additionalProperties": false,
+      "description": "Emitted when the agent begins a new model-request step.",
+      "properties": {
+        "type": {
+          "const": "step_started",
+          "default": "step_started",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "StepStarted",
+      "type": "object"
+    },
+    "Token": {
+      "additionalProperties": false,
+      "description": "Emitted for each text delta produced by the model.\n\nAttributes:\n    content: The delta text content.",
+      "properties": {
+        "type": {
+          "const": "token",
+          "default": "token",
+          "title": "Type",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "Token",
+      "type": "object"
+    },
+    "ToolCalled": {
+      "additionalProperties": false,
+      "description": "Emitted when the agent invokes a tool.\n\nAttributes:\n    name: The tool's name.\n    args_summary: A truncated, non-sensitive summary of the call arguments\n        (never the raw prompt or credentials).",
+      "properties": {
+        "type": {
+          "const": "tool_called",
+          "default": "tool_called",
+          "title": "Type",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "args_summary": {
+          "title": "Args Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "args_summary"
+      ],
+      "title": "ToolCalled",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "completed": "#/$defs/Completed",
+      "error": "#/$defs/Error",
+      "step_started": "#/$defs/StepStarted",
+      "token": "#/$defs/Token",
+      "tool_called": "#/$defs/ToolCalled"
+    },
+    "propertyName": "type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/StepStarted"
+    },
+    {
+      "$ref": "#/$defs/ToolCalled"
+    },
+    {
+      "$ref": "#/$defs/Token"
+    },
+    {
+      "$ref": "#/$defs/Completed"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ]
+}

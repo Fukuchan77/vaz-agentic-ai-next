@@ -375,8 +375,8 @@ dir = "services/api"
 description = "Python API lane quality gate (uv sync + ruff + ty + pytest[unit+integration+e2e] + pip-audit); independent of `check` (NFR-1)"
 
 # --- Boundary contract codegen (Req 3.5): FastAPI OpenAPI -> openapi-typescript ---
-# Regenerates the committed snapshot + generated TS types from services/agent's live
-# Pydantic models (source of truth for the new HTTP boundary, ADR-B). Not build-ified
+# Regenerates the committed snapshots + generated TS types from services/agent's and
+# services/api's live Pydantic models (each the source of truth for its HTTP boundary, ADR-B). Not build-ified
 # (source-only package rule, no build step) — rerun manually/in CI when the boundary changes.
 [tasks."openapi:gen"]
 run = """
@@ -384,5 +384,18 @@ set -e
 mkdir -p packages/schemas/src/generated
 cd services/agent && uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > ../../packages/schemas/src/generated/openapi.snapshot.json
 cd ../.. && pnpm exec openapi-typescript packages/schemas/src/generated/openapi.snapshot.json -o packages/schemas/src/generated/agent-service.ts
+# services/api (spec 008 R3). Its Settings fail fast without a valid key pair and
+# model id, none of which the exported contract depends on, so throwaway values are
+# minted per run (random, never committed — a literal here would be a gitleaks hit)
+# and the model id is a non-existent placeholder (it never reaches a provider).
+# The SSE union is exported separately: `/v1/agent/stream` is text/event-stream, so
+# its five event shapes are absent from the OpenAPI document.
+cd services/api
+export API_KEY="$(uv run python -c 'import secrets; print(secrets.token_hex(16))')"
+export SESSION_SIGNING_KEY="$(uv run python -c 'import secrets; print(secrets.token_hex(24))')"
+export LLM_MODEL="ollama:openapi-export"
+PYTHONPATH=. uv run python scripts/export_contract.py openapi > ../../packages/schemas/src/generated/api-service.openapi.snapshot.json
+PYTHONPATH=. uv run python scripts/export_contract.py sse-events > ../../packages/schemas/src/generated/api-service.sse-events.schema.json
+cd ../.. && pnpm exec openapi-typescript packages/schemas/src/generated/api-service.openapi.snapshot.json -o packages/schemas/src/generated/api-service.ts
 """
-description = "Regenerate generated/agent-service.ts + openapi.snapshot.json from services/agent's OpenAPI schema (Req 3.5)"
+description = "Regenerate the committed OpenAPI snapshots + generated TS types for services/agent (agent-service.ts) and services/api (api-service.ts, plus its SSE-event JSON Schema)"
