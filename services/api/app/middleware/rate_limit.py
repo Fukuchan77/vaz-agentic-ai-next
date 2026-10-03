@@ -1,7 +1,37 @@
-"""Rate limiting middleware using slowapi."""
+"""Rate limiting built directly on `limits` (no slowapi).
 
+Two enforcement paths share one `RateLimiter`:
+
+- `RateLimitMiddleware` counts every HTTP request against the global default
+  limit. It is plain ASGI and runs before routing, so it never inspects
+  `app.routes` - the route walk is what let fastapi 0.137's `_IncludedRouter`
+  silently switch slowapi's global limit off.
+- `enforce_llm_rate_limit` is a route dependency adding the stricter,
+  configurable `llm_rate_limit` (Req 11.3) on LLM-invoking routes.
+
+Both reach the same `RateLimiter.exceeded_response`, the only place a 429 is
+built, so the flat `{message, code}` envelope (Req 1.1, 1.2) and its
+`X-RateLimit-*` / delay-seconds `Retry-After` headers (Req 1.3) cannot diverge
+between them. There is no handler-shape trap left either: slowapi swapped an
+`async def` exception handler for its own `{"error": ...}` one, and nothing here
+inspects the handler.
+
+The verification record for this design (fastapi 0.142 / starlette 1.7, Redis
+included) is `patterns/rate-limit/` in `Fukuchan77/pydantic-ai-sandbox`; this
+module re-implements it rather than vendoring it.
+
+At 500-999 lines this module is in the file-size policy's review band; not
+split, because the client-identity walk (`get_client_identifier`), the
+limiter, and its two enforcement paths are one unit - the 429 contract above
+depends on all three sharing one `RateLimiter` - and it stays well under the
+1000-line hard cap.
+"""
+
+import logging
+import math
+import time
 from collections.abc import Callable
-from collections.abc import Sequence
+from dataclasses import dataclass
 from functools import cache
 from ipaddress import IPv4Network
 from ipaddress import IPv6Network
@@ -13,13 +43,36 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from limits import RateLimitItem
-from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
-from slowapi.wrappers import Limit as SlowApiLimit
+from limits import WindowStats
+from limits.aio.storage import MemoryStorage
+from limits.aio.storage import Storage
+from limits.aio.strategies import FixedWindowRateLimiter
+from limits.storage import storage_from_string
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp
+from starlette.types import Message
+from starlette.types import Receive
+from starlette.types import Scope
+from starlette.types import Send
 
 from app.config import Settings
 from app.config import get_settings
 from app.models.errors import ErrorResponse
+
+
+logger = logging.getLogger(__name__)
+
+RATE_LIMIT_MESSAGE = "Rate limit exceeded. Please try again later."
+RATE_LIMIT_CODE = "RATE_LIMIT_EXCEEDED"
+
+# How long the limiter stays on the in-memory fallback after the primary
+# storage fails before it tries the primary again (Req 11.4).
+_DEFAULT_RECOVERY_SECONDS = 30.0
+
+# Extra key component for the per-route LLM limit, so its bucket can never be
+# the global one even when both are configured to the same `<count>/<period>`
+# (`limits` keys a window on the item's amount and period plus the identifiers).
+_LLM_SCOPE = "llm"
 
 
 @cache
@@ -162,117 +215,332 @@ def get_client_identifier(request: Request) -> str:
     return direct_client_ip
 
 
-def add_rate_limiting(
-    app: FastAPI,
-    default_limits: Sequence[str] | None = None,
-    key_func: Callable[[Request], str] | None = None,
-    storage_uri: str | None = None,
-) -> Limiter:
-    """Add rate limiting to FastAPI application using slowapi.
+@dataclass(frozen=True, slots=True)
+class RateLimitDecision:
+    """The outcome of one counted hit against one limit.
 
-    Creates limiter instance and registers custom exception handler.
-    The limiter is stored in app.state for access via dependencies.
+    Attributes:
+        allowed: Whether the hit fit inside the window.
+        item: The limit the hit was counted against.
+        stats: The window after the hit (remaining count and reset time).
+    """
+
+    allowed: bool
+    item: RateLimitItem
+    stats: WindowStats
+
+
+class RateLimiter:
+    """Count hits on `limits` storage and render the one shared 429.
+
+    Owns what slowapi's `Limiter` used to: storage selection (Redis when
+    configured, degrading to memory - Req 11.4), the fixed-window strategy
+    slowapi defaulted to, and the 429 response itself.
 
     Args:
-        app: FastAPI application instance
-        default_limits: List of default rate limit strings
-            (e.g., ["5/minute", "100/hour"])
-        key_func: Function to extract client identifier from request
-            (default: get_client_identifier)
-        storage_uri: Storage backend URI (e.g. a Redis URL) so limits are
-            shared across processes (Req 11.4). `None` uses in-memory
-            storage, suitable for single-instance/development deployments.
+        default_limit: The limit `RateLimitMiddleware` counts every HTTP
+            request against, in `limits` notation (``"1000/minute"``).
+        key_func: Maps a request to its bucket key.
+        storage_uri: A Redis URL (``redis://`` / ``rediss://``, or an explicit
+            ``async+`` `limits` URI), or ``None`` for in-process memory.
+        clock: Wall-clock seconds, used only for `Retry-After`.
+        monotonic: Monotonic seconds, used only for the fallback cooldown.
+        recovery_seconds: How long to stay on memory after the primary fails.
+        storage: A primary storage to use directly (tests); overrides
+            ``storage_uri``.
+    """
+
+    def __init__(
+        self,
+        default_limit: str,
+        *,
+        key_func: Callable[[Request], str],
+        storage_uri: str | None = None,
+        clock: Callable[[], float] = time.time,
+        monotonic: Callable[[], float] = time.monotonic,
+        recovery_seconds: float = _DEFAULT_RECOVERY_SECONDS,
+        storage: Storage | None = None,
+    ) -> None:
+        """Parse the default limit and select the primary storage."""
+        self.default_limit: RateLimitItem = limits.parse(default_limit)
+        self.key_func = key_func
+        self._clock = clock
+        self._monotonic = monotonic
+        self._recovery_seconds = recovery_seconds
+        self._fallback = MemoryStorage()
+        self._primary: Storage | None = storage or _primary_from_uri(storage_uri)
+        self._degraded_until: float | None = None
+
+    @property
+    def degraded(self) -> bool:
+        """Whether hits are currently counted on the in-memory fallback."""
+        return self._degraded_until is not None
+
+    async def hit(self, item: RateLimitItem, *identifiers: str) -> RateLimitDecision:
+        """Count one hit against ``item`` for ``identifiers`` and read the window back.
+
+        A primary-storage failure at any point - the first request after
+        start-up included, so an unreachable Redis at boot needs no separate
+        probe - moves counting to memory with one warning instead of failing
+        the request. After ``recovery_seconds`` the next hit tries the
+        primary again.
+
+        Args:
+            item: The limit to count against.
+            *identifiers: The bucket key components, usually the client
+                identifier plus an optional scope.
+
+        Returns:
+            RateLimitDecision: Whether the hit fit, and the window after it.
+        """
+        primary = self._primary
+        if primary is not None and self._primary_available():
+            try:
+                return await _count(primary, item, identifiers)
+            except Exception:  # any storage failure degrades, never 500s
+                self._degrade()
+        return await _count(self._fallback, item, identifiers)
+
+    def headers(self, decision: RateLimitDecision, *, retry_after: bool) -> dict[str, str]:
+        """Render the `X-RateLimit-*` headers for ``decision``.
+
+        `X-RateLimit-Reset` is the window's reset time as integer epoch
+        seconds, and `Retry-After` is delay-seconds, never an HTTP-date.
+
+        Args:
+            decision: The counted hit.
+            retry_after: Add `Retry-After`. Only a 429 carries it; RFC 9110
+                gives it no meaning on a 2xx.
+
+        Returns:
+            dict[str, str]: Header name to value.
+        """
+        reset_at = math.ceil(decision.stats.reset_time)
+        headers = {
+            "X-RateLimit-Limit": str(decision.item.amount),
+            "X-RateLimit-Remaining": str(decision.stats.remaining),
+            "X-RateLimit-Reset": str(reset_at),
+        }
+        if retry_after:
+            headers["Retry-After"] = str(max(1, math.ceil(reset_at - self._clock())))
+        return headers
+
+    def exceeded_response(self, decision: RateLimitDecision) -> JSONResponse:
+        """Build the 429 both enforcement paths return (Req 1.1-1.3).
+
+        Args:
+            decision: The hit that did not fit.
+
+        Returns:
+            JSONResponse: The flat `ErrorResponse` body with rate-limit headers.
+        """
+        body = ErrorResponse(message=RATE_LIMIT_MESSAGE, code=RATE_LIMIT_CODE)
+        return JSONResponse(
+            status_code=429,
+            content=body.model_dump(),
+            headers=self.headers(decision, retry_after=True),
+        )
+
+    def _primary_available(self) -> bool:
+        if self._degraded_until is None:
+            return True
+        if self._monotonic() < self._degraded_until:
+            return False
+        logger.info("Retrying primary rate-limit storage")
+        self._degraded_until = None
+        return True
+
+    def _degrade(self) -> None:
+        logger.warning(
+            "Rate limit storage unreachable - falling back to in-memory storage for %.0fs",
+            self._recovery_seconds,
+        )
+        self._degraded_until = self._monotonic() + self._recovery_seconds
+
+
+async def _count(
+    storage: Storage, item: RateLimitItem, identifiers: tuple[str, ...]
+) -> RateLimitDecision:
+    strategy = FixedWindowRateLimiter(storage)
+    allowed = await strategy.hit(item, *identifiers)
+    stats = await strategy.get_window_stats(item, *identifiers)
+    return RateLimitDecision(allowed=allowed, item=item, stats=stats)
+
+
+def _primary_from_uri(storage_uri: str | None) -> Storage | None:
+    """Build the primary async storage for ``storage_uri``.
+
+    `Settings.redis_url` is a plain ``redis://`` URL shared with
+    `RedisSessionStore`, so it is mapped to `limits`' async form here. The
+    ``redispy`` implementation (``redis.asyncio``) keeps the limiter on the
+    `redis` package this project already pins, rather than `limits`' default
+    `coredis`; ``wrap_exceptions`` turns driver errors into
+    `limits.errors.StorageError`, which `RateLimiter.hit` degrades on.
+
+    Args:
+        storage_uri: The configured URI, or ``None``.
 
     Returns:
-        Limiter: Configured slowapi Limiter instance
+        Storage | None: The async storage, or ``None`` for memory only.
+
+    Raises:
+        ValueError: If the URI does not resolve to an async storage.
+    """
+    if storage_uri is None:
+        return None
+    if storage_uri.startswith(("redis://", "rediss://")):
+        storage_uri = f"async+{storage_uri}"
+    options: dict[str, str | bool] = {}
+    if storage_uri.startswith(("async+redis://", "async+rediss://")):
+        options = {"implementation": "redispy", "wrap_exceptions": True}
+    storage = storage_from_string(storage_uri, **options)
+    if not isinstance(storage, Storage):
+        msg = "rate-limit storage URI must resolve to an async storage"
+        raise ValueError(msg)
+    return storage
+
+
+class RateLimitExceededError(Exception):
+    """Raised by `enforce_llm_rate_limit`; carries the decision to render."""
+
+    def __init__(self, decision: RateLimitDecision) -> None:
+        """Keep the decision for the exception handler.
+
+        Args:
+            decision: The hit that did not fit.
+        """
+        super().__init__("rate limit exceeded")
+        self.decision = decision
+
+
+class RateLimitMiddleware:
+    """Count every HTTP request against the limiter's default limit.
+
+    Runs before routing, so every request is counted - included-router
+    routes, and also paths that end in 404. The bucket is one per client
+    across all routes; slowapi scoped its default limit per (client,
+    endpoint), which needed exactly the route walk this avoids.
+
+    Args:
+        app: The wrapped ASGI application.
+        limiter: The shared limiter (also `app.state.rate_limiter`).
+    """
+
+    def __init__(self, app: ASGIApp, limiter: RateLimiter) -> None:
+        """Wrap ``app``."""
+        self.app = app
+        self.limiter = limiter
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Reject over-limit requests; stamp `X-RateLimit-*` on the rest.
+
+        Args:
+            scope: The ASGI connection scope.
+            receive: The ASGI receive channel.
+            send: The ASGI send channel.
+        """
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        limiter = self.limiter
+        decision = await limiter.hit(limiter.default_limit, limiter.key_func(Request(scope)))
+        if not decision.allowed:
+            await limiter.exceeded_response(decision)(scope, receive, send)
+            return
+
+        headers = limiter.headers(decision, retry_after=False)
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                response_headers = MutableHeaders(scope=message)
+                for name, value in headers.items():
+                    # A per-route 429 already carries the stricter limit's
+                    # headers; the global ones must not be appended beside them.
+                    if name not in response_headers:
+                        response_headers.append(name, value)
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
+def add_rate_limiting(
+    app: FastAPI,
+    default_limit: str = "60/minute",
+    key_func: Callable[[Request], str] | None = None,
+    storage_uri: str | None = None,
+) -> RateLimiter:
+    """Install rate limiting on ``app``: limiter state, middleware, and 429 handler.
+
+    The middleware is added here, at the call site's position in the
+    middleware stack, so `create_app` keeps the ordering it had with
+    `SlowAPIMiddleware` (innermost of the stack it builds).
+
+    Args:
+        app: FastAPI application instance.
+        default_limit: The global limit every HTTP request is counted against
+            (e.g. ``"1000/minute"``).
+        key_func: Function to extract the client identifier from a request
+            (default: `get_client_identifier`).
+        storage_uri: Storage backend URI (e.g. a Redis URL) so limits are
+            shared across processes (Req 11.4). `None` uses in-memory storage,
+            suitable for single-instance/development deployments. An
+            unreachable store degrades to memory instead of failing requests.
+
+    Returns:
+        RateLimiter: The limiter both enforcement paths share.
 
     Example:
         ```python
         app = FastAPI()
-        limiter = add_rate_limiting(app, default_limits=["60/minute"])
+        limiter = add_rate_limiting(app, default_limit="60/minute")
         ```
     """
-    # Use default key function if not provided
-    if key_func is None:
-        key_func = get_client_identifier
-
-    # Use default limits if not provided
-    if default_limits is None:
-        default_limits = ["60/minute"]
-
-    # Create limiter instance. in_memory_fallback_enabled=True means a
-    # configured storage_uri that becomes unreachable degrades to in-memory
-    # storage (with a warning) instead of failing every request.
-    limiter = Limiter(
-        key_func=key_func,
-        default_limits=list(default_limits),
-        headers_enabled=True,
+    limiter = RateLimiter(
+        default_limit,
+        key_func=key_func or get_client_identifier,
         storage_uri=storage_uri,
-        in_memory_fallback_enabled=True,
     )
+    app.state.rate_limiter = limiter
+    app.add_middleware(RateLimitMiddleware, limiter=limiter)  # type: ignore[arg-type]
 
-    # Store limiter in app state for access via dependencies
-    app.state.limiter = limiter
+    async def rate_limit_exceeded_handler(request: Request, exc: Exception) -> JSONResponse:
+        """Render `RateLimitExceededError` through the shared 429.
 
-    # Custom exception handler for rate limit exceeded.
-    #
-    # `exc` is typed `Exception`, not `RateLimitExceeded`, to match
-    # `Starlette.add_exception_handler`'s actual signature - it dispatches by
-    # the registered exception class below, but the handler type itself is
-    # not generic over it.
-    #
-    # Deliberately synchronous (`def`, not `async def`): `SlowAPIMiddleware`
-    # reaches this handler through `sync_check_limits`, which uses
-    # `inspect.iscoroutinefunction` to detect an `async def` handler and
-    # silently swaps it for slowapi's own default handler (which returns
-    # `{"error": ...}`) instead of calling this one - that swap is what let
-    # the global rate limit's 429 escape this project's flat envelope.
-    # Starlette runs a synchronous handler via `run_in_threadpool`, so the
-    # `enforce_llm_rate_limit` dependency's raise site is unaffected. If this
-    # ever needs to become `async def` again, `SlowAPIMiddleware` must be
-    # replaced too, or the same regression recurs silently.
-    def rate_limit_exceeded_handler(
-        request: Request,
-        exc: Exception,
-    ) -> JSONResponse:
-        """Handle rate limit exceeded exception with structured error response.
+        `exc` is typed `Exception` to match `Starlette.add_exception_handler`'s
+        signature; registration below guarantees the subclass.
 
         Args:
-            request: The request that exceeded rate limit
-            exc: The rate limit exceeded exception (typed `Exception`; see
-                the handler's own note on `Starlette.add_exception_handler`)
+            request: The request that exceeded the limit.
+            exc: The raised `RateLimitExceededError`.
 
         Returns:
-            JSONResponse: 429 response with the flat `ErrorResponse` body.
-                Header construction (`X-RateLimit-*` and a delay-seconds
-                `Retry-After`) is delegated to `Limiter._inject_headers`,
-                which knows the actual rate-limit window; this handler no
-                longer computes any header itself.
+            JSONResponse: The flat 429.
         """
-        error_response = ErrorResponse(
-            message="Rate limit exceeded. Please try again later.",
-            code="RATE_LIMIT_EXCEEDED",
-        )
-        response = JSONResponse(status_code=429, content=error_response.model_dump())
+        if not isinstance(exc, RateLimitExceededError):  # pragma: no cover - registration
+            raise exc
+        return get_rate_limiter(request).exceeded_response(exc.decision)
 
-        # `view_rate_limit` is set by slowapi itself for both the middleware
-        # and the `@limiter.limit`-decorated path. `enforce_llm_rate_limit`
-        # sets it explicitly too, since it checks the limit directly rather
-        # than through slowapi's own request-limit machinery. The `getattr`
-        # default guards any future raise site that forgets to set it -
-        # `_inject_headers` itself no-ops on a `None` current_limit, so this
-        # keeps such a case a 429 rather than an `AttributeError` -> 500.
-        view_rate_limit: tuple[RateLimitItem, list[str]] | None = getattr(
-            request.state, "view_rate_limit", None
-        )
-        # `_inject_headers`'s own type hint omits the `None` it explicitly
-        # handles at runtime, and it returns the same `JSONResponse` object
-        # it was given (typed as the wider `Response` base class).
-        return limiter._inject_headers(response, view_rate_limit)  # type: ignore
+    app.add_exception_handler(RateLimitExceededError, rate_limit_exceeded_handler)
+    return limiter
 
-    # Register exception handler
-    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
+def get_rate_limiter(request: Request) -> RateLimiter:
+    """Return the limiter `add_rate_limiting` stored on the request's app.
+
+    Args:
+        request: The incoming request.
+
+    Returns:
+        RateLimiter: The application's limiter.
+
+    Raises:
+        RuntimeError: If `add_rate_limiting` was never called on this app.
+    """
+    limiter = getattr(request.app.state, "rate_limiter", None)
+    if not isinstance(limiter, RateLimiter):
+        msg = "add_rate_limiting() has not been called on this application"
+        raise RuntimeError(msg)
     return limiter
 
 
@@ -282,32 +550,27 @@ async def enforce_llm_rate_limit(request: Request) -> None:
     Used as a route `dependencies=[Depends(enforce_llm_rate_limit)]` entry on
     `chat`/`stream_agent` (app/api/v1/agent.py) and `query` (app/api/v1/rag.py).
 
-    Deliberately reuses `request.app.state.limiter` - the same per-app
-    `Limiter`/storage `add_rate_limiting()` already wires to Redis when
-    configured (Req 11.4) - rather than a second, independently-configured
-    limiter, so this stricter check and the global default check share one
-    consistent, correctly per-app-scoped storage backend.
+    Reuses `request.app.state.rate_limiter` - the same per-app limiter and
+    storage `add_rate_limiting()` already wires to Redis when configured
+    (Req 11.4) - rather than a second, independently-configured one. Its
+    bucket is scoped apart from the global one, so the two never share a
+    counter even when configured to the same limit.
+
+    `Request` must stay a runtime import (not under `TYPE_CHECKING`): FastAPI
+    resolves this signature at route registration, and an unresolvable
+    annotation would turn `request` into a query parameter and silently skip
+    the limit.
 
     Args:
         request: FastAPI request object.
 
     Raises:
-        RateLimitExceeded: If `settings.llm_rate_limit` is exceeded; handled
-            by the same exception handler `add_rate_limiting()` registers.
+        RateLimitExceededError: If `settings.llm_rate_limit` is exceeded;
+            rendered by the handler `add_rate_limiting()` registers.
     """
-    limiter: Limiter = request.app.state.limiter
-    settings: Settings = _resolve_settings(request)
+    limiter = get_rate_limiter(request)
+    settings = _resolve_settings(request)
     item = limits.parse(settings.llm_rate_limit)
-    identifier = get_client_identifier(request)
-
-    if not limiter.limiter.hit(item, identifier):
-        # Record the window this check hit, the same way slowapi's own
-        # `_check_request_limit` does for the middleware and decorator
-        # paths - this call checks the limit directly instead, so nothing
-        # else sets it. Without this, `rate_limit_exceeded_handler` finds no
-        # `view_rate_limit` and this 429 carries no `Retry-After`/
-        # `X-RateLimit-*` headers at all (Req 1.4, 1.10).
-        request.state.view_rate_limit = (item, [identifier])
-        raise RateLimitExceeded(
-            SlowApiLimit(item, get_client_identifier, None, False, None, None, None, 1, False)
-        )
+    decision = await limiter.hit(item, limiter.key_func(request), _LLM_SCOPE)
+    if not decision.allowed:
+        raise RateLimitExceededError(decision)

@@ -29,10 +29,9 @@ def app_with_rate_limiting() -> FastAPI:
     app = FastAPI()
 
     # Add very restrictive rate limiting for testing
-    limiter = add_rate_limiting(app, default_limits=["2/minute"])
+    add_rate_limiting(app, default_limit="2/minute")
 
     @app.get("/test")
-    @limiter.limit("2/minute")
     async def test_endpoint(request: Request) -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
 

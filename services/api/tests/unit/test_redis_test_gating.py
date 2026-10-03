@@ -28,6 +28,7 @@ from pathlib import Path
 
 import yaml
 
+from tests.integration import test_rate_limit_redis_live
 from tests.integration import test_redis_session_store_live
 from tests.support.redis import REDIS_LIVE_TEST_COUNT
 
@@ -36,10 +37,11 @@ PR_WORKFLOW = Path(__file__).resolve().parents[4] / ".github" / "workflows" / "a
 
 
 def test_redis_live_test_count_matches_gated_module() -> None:
-    """The declared count equals the number of `test_*` functions in the gated module."""
+    """The declared count equals the number of `test_*` functions in the gated modules."""
     actual = sum(
         1
-        for name, obj in vars(test_redis_session_store_live).items()
+        for module in (test_redis_session_store_live, test_rate_limit_redis_live)
+        for name, obj in vars(module).items()
         if name.startswith("test_") and inspect.isfunction(obj)
     )
 
