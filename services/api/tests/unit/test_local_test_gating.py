@@ -45,6 +45,12 @@ hub's actual root) runs Playwright E2E only, and folding this lane's
 Ollama-gated probe into it is a deliberate follow-up, not part of Task 6 (see
 the note at the top of this repo's `CLAUDE.md`). The two restatement guards
 below, against this lane's own `CLAUDE.md`/`AGENTS.md`, are unaffected.
+
+Path note (2026-10-03, spec `008`): the follow-up above has landed. This
+lane's pre-push leg now lives at `scripts/hooks/pre-push.sh` (invoked by the
+hub's `.githooks/pre-push`), so the hook-literal guard is restored below
+against that file. Its literal reads `mise run api:test:local` (the hub task
+name), hence the separate regex.
 """
 
 import importlib
@@ -63,8 +69,10 @@ from tests.support.ollama import skip_unless_model_pulled
 
 CLAUDE_MD = Path("CLAUDE.md")
 AGENTS_MD = Path("AGENTS.md")
+PRE_PUSH_HOOK = Path("scripts/hooks/pre-push.sh")
 
 _EXPECT_LIVE_TESTS_RE = re.compile(r"EXPECT_LIVE_TESTS=(\d+)\s+mise run test:local")
+_HOOK_EXPECT_LIVE_TESTS_RE = re.compile(r"EXPECT_LIVE_TESTS=(\d+)\s+mise run api:test:local")
 
 
 def test_skip_unless_model_pulled_allows_pulled_model() -> None:
@@ -152,3 +160,10 @@ def test_ollama_live_test_count_matches_claude_md_restatement() -> None:
 def test_ollama_live_test_count_matches_agents_md_restatement() -> None:
     """`AGENTS.md`'s condensed pre-push restatement of the count matches the constant."""
     assert _extract_expect_live_tests(AGENTS_MD) == OLLAMA_LIVE_TEST_COUNT
+
+
+def test_ollama_live_test_count_matches_pre_push_hook_literal() -> None:
+    """The pre-push leg's `EXPECT_LIVE_TESTS` literal for `api:test:local` matches the constant."""
+    match = _HOOK_EXPECT_LIVE_TESTS_RE.search(PRE_PUSH_HOOK.read_text())
+    assert match is not None, f"no EXPECT_LIVE_TESTS literal found in {PRE_PUSH_HOOK}"
+    assert int(match.group(1)) == OLLAMA_LIVE_TEST_COUNT

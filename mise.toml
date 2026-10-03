@@ -321,10 +321,9 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # materialise the env from the lock instead of silently re-resolving it.
 run = "uv run --frozen pip-audit --ignore-vuln PYSEC-2026-161 --ignore-vuln PYSEC-2026-248 --ignore-vuln PYSEC-2026-249 --ignore-vuln PYSEC-2026-2280 --ignore-vuln PYSEC-2026-2281 --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833 --ignore-vuln PYSEC-2026-3740"
 
-[tasks."api:hooks:install"]
-dir = "services/api"
-description = "Install the pre-commit git hook (gitleaks/pip-audit/model-id/tool-conventions guards, Req 12.4)"
-run = "uv run pre-commit install"
+# No `api:hooks:install`: this lane's checks run as legs of the hub's own `.githooks/`
+# (activated by the root `prepare` script), via services/api/scripts/hooks/*.sh
+# (spec 008). `pre-commit install` would also refuse to run under core.hooksPath.
 
 [tasks."api:evals"]
 dir = "services/api"
