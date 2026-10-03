@@ -31,7 +31,8 @@
       `EXPECT_LIVE_TESTS` リテラルの drift guard も復元した。
 - [x] 存在しない `.pre-commit-config.yaml` を参照していた `api:hooks:install` タスクを削除した。
 - [x] 元リポジトリの README / `CLAUDE.md` / `AGENTS.md` に「凍結・ハブへ誘導」の告知を入れた。
-- [ ] **ユーザ実行**: 本ブランチが main に入った後、GitHub 上で `fastapi-pydantic-ai-agent` を Archive にする。
+- [x] **ユーザ実行**: `fastapi-pydantic-ai-agent` を GitHub 上でアーカイブした（2026-10-03、ユーザ確認。#64 マージ後）。
+      同リポジトリの README の告知は「アーカイブ予定」の文言のまま凍結されている（アーカイブ後は編集できないため）。
 
 ## 3. TS ⇔ `services/api` の結合（R3）
 
