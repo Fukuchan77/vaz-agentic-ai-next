@@ -76,7 +76,7 @@ dependencies = [
     # That same pass is what surfaced the `chromadb.types` filterwarnings entry
     # below -- the lane failed 6/6 on 5.7.0 *and* 6.1.0 before it, which is how
     # that blocker was established as pre-existing rather than caused by the bump.
-    "sentence-transformers>=5.7.0,<7.0",
+    "sentence-transformers>=6.1.0,<7.0",
     "slowapi>=0.1.10,<1.0",
     # Pinned below 1.0 because slowapi 0.1.10 is not compatible with starlette 1.x:
     # exception-handler dispatch misroutes (a ValidationError reaches slowapi's
