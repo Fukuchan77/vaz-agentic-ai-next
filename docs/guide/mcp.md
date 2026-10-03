@@ -13,7 +13,7 @@
 
 正本レビューが確認した時点（2026-09-06）で、5 リポジトリの本番ランタイムに採用された
 MCP server/client 実装はゼロだった。一方、`pydantic-ai-agentic-patterns` には
-[第6章「MCP 統合」](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part2/ch06.md)
+第6章「MCP 統合」
 という教材がある。本ハブ固有の資産は、実装ではなく採否条件とセキュリティ原則を固定した
 上記 ADR-0001 である。
 

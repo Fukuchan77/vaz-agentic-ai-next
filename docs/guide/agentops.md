@@ -170,7 +170,7 @@ regression / case-failure だけで決まる — コスト・レイテンシが�
 ## (b) 兄弟リポジトリの教材
 
 - `fastapi-pydantic-ai-agent` [`app/observability.py`](https://github.com/Fukuchan77/fastapi-pydantic-ai-agent/blob/main/app/observability.py) — Logfire 計装（プロンプト・ツール入出力を既定でスクラブ）と JSON 構造化ログ
-- `pydantic-ai-agentic-patterns` [第9章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part3/ch09.md)・[第14章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part5/ch14.md) — Pydantic Logfire による高度なトレース、デプロイと運用
+- `pydantic-ai-agentic-patterns` 第9章・第14章 — Pydantic Logfire による高度なトレース、デプロイと運用
 
 ## (c) 正本レビューの関連項目
 

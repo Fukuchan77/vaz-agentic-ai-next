@@ -39,22 +39,28 @@ MCP は接続標準、評価は品質保証としてこの階層を貫く。
 upstream の原稿・実装へのリンクを正本とする**と裁定した。コードだけを引き剥がすと解説と実装が
 分裂するためであり、本ガイドはその決定に従ってリンク参照を維持する。
 
+> **2026-10-03 追記（spec `008`）**: `pydantic-ai-agentic-patterns` は**非公開でアーカイブ**された。
+> 外部から参照できないため、本ガイド（`docs/guide/` 全ページ）から同リポジトリへのリンクを外し、
+> 章名・パスは記録として本文に残した。下表は「当時どの章がどの手法に対応していたか」の記録であって、
+> 読みに行ける教材ではない。入門からの学習には `from-genai-to-agentic-ai` の学習パス（下の「学習パスとの対応」）を使う。
+> ADR・spec 内の言及は時点の記録なので変更していない。
+
 | 章 | タイトル | 対応する手法 |
 |---|---|---|
-| [第1章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part1/ch01.md) | AIエージェントへの序章 | AE |
-| [第2章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part1/ch02.md) | Claude API と Anthropic Python SDK | PE |
-| [第3章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part1/ch03.md) | Context Engineering — Prompt Caching と Context Manager | CE |
-| [第4章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part2/ch04.md) | 型安全なツール設計と Structured Outputs | PE, HE |
-| [第5章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part2/ch05.md) | ModelRetry による自己修復エージェント | LE |
-| [第6章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part2/ch06.md) | MCP（Model Context Protocol）統合 | MCP |
-| [第7章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part3/ch07.md) | 4大ワークフローパターンと Pydantic Logfire トレース | LE, AO |
-| [第8章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part3/ch08.md) | 自律エージェントとデザインパターン | AE |
-| [第9章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part3/ch09.md) | Pydantic Logfire による高度なトレースと可観測性 | AO |
-| [第10章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part4/ch10.md) | Orchestrator-Workers アーキテクチャ | AE, HE |
-| [第11章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part4/ch11.md) | Agentic RAG — 反復検索と引用検証 | CE, LE |
-| [第12章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part4/ch12.md) | 自律型マルチエージェント・リサーチシステム（総合実践） | AE |
-| [第13章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part5/ch13.md) | 長期記憶・3層評価・Tool Guardrails | CE, EV, LE |
-| [第14章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part5/ch14.md) | デプロイと運用のベストプラクティス | AO |
+| 第1章 | AIエージェントへの序章 | AE |
+| 第2章 | Claude API と Anthropic Python SDK | PE |
+| 第3章 | Context Engineering — Prompt Caching と Context Manager | CE |
+| 第4章 | 型安全なツール設計と Structured Outputs | PE, HE |
+| 第5章 | ModelRetry による自己修復エージェント | LE |
+| 第6章 | MCP（Model Context Protocol）統合 | MCP |
+| 第7章 | 4大ワークフローパターンと Pydantic Logfire トレース | LE, AO |
+| 第8章 | 自律エージェントとデザインパターン | AE |
+| 第9章 | Pydantic Logfire による高度なトレースと可観測性 | AO |
+| 第10章 | Orchestrator-Workers アーキテクチャ | AE, HE |
+| 第11章 | Agentic RAG — 反復検索と引用検証 | CE, LE |
+| 第12章 | 自律型マルチエージェント・リサーチシステム（総合実践） | AE |
+| 第13章 | 長期記憶・3層評価・Tool Guardrails | CE, EV, LE |
+| 第14章 | デプロイと運用のベストプラクティス | AO |
 
 ## 学習パス（`from-genai-to-agentic-ai`）との対応
 

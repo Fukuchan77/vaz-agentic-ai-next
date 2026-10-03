@@ -31,7 +31,8 @@
       `EXPECT_LIVE_TESTS` リテラルの drift guard も復元した。
 - [x] 存在しない `.pre-commit-config.yaml` を参照していた `api:hooks:install` タスクを削除した。
 - [x] 元リポジトリの README / `CLAUDE.md` / `AGENTS.md` に「凍結・ハブへ誘導」の告知を入れた。
-- [ ] **ユーザ実行**: 本ブランチが main に入った後、GitHub 上で `fastapi-pydantic-ai-agent` を Archive にする。
+- [x] **ユーザ実行**: `fastapi-pydantic-ai-agent` を GitHub 上でアーカイブした（2026-10-03、ユーザ確認。#64 マージ後）。
+      同リポジトリの README の告知は「アーカイブ予定」の文言のまま凍結されている（アーカイブ後は編集できないため）。
 
 ## 3. TS ⇔ `services/api` の結合（R3）
 
@@ -69,12 +70,25 @@
 - [x] [ADR-0008](../../docs/adr/0008-ui-component-standard.md)（shadcn/ui + Tailwind）を起票した。
 - [ ] Carbon → shadcn/ui の移行 spec の起票（ADR-0008 Consequences）。
 
+## 7. 後始末（2026-10-03、#64 マージ後）
+
+- [x] `tests/repo/doc-links.spec.ts` の `VENDORED_ROOTS` から `services/api` を外した（空配列）。
+      表面化した壊れたリンクは `services/api/docs/pydantic-ai-sandbox-comparison-review.md` の 1 ファイル 10 本だけで、
+      いずれもパッケージ化された `app/config.py`・`app/stores/{session,vector}_store.py` を指していた。
+      リンク先を現在のパッケージへ付け替え、行番号が調査時コミット `fd6ec5a` 基準であることを日付つきの注記で残した。
+- [x] 使われなくなった dev 依存 `pre-commit` を `services/api` から削除し、uv 0.12 で再ロックした
+      （推移依存ごと 82 行減）。`.pre-commit-config.yaml` を指していた 2 か所の記述を、現在の置き場所に直した。
+- [x] **検証**: `services/api` で ruff / ty が clean、pytest は 1591 passed / 23 skipped（coverage 96.56%）、
+      `api:audit` は「No known vulnerabilities found, 14 ignored」。ハブ側は biome clean、`repo` プロジェクト 65 passed。
+- [x] `pydantic-ai-agentic-patterns` は非公開でアーカイブ済みと確認した（ユーザ回答）。`docs/guide/` の 7 ページから
+      同リポジトリへのリンク 30 本を外し、章名とパスは記録として残した。`docs/guide/README.md` と
+      `agentic-engineering.md` に日付つきの注記を入れた。ADR・spec 内の言及は時点の記録なので変更していない。
+- [x] ~~`agentic-ai-sandbox/reference/` の削除~~ → **不要になった**。ユーザ確認により `agentic-ai-sandbox` 自体が
+      非公開でアーカイブ済みだったため、二重保守は既に解消している（読み取り専用のコピーは更新されない）。
+      用意した削除コミットは push せずに破棄した。正本は `pydantic-ai-sandbox`。
+
 ## 申し送り
 
-- `tests/repo/doc-links.spec.ts` の `VENDORED_ROOTS` は、ADR-0007 によって除外の前提が消えた。
-  上流由来の壊れたリンクを直してから除外を外す。
-- ハブの `docs/guide/README.md` は、`pydantic-ai-agentic-patterns` の書籍原稿へリンクしている。
-  しかし 2026-10-03 時点で、本セッションのアカウントのリポジトリ一覧にこのリポジトリが現れなかった。
-  リネーム・非公開化・削除のどれかを確認する必要がある。
-- `services/api/pyproject.toml` の dev 依存 `pre-commit` は、フックがハブ側へ移ったため使われていない。
-  次に依存を更新するときに削除する。
+- 非公開アーカイブ済みのリポジトリ（`pydantic-ai-agentic-patterns`・`agentic-ai-sandbox`）への言及のうち、
+  時点の記録（`specs/review/`、`services/api/docs/reference-repo-review.md` などのレビュー文書、ADR・spec）は変更しない。
+  読者向けの案内文書（`docs/guide/` など）に新たなリンクを追加しない。

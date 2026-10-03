@@ -1,10 +1,12 @@
 """Runtime no-hardcoded-model-id guard (Req 14.2).
 
-Mirrors the `no-hardcoded-model-id` pre-commit pygrep hook in
-`.pre-commit-config.yaml` so CI still enforces the rule even when pre-commit
-itself was skipped locally. Both places must stay in sync with
-`app.config._ALLOWED_LLM_PROVIDERS`, the single source of truth for which
-provider prefixes are recognized.
+Originally mirrored the `no-hardcoded-model-id` pygrep hook in this lane's
+`.pre-commit-config.yaml`. That file was removed when the lane moved into the
+vaz-agentic-ai-next hub; the commit-time check is now the hub's own
+`lint:model-ids` (`scripts/forbid-model-ids.sh`, which scans `services/**`),
+and this test is what CI enforces for this lane. Its pattern must stay in
+sync with `app.config._ALLOWED_LLM_PROVIDERS`, the single source of truth for
+which provider prefixes are recognized.
 
 The rule only targets `app/` and `evals/` (production/runner code, where a
 model id should always flow from `Settings`, never a literal). `tests/**` is
