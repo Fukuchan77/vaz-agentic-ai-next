@@ -5,6 +5,10 @@
 が確立しているパターンと比較・検証した結果をまとめる。
 
 - 調査日: 2026-08-02
+- リンク注記(2026-10-03, ハブ spec `008`): 本レポートが指す `app/config.py`・`app/stores/session_store.py`・
+  `app/stores/vector_store.py` は、その後それぞれパッケージ(`app/config/`・`app/stores/session_store/`・
+  `app/stores/vector_store/`)へ分割された。リンク先は現在のパッケージに付け替えたが、リンク文中の行番号は
+  調査時コミット `fd6ec5a` のものであり、現在のファイルとは対応しない。本文は時点の記録として変更していない。
 - 関連文書: [reference-repo-review.md](reference-repo-review.md)(別リポジトリ群の先行レビュー。
   本レポートと重複する指摘は「先行レビュー済み」と付記)
 
@@ -39,10 +43,10 @@
 | # | 深刻度 | 指摘 | 場所 |
 |---|---|---|---|
 | H-1 | High | タイムアウトで中断された RAG リクエストが in-flight キャッシュを恒久汚染し、以後同一クエリが常に 504(**再現スクリプトで実証済み**) | [corrective_rag.py:294](../app/workflows/corrective_rag.py) |
-| H-2 | High | `app_env` が自由文字列のため `Production`/`prod` 等の表記ゆれで本番ガードが無効化され、mock ツールが本番登録されうる | [config.py:308](../app/config.py) |
+| H-2 | High | `app_env` が自由文字列のため `Production`/`prod` 等の表記ゆれで本番ガードが無効化され、mock ツールが本番登録されうる | [config.py:308](../app/config/) |
 | H-3 | High | `/v1/rag/ingest` が RAG 結果キャッシュを無効化せず、新規文書が最大 TTL 300 秒間クエリ結果に反映されない | [corrective_rag.py:134](../app/workflows/corrective_rag.py) |
 | H-4 | High | チャット経路に `UsageLimits`・`ModelSettings`・タイムアウトが一切なく、トークン消費と滞留時間が無制限 | [chat_agent.py:119](../app/agents/chat_agent.py) |
-| H-5 | High | セッション履歴が全量リプレイ+上限 1000 件到達で `ValueError` となり、そのセッションが恒久的に使用不能になる | [session_store.py:281](../app/stores/session_store.py) |
+| H-5 | High | セッション履歴が全量リプレイ+上限 1000 件到達で `ValueError` となり、そのセッションが恒久的に使用不能になる | [session_store.py:281](../app/stores/session_store/) |
 
 ---
 
@@ -91,9 +95,9 @@ v2 移行時の破壊的変更チェックリストは sandbox の
 
 #### H-2. `app_env` が未検証の自由文字列で、本番ガードが表記ゆれで無効化される
 
-- 場所: [app/config.py:308-311](../app/config.py)
+- 場所: [app/config.py:308-311](../app/config/)
 - `app_env: str = Field(default="development", ...)` に値検証がない。一方、本番ガードは
-  `== "production"` の完全一致比較([config.py:552](../app/config.py) の mock ツール禁止
+  `== "production"` の完全一致比較([config.py:552](../app/config/) の mock ツール禁止
   validator、[chat_agent.py:133](../app/agents/chat_agent.py) の mock ツール登録ガード)。
 - `APP_ENV=Production` や `APP_ENV=prod` と設定された本番環境では両ガードが素通りし、
   **mock ツールが本番エージェントに登録されうる**。`extra="forbid"` や SecretStr 検証など
@@ -129,7 +133,7 @@ v2 移行時の破壊的変更チェックリストは sandbox の
 #### H-5. セッション履歴の無制限成長と上限到達時の恒久破損
 
 - 場所: [app/api/v1/agent.py:148-165](../app/api/v1/agent.py)、
-  [app/stores/session_store.py:104, 281-282](../app/stores/session_store.py)
+  [app/stores/session_store.py:104, 281-282](../app/stores/session_store/)
 - 毎ターン全履歴を `message_history=` でリプレイし、`result.all_messages()` を全量保存する。
   唯一の上限は 1000 件で、トークン予算・要約・トリミングはない。コストはターン数に
   比例して増加し、**1001 件目の保存で `ValueError` が発生した後はそのセッションが
@@ -150,7 +154,7 @@ v2 移行時の破壊的変更チェックリストは sandbox の
 
 #### M-2. Redis / Chroma / embedding 設定がデッドコード(先行レビュー済み・未対応)
 
-- [config.py:262-270, 392-401](../app/config.py) の `redis_url` /
+- [config.py:262-270, 392-401](../app/config/) の `redis_url` /
   `redis_session_store_enabled` / `embedding_model` / `embedding_base_url` は
   どこからも参照されず、[main.py:223, 227](../app/main.py) は
   `InMemoryVectorStore` / `InMemorySessionStore` をハードコードする。
@@ -160,7 +164,7 @@ v2 移行時の破壊的変更チェックリストは sandbox の
 
 #### M-3. `InMemoryVectorStore.query` がイベントループ上で CPU バウンド処理を行い、ロックもない
 
-- [app/stores/vector_store.py:122-231](../app/stores/vector_store.py)。クエリごとに
+- [app/stores/vector_store.py:122-231](../app/stores/vector_store/)。クエリごとに
   最大 1000 文書分の TF-IDF ベクトルを同期再計算し(L222-225)、`add_documents` は
   `_documents` / `_doc_tokens` / `_memory_usage` を無ロックで変更する。並行リクエストで
   イベントループ停止と不整合読み取りが起こりうる。同ファイルの Chroma 実装は
@@ -190,7 +194,7 @@ v2 移行時の破壊的変更チェックリストは sandbox の
 
 - [app/middleware/rate_limit.py:94-98](../app/middleware/rate_limit.py) の `Limiter` に
   `storage_uri` がなくワーカー単位の制限になる。また既定 `trusted_proxies=[]`
-  ([config.py:340](../app/config.py))では LB 背後で全クライアントがプロキシ IP の
+  ([config.py:340](../app/config/))では LB 背後で全クライアントがプロキシ IP の
   単一バケット(1000/min)を共有する。Redis バックエンド化と、デプロイ手順書での
   `trusted_proxies` 設定必須化を。
 
@@ -215,8 +219,8 @@ v2 移行時の破壊的変更チェックリストは sandbox の
 |---|---|---|
 | L-1 | `result.data` フォールバックはデッドコード(v1 で `data` は削除済み、かつ `output_type=str`) | [agent.py:181-186](../app/api/v1/agent.py) |
 | L-2 | 未使用の `await limiter.hit(...)` — slowapi の `hit` は同期関数 | [rate_limit.py:184](../app/middleware/rate_limit.py) |
-| L-3 | `save_history` が `_last_access` をロック外で更新(`get_history` は修正済みの同じレース) | [session_store.py:182](../app/stores/session_store.py) |
-| L-4 | `RedisSessionStore.close()` が deprecated な `close()` を使用し、かつ lifespan から呼ばれない | [session_store.py:500](../app/stores/session_store.py) |
+| L-3 | `save_history` が `_last_access` をロック外で更新(`get_history` は修正済みの同じレース) | [session_store.py:182](../app/stores/session_store/) |
+| L-4 | `RedisSessionStore.close()` が deprecated な `close()` を使用し、かつ lifespan から呼ばれない | [session_store.py:500](../app/stores/session_store/) |
 | L-5 | `readiness_check` が sync `def` で `hasattr` チェックのみ(先行レビュー済み) | [health.py:24](../app/api/health.py) |
 | L-6 | ワークフローのモデル解決フォールバックが `build_model()` を迂回し、素の設定文字列を `Agent` に渡す(現状は呼び出し側が常にモデルを渡すため潜在) | [corrective_rag.py:110](../app/workflows/corrective_rag.py) |
 | L-7 | CSP に末尾スペース・`'unsafe-inline'`、HSTS を平文 HTTP でも送出 | [security_headers.py:50-55](../app/middleware/security_headers.py) |

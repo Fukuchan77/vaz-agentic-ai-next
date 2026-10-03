@@ -69,12 +69,24 @@
 - [x] [ADR-0008](../../docs/adr/0008-ui-component-standard.md)（shadcn/ui + Tailwind）を起票した。
 - [ ] Carbon → shadcn/ui の移行 spec の起票（ADR-0008 Consequences）。
 
+## 7. 後始末（2026-10-03、#64 マージ後）
+
+- [x] `tests/repo/doc-links.spec.ts` の `VENDORED_ROOTS` から `services/api` を外した（空配列）。
+      表面化した壊れたリンクは `services/api/docs/pydantic-ai-sandbox-comparison-review.md` の 1 ファイル 10 本だけで、
+      いずれもパッケージ化された `app/config.py`・`app/stores/{session,vector}_store.py` を指していた。
+      リンク先を現在のパッケージへ付け替え、行番号が調査時コミット `fd6ec5a` 基準であることを日付つきの注記で残した。
+- [x] 使われなくなった dev 依存 `pre-commit` を `services/api` から削除し、uv 0.12 で再ロックした
+      （推移依存ごと 82 行減）。`.pre-commit-config.yaml` を指していた 2 か所の記述を、現在の置き場所に直した。
+- [x] **検証**: `services/api` で ruff / ty が clean、pytest は 1591 passed / 23 skipped（coverage 96.56%）、
+      `api:audit` は「No known vulnerabilities found, 14 ignored」。ハブ側は biome clean、`repo` プロジェクト 65 passed。
+- [ ] **ユーザ判断待ち**: `pydantic-ai-agentic-patterns` の所在（下記）。
+
 ## 申し送り
 
-- `tests/repo/doc-links.spec.ts` の `VENDORED_ROOTS` は、ADR-0007 によって除外の前提が消えた。
-  上流由来の壊れたリンクを直してから除外を外す。
-- ハブの `docs/guide/README.md` は、`pydantic-ai-agentic-patterns` の書籍原稿へリンクしている。
-  しかし 2026-10-03 時点で、本セッションのアカウントのリポジトリ一覧にこのリポジトリが現れなかった。
-  リネーム・非公開化・削除のどれかを確認する必要がある。
-- `services/api/pyproject.toml` の dev 依存 `pre-commit` は、フックがハブ側へ移ったため使われていない。
-  次に依存を更新するときに削除する。
+- ハブの [`docs/guide/README.md`](../../docs/guide/README.md) は `pydantic-ai-agentic-patterns` の書籍原稿 14 章へリンクしている。
+  2026-10-03 時点で、このリポジトリは本アカウントのリポジトリ一覧に無く、匿名の HTTPS 取得も 403 だった。
+  `agentic-ai-sandbox` に統合された形跡も無い（同リポジトリの `learn/` は旧 `agentic-ai-bootcamp`、
+  `reference/` は `pydantic-ai-sandbox` の旧版コピー）。リネーム・非公開化・削除のどれかをユーザが確認したうえで、
+  リンクを付け替えるか、対応表を「参照不能」と注記する。
+- `agentic-ai-sandbox/reference/` が `pydantic-ai-sandbox` の旧版（spec 011 まで。012・013 が無い）を
+  丸ごと抱えている。ADR-0007 で解消した FastAPI レーンと同じ二重保守の形なので、どちらを正本にするかの判断が要る。
