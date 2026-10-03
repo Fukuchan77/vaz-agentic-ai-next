@@ -3,6 +3,7 @@
 import time
 
 import pytest
+from fastapi import APIRouter
 from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -18,15 +19,14 @@ def app_with_rate_limit() -> FastAPI:
 
     # Add rate limiting with test configuration
     # Use a very low limit for testing: 3 requests per minute
-    limiter = add_rate_limiting(app, default_limits=["3/minute"])
+    add_rate_limiting(app, default_limit="3/minute")
 
     @app.get("/test")
-    @limiter.limit("3/minute")
     async def test_endpoint(request: Request) -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
 
-    @app.get("/unlimited")
-    async def unlimited_endpoint() -> JSONResponse:
+    @app.get("/other")
+    async def other_endpoint() -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
 
     return app
@@ -87,28 +87,82 @@ def test_rate_limit_remaining_decreases(client: TestClient) -> None:
     assert remaining2 == remaining1 - 1
 
 
-def test_rate_limit_unlimited_endpoint(client: TestClient) -> None:
-    """Test that endpoints without rate limit decorator are not limited."""
-    # Should be able to make many requests
-    for _ in range(10):
-        response = client.get("/unlimited")
-        assert response.status_code == 200
+def test_rate_limit_bucket_is_shared_across_routes(client: TestClient) -> None:
+    """The global limit is one bucket per client across all routes.
+
+    Deliberate difference from slowapi, which scoped its default limit per
+    (client, endpoint): that needed a walk of `app.routes`, the exact walk
+    fastapi 0.137's `_IncludedRouter` broke. Requests to `/other` (no
+    per-route limit of its own) therefore spend the same budget as `/test`.
+    """
+    for _ in range(3):
+        assert client.get("/other").status_code == 200
+
+    response = client.get("/test")
+    assert response.status_code == 429
+
+
+def test_global_rate_limit_counts_included_router_routes() -> None:
+    """Routes mounted through `include_router` are counted (the fastapi>=0.137 canary).
+
+    fastapi 0.137 wraps included routers in `_IncludedRouter`; slowapi's route
+    walk stopped finding their endpoints and exempted every such request. Every
+    route this service serves is mounted this way (`app/api/v1/router.py`).
+    """
+    router = APIRouter()
+
+    @router.get("/inner")
+    async def inner() -> dict[str, bool]:
+        return {"ok": True}
+
+    outer = APIRouter(prefix="/v1")
+    outer.include_router(router)
+
+    app = FastAPI()
+    add_rate_limiting(app, default_limit="2/minute")
+    app.include_router(outer)
+    client = TestClient(app)
+
+    statuses = [client.get("/v1/inner").status_code for _ in range(3)]
+
+    assert statuses == [200, 200, 429]
+
+
+def test_global_rate_limit_counts_unmatched_paths() -> None:
+    """A path that ends in 404 still spends budget: counting happens before routing."""
+    app = FastAPI()
+    add_rate_limiting(app, default_limit="1/minute")
+    client = TestClient(app)
+
+    assert client.get("/missing").status_code == 404
+    assert client.get("/missing").status_code == 429
+
+
+def test_rate_limit_ignores_non_http_scopes() -> None:
+    """Lifespan (and any non-HTTP) scopes pass through without being counted."""
+    app = FastAPI()
+    add_rate_limiting(app, default_limit="1/minute")
+
+    @app.get("/ok")
+    async def ok() -> dict[str, bool]:
+        return {"ok": True}
+
+    with TestClient(app) as client:  # runs the lifespan scope through the middleware
+        assert client.get("/ok").status_code == 200
 
 
 def test_rate_limit_reset_after_window() -> None:
     """Test that rate limit resets after the time window expires.
 
     Uses its own 3/second-limited app rather than the shared `client`
-    fixture's 3/minute one: now that `Limiter._inject_headers` actually
-    builds `X-RateLimit-Reset` (Req 1.3), that header holds a real reset
-    timestamp instead of the default `0` this test used to read, and a
-    1-minute window would make this test sleep for up to a minute.
+    fixture's 3/minute one: `X-RateLimit-Reset` holds the window's real reset
+    timestamp (Req 1.3), and a 1-minute window would make this test sleep for
+    up to a minute.
     """
     app = FastAPI()
-    limiter = add_rate_limiting(app, default_limits=["3/second"])
+    add_rate_limiting(app, default_limit="3/second")
 
     @app.get("/fast")
-    @limiter.limit("3/second")
     async def fast_endpoint(request: Request) -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
 
@@ -121,8 +175,8 @@ def test_rate_limit_reset_after_window() -> None:
     response = client.get("/fast")
     assert response.status_code == 429
 
-    # `X-RateLimit-Reset` is a real (float-string) epoch timestamp now, not
-    # the always-0 fallback the old, dead header-computation code path left
+    # `X-RateLimit-Reset` is a real epoch timestamp (integer seconds), not
+    # the always-0 fallback an old, dead header-computation code path left
     # behind.
     reset_time = float(response.headers["X-RateLimit-Reset"])
     current_time = time.time()

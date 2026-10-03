@@ -1,19 +1,16 @@
 """Regression test for the global rate limit's 429 envelope (Req 1.1, 1.2, 1.3, 1.6).
 
-Every other rate-limit unit test decorates its route with `@limiter.limit(...)`,
-which slowapi's `_should_exempt` treats as "the decorator will handle it" and
-skips in `SlowAPIMiddleware` - so none of them exercise the middleware's own
-check. This is the path that shipped broken: `SlowAPIMiddleware` reaches the
-registered handler through `sync_check_limits`, which uses
-`inspect.iscoroutinefunction` to detect an `async def` handler and silently
-swaps it for slowapi's own default handler (`{"error": ...}`), breaking this
-project's flat `{message, code}` envelope contract.
+Covers the middleware path specifically: a route with no per-route limit is
+checked only by `RateLimitMiddleware`. That is the path that shipped broken
+under slowapi, whose `SlowAPIMiddleware` silently swapped an `async def`
+handler for its own `{"error": ...}` one. The middleware now builds its 429
+through `RateLimiter.exceeded_response` directly, so this test pins that the
+flat `{message, code}` contract holds without any exception handler involved.
 """
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from slowapi.middleware import SlowAPIMiddleware
 
 from app.middleware.rate_limit import add_rate_limiting
 
@@ -21,15 +18,11 @@ from app.middleware.rate_limit import add_rate_limiting
 def _client() -> TestClient:
     """Build a client whose only route is limited exclusively by the middleware.
 
-    No route carries a `@limiter.limit` decorator, so `_should_exempt` does
-    not exempt it and the request is checked by `SlowAPIMiddleware` itself.
-
     Returns:
         TestClient: A second request within the window yields 429.
     """
     app = FastAPI()
-    add_rate_limiting(app, default_limits=["1/minute"])
-    app.add_middleware(SlowAPIMiddleware)  # type: ignore[arg-type]
+    add_rate_limiting(app, default_limit="1/minute")
 
     @app.get("/undecorated")
     async def _undecorated() -> JSONResponse:
@@ -60,3 +53,12 @@ def test_global_rate_limit_429_carries_rate_limit_headers() -> None:
     assert response.status_code == 429
     assert "X-RateLimit-Limit" in response.headers
     assert "Retry-After" in response.headers
+
+
+def test_global_rate_limit_success_carries_no_retry_after() -> None:
+    """A 2xx carries `X-RateLimit-*` but no `Retry-After` (meaningless on a 2xx, RFC 9110)."""
+    response = _client().get("/undecorated")
+
+    assert response.status_code == 200
+    assert "X-RateLimit-Remaining" in response.headers
+    assert "Retry-After" not in response.headers
