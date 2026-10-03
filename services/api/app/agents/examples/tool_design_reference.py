@@ -9,7 +9,7 @@ reassemble from scratch.
 
 `directory_search`/`directory_get` are deliberately **not** decorated with
 `@agent.tool` and are never registered on `chat_agent` — registering them
-would trip `real-tool-conventions-guard` (`.pre-commit-config.yaml`), whose
+would trip `real-tool-conventions-guard` (`scripts/hooks/pre-commit.sh`), whose
 whole point is to force a conscious review the first time a *real* tool is
 wired in. Copy the shape here, add the decorator, and go through that review
 at that point.
