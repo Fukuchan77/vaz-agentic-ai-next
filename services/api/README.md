@@ -43,9 +43,9 @@ cd fastapi-pydantic-ai-agent
 # Install dependencies with uv (via mise)
 mise install
 
-# Install the pre-commit git hook (secret scanning, dependency audit, and
-# repo-specific guards — blocks a commit if gitleaks detects a secret)
-mise run hooks:install
+# Git hooks: nothing to install here. In the vaz-agentic-ai-next hub, the root
+# `pnpm install` activates .githooks/, which runs this lane's
+# scripts/hooks/pre-commit.sh / pre-push.sh as legs.
 ```
 
 ### 2. Configure Environment

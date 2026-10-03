@@ -8,6 +8,8 @@
 #   test:run           = vitest run (projects: web=jsdom / worker=node / packages=node)
 #   audit              = pnpm audit --audit-level=moderate
 #   lint:model-ids     = scripts/forbid-model-ids.sh (R1.8/ADR-5 hardcoded-model-id gate)
+#   services/api leg   = services/api/scripts/hooks/pre-commit.sh (ruff+ty, tool-conventions
+#                        guard, pip-audit) — no-op unless services/api/ is staged (spec 008)
 # To skip temporarily: git commit --no-verify
 set -e
 
@@ -16,22 +18,25 @@ set -e
 # out of history — so this is the only check here whose failure gets more expensive
 # the later it is caught. Staged diff only, so it costs well under a second; the
 # full-history scan is security-daily.yml's `secret-scan` job.
-echo "[pre-commit] 1/6 secret scan (gitleaks, staged changes)"
+echo "[pre-commit] 1/7 secret scan (gitleaks, staged changes)"
 mise run secret-scan:staged
 
-echo "[pre-commit] 2/6 lint & format check (biome, whole workspace)"
+echo "[pre-commit] 2/7 lint & format check (biome, whole workspace)"
 mise run lint
 
-echo "[pre-commit] 3/6 typecheck (pnpm -r)"
+echo "[pre-commit] 3/7 typecheck (pnpm -r)"
 mise run typecheck
 
-echo "[pre-commit] 4/6 unit tests (vitest projects)"
+echo "[pre-commit] 4/7 unit tests (vitest projects)"
 mise run test:run
 
-echo "[pre-commit] 5/6 dependency audit (pnpm audit)"
+echo "[pre-commit] 5/7 dependency audit (pnpm audit)"
 mise run audit
 
-echo "[pre-commit] 6/6 hardcoded-model-id gate"
+echo "[pre-commit] 6/7 hardcoded-model-id gate"
 mise run lint:model-ids
+
+echo "[pre-commit] 7/7 services/api lane (only when services/api/ is staged)"
+sh services/api/scripts/hooks/pre-commit.sh
 
 echo "[pre-commit] ✅ all checks passed"

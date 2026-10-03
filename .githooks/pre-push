@@ -14,7 +14,14 @@
 # a partial CI-side safety net (chromium only, no infra-gated specs), but only this
 # hook covers the full chromium+firefox matrix and the real Ollama round-trip.
 # `--no-verify` skips this hook, leaving only that partial CI safety net.
+#
+# The services/api leg runs first because it consumes git's pre-push stdin (the
+# pushed ref list) to decide whether any pushed commit touches services/api/ —
+# see services/api/scripts/hooks/pre-push.sh (spec 008).
 set -e
+
+echo "[pre-push] services/api lane (Ollama-gated local tests + evals)"
+sh services/api/scripts/hooks/pre-push.sh
 
 OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://localhost:11434/v1}"
 

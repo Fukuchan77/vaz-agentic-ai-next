@@ -5,7 +5,7 @@ This file provides guidance to agents when working with code in this repository.
 > **Note (2026-09-21, spec `006-repo-consolidation` Task 6)**: this repo now lives at `services/api`
 > of the `vaz-agentic-ai-next` hub (`git subtree add --squash`). `.github/`, `.pre-commit-config.yaml`,
 > `.githooks/`, and `mise.toml` moved to the hub's actual root — see the longer note at the top of
-> `CLAUDE.md` for what replaced each. `mise run <task>` below means `mise run api:<task>` from the
+> `CLAUDE.md` for what replaced each (hooks: `scripts/hooks/*.sh`, called by the hub's `.githooks/`, spec `008`). `mise run <task>` below means `mise run api:<task>` from the
 > hub root.
 
 ## Commands
@@ -27,7 +27,6 @@ mise run evals:pr-gate       # diff two EvalReport JSON files for regressions; o
 mise run lint                # ruff check + ty check (type checker is `ty`, NOT mypy)
 mise run format              # ruff format
 mise run audit               # pip-audit dependency vulnerability scan
-mise run hooks:install       # install pre-commit hook
 mise run build               # docker build
 ```
 
@@ -157,8 +156,8 @@ A private-API coupling, not a version bound: the rate-limit-exceeded handler (`a
 
 - **PR CI** (`.github/workflows/pr.yml`): lint → `test:ci` → `test:redis` → `audit`. Never runs live LLM or Ollama tests, nor the `chroma`-marked tests (they self-skip unless `RUN_CHROMA_INTEGRATION_TESTS` is set, since they download a Hugging Face embedding model). The `redis`-marked lane does run here — CI starts a `redis:7-alpine` service container and sets `EXPECT_LIVE_TESTS=7` so a broken container fails the run instead of passing as a silent zero-collected green. `asyncio_mode = "auto"` means an unmarked coroutine test in this lane still runs instead of silently passing unawaited.
 - **Nightly** (`.github/workflows/security.yml`): `pip-audit` + gitleaks, cron `37 3 * * *`. Steps run sequentially — a red `pip-audit` means gitleaks never runs that night, which hid 365 pre-existing findings for months (all `main`'s history) until `pip-audit` was fixed on 2026-08-29. All 365 are confirmed false positives (dummy `test-`/`sk-test-` keys in `tests/**` fixtures, 4 placeholder curl `-H "X-API-Key: ..."` lines in `README.md`); none in `app/`. `.gitleaksignore` lists them by exact `<commit>:<file>:<rule>:<line>` fingerprint (from `gitleaks detect --source . --report-format json`) — fingerprint-scoped, not text- or path-scoped, so a new commit reusing the same dummy string still gets flagged (verified). Regenerate the same way to add new entries; never hand-edit existing lines.
-- **pre-commit** (`.pre-commit-config.yaml`): gitleaks, `pip-audit`, `no-hardcoded-model-id` pygrep, `real-tool-conventions-guard` (fires on any non-mock `@agent.tool` under `app/agents/`, forcing review of `docs/tool-design-conventions.md`).
-- **pre-push** (`.githooks/pre-push`, opt-in via `git config core.hooksPath .githooks`): probes Ollama, runs `EXPECT_LIVE_TESTS=6 mise run test:local` + `evals` when reachable (the pinned count guards against a lane that silently collects zero live cases), warns and lets the push through when not.
+- **pre-commit** (`scripts/hooks/pre-commit.sh`, run by the hub's `.githooks/pre-commit`): `ruff`+`ty`, `pip-audit` on dependency changes, `real-tool-conventions-guard` (fires on any non-mock `@agent.tool` under `app/agents/`, forcing review of `docs/tool-design-conventions.md`). gitleaks + model-id guard are hub-wide steps.
+- **pre-push** (`scripts/hooks/pre-push.sh`, run by the hub's `.githooks/pre-push` when a pushed commit touches `services/api/`): probes Ollama at `API_OLLAMA_BASE_URL`, runs `EXPECT_LIVE_TESTS=6 mise run test:local` + `evals` when reachable (the pinned count guards against a lane that silently collects zero live cases), warns and lets the push through when not.
 - **Dependabot** (`.github/dependabot.yml`): weekly `uv` + `github-actions`, minors/patches grouped. Its `ignore:` list blocks the forbidden bumps — `starlette` majors and `fastapi` **minors and majors** (Dependabot reads fastapi's 0.x releases by patch position, so `0.136 → 0.137` is a minor) — plus `chromadb`/`redis` majors, shelved pending a client-compatibility pass. **redis's pass was run on 2026-09-05** — the client moved 5.3.1 → 8.1.0 (`redis>=8.1.0,<9.0`) after the live `-m redis` lane (7/7) and the full unit+integration+e2e suite came back green; the ignore entry stays but now shelves redis **9.x**. **`sentence-transformers` had its pass on 2026-09-21** (PR #37) — cap `<6.0` → `<7.0`, package 5.7.0 → 6.1.0, after the HF-download-gated `chroma` lane (6/6 against a fresh `HF_HOME`) and `mise run api:check` (1557 passed / 22 skipped, 96% coverage) both came back green from an HF-reachable machine; the same run established the `chromadb.types` deprecation entry as pre-existing (the lane failed 6/6 on 5.7.0 too). Guarded by `tests/unit/test_dependabot_config.py`; `docs/dependency-runbook.md` is the accept/shelve process.
 
 ## Feature Status (`004-pydantic-ai-v2-unblock` complete; `003-pydantic-ai-v2-migration` sealed, both tracked under `.sdd/specs/`)
