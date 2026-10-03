@@ -82,18 +82,12 @@
 - [x] `pydantic-ai-agentic-patterns` は非公開でアーカイブ済みと確認した（ユーザ回答）。`docs/guide/` の 7 ページから
       同リポジトリへのリンク 30 本を外し、章名とパスは記録として残した。`docs/guide/README.md` と
       `agentic-engineering.md` に日付つきの注記を入れた。ADR・spec 内の言及は時点の記録なので変更していない。
-- [x] `agentic-ai-sandbox/reference/`（`pydantic-ai-sandbox` の旧版コピー）を削除し、`pydantic-ai-sandbox` を正本とした
-      （ユーザ判断）。移転先を案内する `reference/README.md` だけを残し、文書のリンクを `pydantic-ai-sandbox` の URL に
-      付け替え（リンク先の実在を確認済み）、`reference:*`・`patterns:*` の mise タスク、reference 専用の
-      ワークフロー 5 本、Dependabot の uv ブロック 2 つ、`security.yml` の pip-audit ジョブを外した。
-      同リポジトリの `claude/gracious-turing-1xd2gg` にコミット `b09d764` を作成済み。
-- [ ] **push 待ち**: このセッションには `agentic-ai-sandbox` への書き込み権限が無い（Claude GitHub App が未導入）。
-      権限を付与したうえで push するか、ユーザが手元で取り込む。
+- [x] ~~`agentic-ai-sandbox/reference/` の削除~~ → **不要になった**。ユーザ確認により `agentic-ai-sandbox` 自体が
+      非公開でアーカイブ済みだったため、二重保守は既に解消している（読み取り専用のコピーは更新されない）。
+      用意した削除コミットは push せずに破棄した。正本は `pydantic-ai-sandbox`。
 
 ## 申し送り
 
-- `agentic-ai-sandbox/learn/` のロックファイルには、修正版のある既知の脆弱性が 11 パッケージ・106 件ある
-  （`nltk` 53 件、`pillow` 25 件ほか。いずれも修正版あり）。同ティアは Dependabot の対象外と明記されており、
-  `security.yml` の pip-audit も `reference/` だけを見ていたため、これまで検知されていなかった。
-  pip-audit をこのティアへ向けるかどうかは方針の変更になるため、今回の削除には含めていない。
-  ロックを更新してから監視対象に加えるのが順序として安全。
+- 非公開アーカイブ済みのリポジトリ（`pydantic-ai-agentic-patterns`・`agentic-ai-sandbox`）への言及のうち、
+  時点の記録（`specs/review/`、`services/api/docs/reference-repo-review.md` などのレビュー文書、ADR・spec）は変更しない。
+  読者向けの案内文書（`docs/guide/` など）に新たなリンクを追加しない。
