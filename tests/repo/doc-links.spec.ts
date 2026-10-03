@@ -38,14 +38,16 @@ const SKIP_DIRS = new Set([
 ]);
 
 /**
- * Subtrees imported verbatim from another repository (`git subtree add
- * --squash`, spec `006-repo-consolidation` Task 6). Their Markdown is upstream's
- * to keep correct — `services/api/docs/` links a `config.py` that upstream has
- * since turned into a `config/` package — and rewriting it here would defeat the
- * point of a verbatim import. `tests/repo/cross-repo-reference-resolution.spec.ts`
- * covers what this hub does assert about that tree.
+ * Subtrees imported verbatim from another repository and still owned upstream,
+ * whose Markdown it is not this repo's job to keep correct. Empty since spec 008:
+ * `services/api` (imported via `git subtree add --squash` in spec 006 Task 6) is
+ * now this repo's own source of truth (`docs/adr/0007-fastapi-single-source-of-truth.md`),
+ * so its docs are checked like any other, and the upstream-era broken links it
+ * carried were repointed. Add an entry only for a future import that is genuinely
+ * still maintained elsewhere; the "every vendored root still exists" test keeps
+ * any entry from going stale.
  */
-const VENDORED_ROOTS = ["services/api"];
+const VENDORED_ROOTS: string[] = [];
 
 /**
  * `[text](target)` and `![alt](target)`. The target stops at whitespace (a
