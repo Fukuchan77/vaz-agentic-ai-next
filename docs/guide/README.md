@@ -1,6 +1,8 @@
 # Agentic AI 開発ガイド
 
-Agentic AI アプリ開発の学習パス。骨格は
+Agentic AI アプリ開発の**本番エンジニアリング・リファレンス**（手法別）。入門から順に学ぶ学習パスは
+兄弟リポジトリ `from-genai-to-agentic-ai`（19 モジュール。対応表は下の「学習パスとの対応」）が担う。
+2026-10-03 の役割分担による（[`specs/008-hub-consolidation-followup/spec.md`](../../specs/008-hub-consolidation-followup/spec.md) R6.1）。骨格は
 [`docs/agentic-engineering-review.md`](../agentic-engineering-review.md) §1 が定義する
 **8 手法**（PE / CE / LE / HE / AE / AO / MCP / EV）で、各手法から (a) このハブでの実装、
 (b) 兄弟リポジトリの教材、(c) [`docs/cross-repo-adoption-review.md`](../cross-repo-adoption-review.md)
@@ -53,6 +55,27 @@ upstream の原稿・実装へのリンクを正本とする**と裁定した。
 | [第12章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part4/ch12.md) | 自律型マルチエージェント・リサーチシステム（総合実践） | AE |
 | [第13章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part5/ch13.md) | 長期記憶・3層評価・Tool Guardrails | CE, EV, LE |
 | [第14章](https://github.com/Fukuchan77/pydantic-ai-agentic-patterns/blob/main/docs/part5/ch14.md) | デプロイと運用のベストプラクティス | AO |
+
+## 学習パス（`from-genai-to-agentic-ai`）との対応
+
+`from-genai-to-agentic-ai` は、Python / LangChain の書籍 3 冊を TypeScript / AI SDK v7 へ移植した
+4 フェーズ・19 モジュールの学習パスである。各モジュールの解説は本ガイドの手法ページへ「本番ではどう作るか」
+としてリンクし、本ガイドからは下表で学習パスへ戻る。**本文はどちらにも複製しない。**
+逆向きの対応表の正本は同リポジトリの `specs/curriculum/README.md`「本番実装との対応」。
+
+| 手法 | 学習パスのモジュール |
+|---|---|
+| PE | 1-2 AI SDK v7 Core とツール呼び出し、1-3 構造化出力と要約パイプライン |
+| CE | 2-1 TypeScript ネイティブ RAG、2-2 Advanced RAG、4-1 コンテキストエンジニアリング |
+| LE | 1-2、2-3 5大ワークフローパターン、4-4（強制停止条件） |
+| HE | 3-1 ACI と MCP、3-2〜3-6 ドメインエージェント、4-2 長時間実行ハーネス |
+| AE | 1-0 導入、2-3、2-4 エージェントデザインパターン、3-2〜3-6、4-5 総合演習 |
+| AO | 4-4 安全設計・オブザーバビリティ |
+| MCP | 3-1 ACI と MCP |
+| EV | 4-3 Agent Evals |
+
+学習パスのリファレンス実装（`@platform/ai-core`）は教材用の最小構成である。認証・RBAC、耐久ワークフロー、
+承認の永続化といった本番の機能は本ハブにだけ置く。学習パス側で第 3 の本番実装を育てない。
 
 ## 関連
 
