@@ -1,0 +1,556 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI Pydantic AI Agent",
+    "description": "Production-ready agentic AI framework combining FastAPI, Pydantic AI, and LlamaIndex Workflows. Features include:\n\n- **Chat Agent**: Conversational AI with tool-calling capabilities and session management\n- **RAG System**: Corrective RAG workflow with TF-IDF vector store for document retrieval\n- **Streaming**: Server-Sent Events (SSE) streaming for real-time responses\n- **Observability**: Integrated Logfire instrumentation for AI-native monitoring\n- **Security**: API key authentication, CORS, rate limiting, and security headers\n\nBuilt with enterprise features: connection pooling, request size limits, comprehensive error handling, and production-ready configuration management.",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Liveness health check endpoint.\n\nReturns 200 OK when the service is running. No authentication required.\nUsed by load balancers and monitoring systems.\n\nReturns:\n    dict: Status response indicating service is healthy.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Readiness Check",
+        "description": "Deep readiness health check endpoint.\n\nPerforms live connectivity probes against every store or provider\ncurrently selected by configuration: the Redis session store (only when\nenabled), the active vector store backend, and the LLM provider\n(Req 13.1). Probes run concurrently to minimize added latency.\n\nThis endpoint is intended for Kubernetes readiness probes and load\nbalancer health checks. No authentication is required - which is why the\nresult is served through `ReadinessProbeCache` (see its docstring): the\nLLM probe is a billable provider request, and an unauthenticated route\nmust not turn inbound request volume into outbound provider volume.\n\nAn application whose lifespan did not run (a bare `FastAPI()` test\nharness) has no cache on `app.state` and probes live on every request.\n\nArgs:\n    request: FastAPI request object to access app.state\n\nReturns:\n    JSONResponse: 200 with `{\"status\": \"ready\", \"checks\": {...}}` when\n        every probe passes; 503 with `{\"status\": \"not_ready\", \"checks\":\n        {...}}` naming the failed dependency otherwise (Req 13.2).",
+        "operationId": "readiness_check_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agent/chat": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Chat",
+        "description": "Handle chat requests with the Pydantic AI agent.\n\nIssues a server-side session_id bound to the caller when none is\npresented, or authorizes an existing one before loading history - a\nsession_id bound to a different principal is rejected with 403\n(Req 11.1/11.2). Runs the agent with the user's message under\n`run_guarded` (Req 4.1: native `UsageLimits`; Req 4.4-4.6: tool\nallow-list/approval/budget checks), saves the updated history on a\ncompleted run, and returns the agent's response. The whole request is\nbounded by `chat_request_timeout` (Req 4.2): a timeout aborts with a 504\nrather than hanging indefinitely.\n\nArgs:\n    chat_request: ChatRequest with message and optional session_id.\n    request: FastAPI Request object for accessing app.state.\n    deps: AgentDeps with session_store and other dependencies.\n    principal: Authenticated caller (validates X-API-Key header, Req 11.1/11.2).\n\nReturns:\n    ChatResponse with the agent's reply, session_id, tool call count,\n    stop reason, and audit trail.\n\nRaises:\n    HTTPException: 403 if session_id belongs to another principal; 504 if\n        the request exceeds `chat_request_timeout`.",
+        "operationId": "chat_v1_agent_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/agent/stream": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Stream Agent",
+        "description": "Stream chat responses from the Pydantic AI agent via Server-Sent Events.\n\nEmits the typed 5-event union (`step_started`/`tool_called`/`token`/\n`completed`/`error`) defined in `app.patterns.sse`. Session history is\nloaded and saved by the event source in `app.api.v1._stream`; this route\nonly wires headers and the idle heartbeat. Unlike `/agent/chat`, this\nendpoint has no wire channel to mint and return a new session_id (the\nSSE contract carries no such field), so it only authorizes an existing\nsession_id (403 on cross-principal access, Req 11.2) and otherwise runs\nstatelessly, exactly as before.\n\nArgs:\n    chat_request: ChatRequest with message and optional session_id.\n    request: FastAPI Request object for accessing app.state.\n    deps: AgentDeps with session_store and other dependencies.\n    principal: Authenticated caller (validates X-API-Key header, Req 11.2).\n\nReturns:\n    StreamingResponse with text/event-stream media type.\n\nRaises:\n    HTTPException: 403 if session_id belongs to another principal.",
+        "operationId": "stream_agent_v1_agent_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/rag/ingest": {
+      "post": {
+        "tags": [
+          "rag"
+        ],
+        "summary": "Ingest",
+        "description": "Ingest document chunks into the vector store.\n\nThis endpoint accepts a list of text chunks and adds them to the\nconfigured vector store for later retrieval during RAG queries.\n\nArgs:\n    request: IngestRequest with list of document chunks.\n    req: FastAPI Request object for accessing app.state.\n    _: Authentication dependency (validates X-API-Key header).\n\nReturns:\n    IngestResponse with count of ingested chunks.\n\nRaises:\n    HTTPException: 422 if the configured store rejects a chunk as oversized.",
+        "operationId": "ingest_v1_rag_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/rag/query": {
+      "post": {
+        "tags": [
+          "rag"
+        ],
+        "summary": "Query",
+        "description": "Execute a RAG query using the Corrective RAG workflow.\n\nThis endpoint runs the Corrective RAG workflow which:\n1. Retrieves relevant documents from the vector store\n2. Evaluates relevance and retries if insufficient\n3. Synthesizes a final answer from relevant context\n\nRAG queries are session-less (Req 11's session ownership does not apply\nhere); only the stricter per-endpoint rate limit (Req 11.3) does.\n\nArgs:\n    rag_request: RAGQueryRequest with query string and optional max_retries.\n    workflow: CorrectiveRAGWorkflow instance (per-request).\n    _: Authentication dependency (validates X-API-Key header).\n\nReturns:\n    RAGQueryResponse with answer, context_found flag, and search_count.",
+        "operationId": "query_v1_rag_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RAGQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RAGQueryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuditRecord": {
+        "properties": {
+          "tool_name": {
+            "type": "string",
+            "title": "Tool Name"
+          },
+          "stop_reason": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "max_iterations",
+              "budget_exceeded",
+              "denied",
+              "disallowed_tool"
+            ],
+            "title": "Stop Reason"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          },
+          "principal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool_name",
+          "stop_reason"
+        ],
+        "title": "AuditRecord",
+        "description": "A single refused, denied, or budget-blocked attempt (Req 4.7).\n\n`tool_name` is empty for a native `UsageLimitExceeded` stop (Req 9.6):\nthe request-count/tool-call-count/token-count check that raised fires\nbefore any specific tool call is attempted, so there is no tool name to\nrecord.\n\n`principal` is best-effort attribution, not a guarantee: it is read off\n`deps.principal` by convention (see `_principal_of`), so it is `None` for\nany route that runs before `bind_principal()` (`app/agents/deps.py`) has\nset it, or for a `DepsT` shape that carries no such attribute at all."
+      },
+      "ChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 32000,
+            "minLength": 1,
+            "title": "Message",
+            "description": "User message to send to the agent"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "Session ID for conversation continuity. If omitted, the server issues a new one; presenting another principal's session_id is rejected with 403."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest",
+        "description": "Request model for chat endpoint.\n\nDeliberately defines no `message_history`, `usage`, or `model` field:\nconversation history is always server-loaded from `SessionStore` (never\nclient-supplied), so there is no field for a client to inject it\nthrough. `extra=\"forbid\"` makes that a *structural* guarantee rather\nthan an accident of the current field list \u2014 an unrecognized field\n(including a client attempting to smuggle in `message_history`) is a\n422, not a silently-dropped extra key. This closes the same class of\nattack surface as CVE-2026-25580 (untrusted history/URL injection) by\nconstruction. See `tests/unit/models/test_request_model_strictness.py`.\n\nAttributes:\n    message: User message to send to the agent (1-32000 chars).\n    session_id: Server-issued session ID from a previous response, for\n        conversation continuity. If omitted, the server mints a new one\n        (Req 11.1). Presenting a session_id bound to another principal\n        is rejected with 403 (Req 11.2)."
+      },
+      "ChatResponse": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "title": "Reply",
+            "description": "Agent's response to the user message"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "Server-issued session ID for this conversation (Req 11.1)"
+          },
+          "tool_calls_made": {
+            "type": "integer",
+            "title": "Tool Calls Made",
+            "description": "Number of tool calls executed during this conversation turn"
+          },
+          "stop_reason": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "max_iterations",
+              "budget_exceeded",
+              "denied",
+              "disallowed_tool"
+            ],
+            "title": "Stop Reason",
+            "description": "Why the guarded agent run stopped (Req 4.3)",
+            "default": "completed"
+          },
+          "audit": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRecord"
+            },
+            "type": "array",
+            "title": "Audit",
+            "description": "Refused, denied, or budget-blocked tool attempts recorded during this turn (Req 4.7)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reply",
+          "session_id",
+          "tool_calls_made"
+        ],
+        "title": "ChatResponse",
+        "description": "Response model for chat endpoint.\n\nAttributes:\n    reply: Agent's response to the user message.\n    session_id: The server-issued session ID for this conversation - the\n        minted id for a new conversation, or the same id echoed back\n        when continuing one (Req 11.1).\n    tool_calls_made: Number of tool calls executed during this conversation turn."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IngestRequest": {
+        "properties": {
+          "chunks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Chunks",
+            "description": "List of text chunks to ingest into the vector store"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chunks"
+        ],
+        "title": "IngestRequest",
+        "description": "Request model for document ingestion.\n\n`extra=\"forbid\"` rejects an unrecognized field with a 422 rather than\nsilently dropping it, so a caller cannot smuggle in fields this model\nnever defines (see `tests/unit/models/test_request_model_strictness.py`).\n\nAttributes:\n    chunks: List of text chunks to ingest into the vector store (1-1000\n        chunks, each at most MAX_CHUNK_CHARS characters)."
+      },
+      "IngestResponse": {
+        "properties": {
+          "ingested": {
+            "type": "integer",
+            "title": "Ingested",
+            "description": "Number of chunks successfully ingested into the vector store"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingested"
+        ],
+        "title": "IngestResponse",
+        "description": "Response model for document ingestion.\n\nAttributes:\n    ingested: Number of chunks successfully ingested into the vector store."
+      },
+      "RAGQueryRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Query",
+            "description": "User query to search for relevant context"
+          },
+          "max_retries": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Retries",
+            "description": "Maximum number of search retries for relevance evaluation",
+            "default": 3
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "RAGQueryRequest",
+        "description": "Request model for RAG query endpoint.\n\nDeliberately defines no `context`/`hits`/`history` field: retrieved\ncontext always comes from this run's own workflow search, never from the\ncaller. `extra=\"forbid\"` makes an unrecognized field a 422 rather than a\nsilently-dropped extra key (see\n`tests/unit/models/test_request_model_strictness.py`).\n\nAttributes:\n    query: User query to search for relevant context (1-10000 chars).\n    max_retries: Maximum number of search retries for relevance evaluation (1-10)."
+      },
+      "RAGQueryResponse": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer",
+            "description": "Generated answer based on retrieved context"
+          },
+          "context_found": {
+            "type": "boolean",
+            "title": "Context Found",
+            "description": "Whether relevant context was found in the vector store"
+          },
+          "search_count": {
+            "type": "integer",
+            "title": "Search Count",
+            "description": "Number of search attempts performed during this query"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedHit"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Retrieved hits cited in the answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "context_found",
+          "search_count"
+        ],
+        "title": "RAGQueryResponse",
+        "description": "Response model for RAG query endpoint.\n\nAttributes:\n    answer: Generated answer based on retrieved context.\n    context_found: Whether relevant context was found in the vector store.\n    search_count: Number of search attempts performed during this query.\n    citations: Retrieved hits cited in the answer."
+      },
+      "RetrievedHit": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id",
+            "description": "Stable document-chunk identifier (source::ordinal)"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Retrieved document chunk text"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Relevance score assigned by the vector store"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "text",
+          "score"
+        ],
+        "title": "RetrievedHit",
+        "description": "A single retrieval hit with its stable citation id and relevance score.\n\nAttributes:\n    chunk_id: Stable document-chunk identifier of the form \"source::ordinal\".\n    text: The retrieved document chunk text.\n    score: Relevance score assigned by the vector store (higher is more relevant)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "description": "API key for authentication. Include this key in the X-API-Key header for all requests to protected endpoints. Contact your administrator to obtain an API key.",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}
