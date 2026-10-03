@@ -206,3 +206,43 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
   個別マージが渋滞したら、1 ブランチで `pnpm update -r` / `uv lock --upgrade` / Actions SHA
   更新をまとめ、main 反映後に Dependabot の自動クローズに任せる方が速く、かつ結果も新しい
   (2026-09-11 の実例)。
+
+## 8. ベータ検証レーンからの取り込み手順
+
+- **仕様根拠**: [`specs/008-hub-consolidation-followup/spec.md`](../specs/008-hub-consolidation-followup/spec.md) R4.2
+
+本ハブは**安定版チャネル**である。プレリリース版や新メジャーの検証は、ハブの長命ブランチではなく
+兄弟リポジトリで行う。長命ブランチは、本ハブの規模（約 650 ファイル）と週次の Dependabot 更新に
+追従しきれず、検証結果が出る前に腐る。
+
+| レーン | リポジトリ | 検証対象（2026-10-03 時点） |
+|---|---|---|
+| TypeScript ベータ | `Fukuchan77/next-agentic-stack` | TypeScript 7.1 nightly、Next.js canary、Vitest 5、Node 26、Playwright alpha |
+| Python ベータ | `Fukuchan77/pydantic-ai-sandbox` | Python 3.15、pydantic-ai のベータ機能、slowapi を外した starlette 1.x / 最新 FastAPI |
+
+### 8.1 据え置き中のメジャーと、取り込みに必要な証拠
+
+本ハブが新メジャーを据え置いている理由は、どれも**具体的な障害 1 つ**に帰着する。ベータレーンでは、
+その障害が解消したことを示す必要がある。単に「動いた」だけでは足りない。
+
+| 据え置き | 障害（正本） | ベータレーンで示すべきこと |
+|---|---|---|
+| `vitest` 4.x | 5.x はテスト間でモック状態をリセットする。`apps/web/tests/auth.spec.ts` がテストをまたいで `NextAuthMock.mock.calls` を読むため壊れる（[`AGENTS.md`](../AGENTS.md)） | Vitest 5 下で、テストをまたいだモック参照を持たない書き方。ハブに持ち込める差分として示す |
+| `typescript` 6.x | TS 7 はネイティブ移植で、JS の compiler API が無い（[`CLAUDE.md`](../CLAUDE.md)） | ハブが使う compiler API 依存のツール（`openapi-typescript`、`next typegen` など）が TS 7 下で通ること |
+| `@types/node` `^24` | ランタイムの Node 24 LTS に合わせている | Node のランタイム側を上げる判断が先。型だけを先行させない |
+| `fastapi<0.137` / `starlette<1.0` / Python 3.13 固定 | 3 つとも slowapi が根本原因（`services/api/CLAUDE.md`「Dependency pins that are load-bearing」） | `pydantic-ai-sandbox` の slowapi 置き換え計画（`docs/slowapi-replacement-plan.md`）の検証レーンが green であること |
+
+### 8.2 取り込みの手順
+
+1. **ベータレーン側で記録する。** 検証した版、通したゲート（コマンドと結果）、8.1 の障害が
+   解消した根拠を、そのリポジトリの PR かドキュメントに残す。
+2. **ハブ側は 1 メジャーにつき 1 PR。** PR 本文にベータレーンの記録をリンクする。
+   同じ PR で次をまとめて更新する。
+   - `.github/dependabot.yml` の `ignore`（§7「保留中メジャーとの整合」）
+   - `CLAUDE.md` / `AGENTS.md` の据え置き記述（ペアで）
+   - 8.1 の表の該当行（削除）
+3. **プレリリース版はハブのロックファイルに入れない。** 正式版の公開を待つ。
+   `minimumReleaseAge`（24h）と Dependabot の `cooldown` は、ベータレーンで検証済みの版にも適用する。
+4. **設定ファイルを丸ごとコピーしない。** ベータレーンの `tsconfig` / `vitest.config` /
+   `pyproject.toml` は前提（ワークスペース構成、テスト分割）がハブと違う。ハブでは差分として再構成し、
+   ハブ自身のゲート（`mise run check`、`api:check`、`py:check`、`size`）で確認する。

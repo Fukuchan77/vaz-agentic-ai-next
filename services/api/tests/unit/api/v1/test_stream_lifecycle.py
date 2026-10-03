@@ -11,6 +11,11 @@ from collections.abc import AsyncGenerator
 import pytest
 from pydantic_ai import RunUsage
 from pydantic_ai import UsageLimitExceeded
+from pydantic_ai.messages import ModelRequest
+from pydantic_ai.messages import ModelResponse
+from pydantic_ai.messages import SystemPromptPart
+from pydantic_ai.messages import TextPart
+from pydantic_ai.messages import UserPromptPart
 
 from app.api.v1._stream import _run_with_lifecycle_guards
 from app.patterns.sse import Completed
@@ -18,6 +23,7 @@ from app.patterns.sse import Error
 from app.patterns.sse import SSEEvent
 from app.patterns.sse import Token
 from app.patterns.sse import parse_sse_events
+from app.stores.session_store.in_memory import InMemorySessionStore
 from tests.conftest import build_test_settings
 
 
@@ -210,6 +216,92 @@ class TestUsageLimitExceededDetail:
     @pytest.mark.asyncio
     async def test_error_message_omits_the_snapshot_when_no_usage_is_given(self) -> None:
         """Without a usage object, the message stays the plain stop-reason text."""
+        settings = build_test_settings()
+        agen = _TrackingAsyncGen(
+            _raises(UsageLimitExceeded("Exceeded the total_tokens_limit of 10"))
+        )
+
+        wires = [w async for w in _run_with_lifecycle_guards(_FakeRequest(), agen, settings)]
+
+        parsed = parse_sse_events("".join(wires))
+        assert parsed == [Error(message="Usage limit exceeded: budget_exceeded")]
+
+
+def _long_history() -> list:
+    """A history long enough that `shrink_for_budget_recovery` actually cuts it."""
+    messages: list = [ModelRequest(parts=[SystemPromptPart(content="sys")])]
+    for i in range(9):
+        messages.append(ModelRequest(parts=[UserPromptPart(content=f"u{i}")]))
+        messages.append(ModelResponse(parts=[TextPart(content=f"a{i}")]))
+    return messages
+
+
+class TestBudgetExceededRecovery:
+    """Verify recovery-trim on a `budget_exceeded` `UsageLimitExceeded`.
+
+    It halves and persists the stored history so a following turn has a
+    chance to escape the wall, mirroring the non-streaming `/agent/chat`
+    recovery path in `app.api.v1.agent`.
+    """
+
+    @pytest.mark.asyncio
+    async def test_shrinks_and_saves_history_on_budget_exceeded(self) -> None:
+        """`session_store.save_history` is called with a strictly shorter history."""
+        settings = build_test_settings()
+        agen = _TrackingAsyncGen(
+            _raises(UsageLimitExceeded("Exceeded the total_tokens_limit of 10"))
+        )
+        session_store = InMemorySessionStore()
+        history = _long_history()
+        await session_store.save_history("sess-1", history)
+
+        wires = [
+            w
+            async for w in _run_with_lifecycle_guards(
+                _FakeRequest(),
+                agen,
+                settings,
+                session_store=session_store,
+                session_id="sess-1",
+                history=history,
+            )
+        ]
+
+        parsed = parse_sse_events("".join(wires))
+        assert parsed == [Error(message="Usage limit exceeded: budget_exceeded")]
+        recovered = await session_store.get_history("sess-1")
+        assert len(recovered) < len(history)
+
+    @pytest.mark.asyncio
+    async def test_does_not_touch_history_on_a_non_budget_stop(self) -> None:
+        """A `max_iterations`/`request_limit` stop leaves the stored history untouched."""
+        settings = build_test_settings()
+        agen = _TrackingAsyncGen(
+            _raises(UsageLimitExceeded("The next request would exceed the request_limit of 1"))
+        )
+        session_store = InMemorySessionStore()
+        history = _long_history()
+        await session_store.save_history("sess-2", history)
+
+        async for _ in _run_with_lifecycle_guards(
+            _FakeRequest(),
+            agen,
+            settings,
+            session_store=session_store,
+            session_id="sess-2",
+            history=history,
+        ):
+            pass
+
+        recovered = await session_store.get_history("sess-2")
+        assert recovered == history
+
+    @pytest.mark.asyncio
+    async def test_omitted_session_args_disable_recovery(self) -> None:
+        """Recovery is a no-op without `session_store`/`session_id`/`history`.
+
+        This is what every pre-existing caller in this file relies on.
+        """
         settings = build_test_settings()
         agen = _TrackingAsyncGen(
             _raises(UsageLimitExceeded("Exceeded the total_tokens_limit of 10"))

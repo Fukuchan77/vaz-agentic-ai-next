@@ -279,3 +279,11 @@
 11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/test_middleware_order.py:generic-api-key:66
 11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/workflows/test_asyncio_timeout_no_retry.py:generic-api-key:33
 11a87f50d76c06ce3c49e47faaf933ddc7c10f06:tests/unit/workflows/test_asyncio_timeout_no_retry.py:generic-api-key:98
+
+# Added 2026-10-03 (spec 008 Task 1): port of fastapi-pydantic-ai-agent@d9a3c93, whose
+# budget-recovery E2E test reuses the dummy API-key placeholder. Same two findings the
+# source repo baselined in its own e606e07; re-fingerprinted against the port commit.
+# Generated with `gitleaks git --report-path` + `jq -r .[].Fingerprint`. This depends on
+# the port commit keeping its SHA, so merge the branch with a merge commit, not squash/rebase.
+7a5a75a5b5a7c647c4e0340ca3a0455d001c8728:services/api/tests/e2e/test_agent_budget_recovery.py:generic-api-key:131
+7a5a75a5b5a7c647c4e0340ca3a0455d001c8728:services/api/tests/e2e/test_agent_budget_recovery.py:generic-api-key:88

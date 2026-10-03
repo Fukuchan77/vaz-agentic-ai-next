@@ -27,18 +27,23 @@ def register_mock_tools(agent: Agent[AgentDeps, str]) -> None:
 
     @agent.tool
     async def mock_web_search(ctx: RunContext[AgentDeps], query: str) -> str:
-        """Mock web search tool - placeholder that returns stub data.
+        """Look up web search results for a query.
 
-        ⚠️ WARNING: This is a MOCK implementation for development only!
-        It does NOT perform actual web searches and returns stub data.
+        Returns a short list of illustrative results for local development
+        and evaluation; it does not query a real search engine.
 
         Args:
             ctx: RunContext providing access to AgentDeps (http_client, settings).
-            query: The search query string.
+            query: The search query to look up.
 
         Returns:
-            Mock search results as a formatted string (not real search data).
+            A newline-separated list of result snippets related to the query.
         """
+        # DEV-ONLY STUB (not sent to the model - this comment, unlike the
+        # docstring above, never becomes part of the tool's model-facing
+        # description; see "Writing tools for agents" on keeping a tool's
+        # description limited to its actual behavior): returns canned text,
+        # performs no real search or outbound request.
         logger.warning(
             "Mock web search tool called with query: %s. "
             "This returns stub data only. Replace with real search API for production.",

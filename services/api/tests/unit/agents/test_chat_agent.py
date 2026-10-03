@@ -10,11 +10,25 @@ from pydantic_ai import RunContext
 from pydantic_ai.models.test import TestModel
 
 from app.agents.chat_agent import ChatOutput
-from app.agents.chat_agent import _build_system_prompt
+from app.agents.chat_agent import _build_instructions
 from app.agents.chat_agent import build_chat_agent
 from app.agents.chat_agent import build_model
 from app.agents.deps import AgentDeps
 from app.config import Settings
+
+
+def _ctx_with_settings(settings: Settings) -> Mock:
+    """Build a `Mock(spec=RunContext[AgentDeps])` whose `.deps.settings` is real.
+
+    `_build_instructions` reads `ctx.deps.settings` to decide whether the
+    build it belongs to actually registered any tool, so the fixture needs a
+    real `Settings` instance behind `.deps.settings`, not an unconfigured
+    `Mock` attribute.
+    """
+    ctx = Mock(spec=RunContext[AgentDeps])
+    ctx.deps = Mock(spec=AgentDeps)
+    ctx.deps.settings = settings
+    return ctx
 
 
 class TestBuildModel:
@@ -160,38 +174,85 @@ class TestBuildModel:
         assert provider == "openai", f"Expected 'openai' but got '{provider}'"
 
 
-class TestBuildSystemPrompt:
-    """Test suite for _build_system_prompt function."""
+class TestBuildInstructions:
+    """Test suite for `_build_instructions`.
+
+    Registered via `agent.instructions()` (re-evaluated every request, never
+    baked into persisted session history) rather than `agent.system_prompt()`
+    - see the docstring on `_build_instructions` for why that distinction
+    matters for a prompt update reaching an already-running session.
+    """
+
+    def _settings(self, **overrides: object) -> Settings:
+        defaults: dict[str, object] = {
+            "api_key": SecretStr("test-api-key-12345"),
+            "llm_model": "openai:gpt-4o",
+            "llm_api_key": SecretStr("test-api-key-12345"),
+        }
+        defaults.update(overrides)
+        return Settings(**defaults)  # type: ignore[arg-type]
 
     @pytest.mark.asyncio
-    async def test_build_system_prompt_returns_string(self) -> None:
-        """_build_system_prompt should return a non-empty string."""
-        mock_ctx = Mock(spec=RunContext[AgentDeps])
+    async def test_returns_non_empty_string(self) -> None:
+        """_build_instructions should return a non-empty string."""
+        ctx = _ctx_with_settings(self._settings())
 
-        prompt = await _build_system_prompt(mock_ctx)
+        instructions = await _build_instructions(ctx)
 
-        assert isinstance(prompt, str)
-        assert len(prompt) > 0
-
-    @pytest.mark.asyncio
-    async def test_build_system_prompt_mentions_tools(self) -> None:
-        """_build_system_prompt should mention tool usage."""
-        mock_ctx = Mock(spec=RunContext[AgentDeps])
-
-        prompt = await _build_system_prompt(mock_ctx)
-
-        # Prompt should mention tools since the agent has tool-calling capabilities
-        assert "tool" in prompt.lower()
+        assert isinstance(instructions, str)
+        assert len(instructions) > 0
 
     @pytest.mark.asyncio
-    async def test_build_system_prompt_is_helpful_tone(self) -> None:
-        """_build_system_prompt should have a helpful, assistant tone."""
-        mock_ctx = Mock(spec=RunContext[AgentDeps])
+    async def test_is_helpful_tone(self) -> None:
+        """_build_instructions should have a helpful, assistant tone."""
+        ctx = _ctx_with_settings(self._settings())
 
-        prompt = await _build_system_prompt(mock_ctx)
+        instructions = await _build_instructions(ctx)
 
-        # Check for helpful/assistant language
-        assert any(word in prompt.lower() for word in ["helpful", "assist", "help"])
+        assert any(word in instructions.lower() for word in ["helpful", "assist", "help"])
+
+    @pytest.mark.asyncio
+    async def test_mentions_tools_when_mock_tools_are_registered(self) -> None:
+        """Tool access is claimed when the mock-tool build gate is open.
+
+        Matches what `build_chat_agent` actually wires when it's open.
+        """
+        ctx = _ctx_with_settings(self._settings(app_env="development", enable_mock_tools=True))
+
+        instructions = await _build_instructions(ctx)
+
+        assert "tool" in instructions.lower()
+
+    @pytest.mark.asyncio
+    async def test_does_not_claim_tools_in_production(self) -> None:
+        """The production build must not claim tool access.
+
+        It registers zero tools (Req: mock tools are double-guarded).
+        """
+        ctx = _ctx_with_settings(
+            self._settings(
+                app_env="production",
+                enable_mock_tools=False,
+                allowed_hosts=["api.example.com"],
+            )
+        )
+
+        instructions = await _build_instructions(ctx)
+
+        assert "tool" not in instructions.lower()
+
+    @pytest.mark.asyncio
+    async def test_does_not_claim_tools_when_mock_tools_disabled(self) -> None:
+        """The prompt must track the gate, not just the environment.
+
+        Non-production but `enable_mock_tools=False` also registers zero
+        tools.
+        """
+        ctx = _ctx_with_settings(self._settings(app_env="development", enable_mock_tools=False))
+
+        instructions = await _build_instructions(ctx)
+
+        assert "tool" not in instructions.lower()
 
 
 class TestBuildChatAgent:
