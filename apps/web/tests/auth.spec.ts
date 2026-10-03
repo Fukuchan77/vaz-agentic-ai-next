@@ -30,6 +30,16 @@ vi.mock("next-auth", () => ({ default: NextAuthMock }));
 vi.mock("next-auth/providers/google", () => ({ default: GoogleMock }));
 vi.mock("next-auth/providers/microsoft-entra-id", () => ({ default: MicrosoftEntraIDMock }));
 
+// `@/lib/auth` calls NextAuth once, at module evaluation, and the module is
+// cached for the rest of the file. Snapshot that single call's argument before
+// any test runs, so no test depends on mock call history surviving between
+// tests (Vitest 5 defaults to `clearMocks: true`).
+let nextAuthConfig: unknown;
+beforeAll(async () => {
+	await import("@/lib/auth");
+	nextAuthConfig = NextAuthMock.mock.calls[0]?.[0];
+});
+
 describe("buildAuthProviders", () => {
 	test("registers Microsoft Entra ID for the entra-id switch (default)", async () => {
 		const { buildAuthProviders } = await import("@/lib/auth");
@@ -89,8 +99,7 @@ describe("NextAuth wiring", () => {
 	});
 
 	test("passes session: { strategy: 'jwt' } and the AUTH_IDP-selected provider to NextAuth", async () => {
-		await import("@/lib/auth");
-		expect(NextAuthMock).toHaveBeenCalledWith(
+		expect(nextAuthConfig).toEqual(
 			expect.objectContaining({
 				session: { strategy: "jwt" },
 				providers: expect.arrayContaining([expect.objectContaining({ id: "microsoft-entra-id" })]),
@@ -103,8 +112,7 @@ describe("NextAuth callbacks (email→role→JWT→session propagation, R5.1)", 
 	// The callbacks are exercised through the config object captured by the
 	// NextAuth mock — the same closures production passes to Auth.js.
 	async function getCallbacks() {
-		await import("@/lib/auth");
-		const config = NextAuthMock.mock.calls[0]?.[0] as unknown as {
+		const config = nextAuthConfig as {
 			callbacks: {
 				jwt: (args: { token: { role?: string }; user?: { email?: string | null } }) => {
 					role?: string;
