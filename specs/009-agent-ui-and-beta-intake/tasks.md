@@ -22,38 +22,38 @@ _Depends:_ none
 _Requirements:_ 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
 _Traces:_ REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-012, REQ-013, DES-1.1, DES-1.2, DES-1.3, DES-1.4, DES-1.11
 
-- [ ] 1.1 Tailwind v4 / shadcn new-york の設定、`apps/web/src` 限定の source scan、preflight なしの CSS entry、system font token、依存監査を導入する。theme token（色・コントラスト）は `from-genai-to-agentic-ai` の `apps/web/app/globals.css` と `scripts/check-web-theme.test.mjs`（参照 commit を Implementation Notes に記録）を参照元にし、ファイルを丸ごとコピーせず agent-ui が使うトークンだけを移す。`shadcn init` / `add` の実行後に manifest の差分を plan.md External Dependencies と照合し、表にない依存（`tw-animate-css` など）は取り除いて、それを使う import も残さない。`pnpm ignored-builds` の結果を確認し、必要な lifecycle script だけを明示許可する。Tailwind を入れる前に `mise run build && mise run size` を実行し、Client CSS のベースラインとして Implementation Notes に記録する（2026-10-03 の 19.94 kB は参考値で、判定には使わない）。Branch A/C は部品を含む完成形の 1.7 まで判定しない。Carbon の reset は layer の外に出力され、Tailwind の utilities を打ち消すため、plan.md「Cascade layer contract」に従って Carbon を最も弱い `carbon` layer へ入れる。先に `apps/web/tests/e2e/css-cascade.spec.ts` へ構造の検査（Carbon の規則が `carbon` の `CSSLayerBlockRule` の中にあり、layer の順序が `carbon` から始まる）を書いて RED を確認し、それから `global.scss` の先頭に layer 順序を宣言して Carbon の出力を `@layer carbon` で包む。Sass で採った包み方（第一候補は `sass:meta` の `load-css()`）を Implementation Notes に記録する。Carbon 画面（`/`）の a11y E2E が変わらず通ることも確認する。
+- [x] 1.1 Tailwind v4 / shadcn new-york の設定、`apps/web/src` 限定の source scan、preflight なしの CSS entry、system font token、依存監査を導入する。theme token（色・コントラスト）は `from-genai-to-agentic-ai` の `apps/web/app/globals.css` と `scripts/check-web-theme.test.mjs`（参照 commit を Implementation Notes に記録）を参照元にし、ファイルを丸ごとコピーせず agent-ui が使うトークンだけを移す。`shadcn init` / `add` の実行後に manifest の差分を plan.md External Dependencies と照合し、表にない依存（`tw-animate-css` など）は取り除いて、それを使う import も残さない。`pnpm ignored-builds` の結果を確認し、必要な lifecycle script だけを明示許可する。Tailwind を入れる前に `mise run build && mise run size` を実行し、Client CSS のベースラインとして Implementation Notes に記録する（2026-10-03 の 19.94 kB は参考値で、判定には使わない）。Branch A/C は部品を含む完成形の 1.7 まで判定しない。Carbon の reset は layer の外に出力され、Tailwind の utilities を打ち消すため、plan.md「Cascade layer contract」に従って Carbon を最も弱い `carbon` layer へ入れる。先に `apps/web/tests/e2e/css-cascade.spec.ts` へ構造の検査（Carbon の規則が `carbon` の `CSSLayerBlockRule` の中にあり、layer の順序が `carbon` から始まる）を書いて RED を確認し、それから `global.scss` の先頭に layer 順序を宣言して Carbon の出力を `@layer carbon` で包む。Sass で採った包み方（第一候補は `sass:meta` の `load-css()`）を Implementation Notes に記録する。Carbon 画面（`/`）の a11y E2E が変わらず通ることも確認する。
   _Boundary:_ `apps/web/package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `biome.json`, `apps/web/postcss.config.mjs`, `apps/web/components.json`, `apps/web/src/assets/styles/tailwind.css`, `apps/web/src/assets/styles/global.scss`, `apps/web/src/app/layout.tsx`, `apps/web/tests/e2e/css-cascade.spec.ts`
   _Run (unchanged):_ `apps/web/tests/e2e/a11y.spec.ts`
   _Depends:_ none
   _Requirements:_ 1.1, 1.2, 1.3, 1.5, 1.7, 2.5
   _Traces:_ REQ-001, REQ-002, REQ-003, REQ-005, REQ-007, REQ-012, DES-1.1
-- [ ] 1.2 `cn()` と必要最小限の shadcn primitives をリポジトリ所有の source として追加し、共通部品が Carbon を import せず利用できる presentation foundation を作る。primitives は shadcn からコピーしたソースで、独自の振る舞いを持たないため単独の unit test は置かない。振る舞いは 1.4〜1.6 の agent-ui の失敗するテストを通して検証する。
+- [x] 1.2 `cn()` と必要最小限の shadcn primitives をリポジトリ所有の source として追加し、共通部品が Carbon を import せず利用できる presentation foundation を作る。primitives は shadcn からコピーしたソースで、独自の振る舞いを持たないため単独の unit test は置かない。振る舞いは 1.4〜1.6 の agent-ui の失敗するテストを通して検証する。
   _Boundary:_ `apps/web/src/lib/utils.ts`, `apps/web/src/components/ui/button.tsx`, `apps/web/src/components/ui/card.tsx`, `apps/web/src/components/ui/input.tsx`, `apps/web/src/components/ui/textarea.tsx`, `apps/web/src/components/ui/badge.tsx`, `apps/web/src/components/ui/alert.tsx`
   _Depends:_ 1.1
   _Requirements:_ 1.1, 1.7, 2.5
   _Traces:_ REQ-001, REQ-007, REQ-012, DES-1.1
-- [ ] 1.3 (P) UI dependency の Dependabot group を 2 つ追加し、非空虚な repo guard で固定する。1 つ目は `radix-ui` / `class-variance-authority` / `clsx` / `tailwind-merge` / `lucide-react`。2 つ目は `tailwindcss` と `@tailwindcss/postcss` だけで、同じ版で揃えて上げるために 1 つ目とは分ける（R1.6）。先に `tests/repo/dependabot.spec.ts` へ 2 グループの所属・相互排他・cooldown・minimum release age の期待値を足して RED を確認し、それから `.github/dependabot.yml` を変える。既存 policy が drift しないことも検証する。
+- [x] 1.3 (P) UI dependency の Dependabot group を 2 つ追加し、非空虚な repo guard で固定する。1 つ目は `radix-ui` / `class-variance-authority` / `clsx` / `tailwind-merge` / `lucide-react`。2 つ目は `tailwindcss` と `@tailwindcss/postcss` だけで、同じ版で揃えて上げるために 1 つ目とは分ける（R1.6）。先に `tests/repo/dependabot.spec.ts` へ 2 グループの所属・相互排他・cooldown・minimum release age の期待値を足して RED を確認し、それから `.github/dependabot.yml` を変える。既存 policy が drift しないことも検証する。
   _Boundary:_ `.github/dependabot.yml`, `tests/repo/dependabot.spec.ts`
   _Depends:_ none
   _Requirements:_ 1.5, 1.6
   _Traces:_ REQ-005, REQ-006, DES-1.11
-- [ ] 1.4 (P) `ApprovalCard` の失敗する unit test を先に追加し、chat/jobs の双方を中立 props へ写像できる表示専用カードを実装する。optional arguments、editable JSON text、画面別 labels、pending/denial/error、accessible actions を覆い、fetch・承認判定・監査・logging を持ち込まない。
+- [x] 1.4 (P) `ApprovalCard` の失敗する unit test を先に追加し、chat/jobs の双方を中立 props へ写像できる表示専用カードを実装する。optional arguments、editable JSON text、画面別 labels、pending/denial/error、accessible actions を覆い、fetch・承認判定・監査・logging を持ち込まない。
   _Boundary:_ `apps/web/src/components/agent-ui/ApprovalCard.tsx`, `apps/web/tests/ApprovalCard.spec.tsx`
   _Depends:_ 1.2
   _Requirements:_ 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
   _Traces:_ REQ-008, REQ-009, REQ-010, REQ-011, REQ-012, REQ-013, DES-1.2
-- [ ] 1.5 (P) `ToolExecution` の失敗する unit test を先に追加し、typed tool state、result、error、approval slot を安全に表示する。既存 E2E 用の `toolOutput` compatibility hook を維持し、tool 実行・永続化・raw arguments の telemetry を含めない。
+- [x] 1.5 (P) `ToolExecution` の失敗する unit test を先に追加し、typed tool state、result、error、approval slot を安全に表示する。既存 E2E 用の `toolOutput` compatibility hook を維持し、tool 実行・永続化・raw arguments の telemetry を含めない。
   _Boundary:_ `apps/web/src/components/agent-ui/ToolExecution.tsx`, `apps/web/tests/ToolExecution.spec.tsx`
   _Depends:_ 1.2
   _Requirements:_ 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
   _Traces:_ REQ-008, REQ-009, REQ-010, REQ-011, REQ-012, REQ-013, DES-1.3
-- [ ] 1.6 (P) `StreamingStatus` の失敗する unit test を先に追加し、submitted/streaming/completed/aborted/error と client-observable `finishReason` を live region で表示する。abort 優先順位と finish reason 不在時の generic state を検証し、server `RunStopReason` を推測しない。
+- [x] 1.6 (P) `StreamingStatus` の失敗する unit test を先に追加し、submitted/streaming/completed/aborted/error と client-observable `finishReason` を live region で表示する。abort 優先順位と finish reason 不在時の generic state を検証し、server `RunStopReason` を推測しない。
   _Boundary:_ `apps/web/src/components/agent-ui/StreamingStatus.tsx`, `apps/web/tests/StreamingStatus.spec.tsx`
   _Depends:_ 1.2
   _Requirements:_ 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
   _Traces:_ REQ-008, REQ-009, REQ-010, REQ-011, REQ-012, REQ-013, DES-1.4
-- [ ] 1.7 UI-1 完成形（Tailwind entry、primitives 6 種、agent-ui 3 部品）で、まず `css-cascade.spec.ts` に振る舞いの検査を足す。`Button` と `Card` が使う class の文字列を持つ要素を `/` に差し込み、計算済みの `padding`・`border-width`・`border-radius` が 0 でないことを検査する。1.1 の layer 包みを一時的に外すとこの検査が落ちることを確かめ（非空虚性）、その結果を Implementation Notes に記録する。続けて component tests、`css-cascade.spec.ts`、`mise run check`、`mise run build`、`mise run size` を実行し、CSS budget を Client CSS の絶対値で判定する。22 kB を超えた場合は theme 変数を実際に使うトークンだけに絞って再測定する。再測定後が ≤ 22 kB なら Branch A、超えたままなら Branch C として実装を停止し、実測値を添えて `/sdd-plan` に戻る。上限は引き上げない。実測値と分岐を Implementation Notes に記録する。
+- [x] 1.7 UI-1 完成形（Tailwind entry、primitives 6 種、agent-ui 3 部品）で、まず `css-cascade.spec.ts` に振る舞いの検査を足す。`Button` と `Card` が使う class の文字列を持つ要素を `/` に差し込み、計算済みの `padding`・`border-width`・`border-radius` が 0 でないことを検査する。1.1 の layer 包みを一時的に外すとこの検査が落ちることを確かめ（非空虚性）、その結果を Implementation Notes に記録する。続けて component tests、`css-cascade.spec.ts`、`mise run check`、`mise run build`、`mise run size` を実行し、CSS budget を Client CSS の絶対値で判定する。22 kB を超えた場合は theme 変数を実際に使うトークンだけに絞って再測定する。再測定後が ≤ 22 kB なら Branch A、超えたままなら Branch C として実装を停止し、実測値を添えて `/sdd-plan` に戻る。上限は引き上げない。実測値と分岐を Implementation Notes に記録する。
   _Boundary:_ `apps/web/src/assets/styles/tailwind.css`, `apps/web/src/components/ui/button.tsx`, `apps/web/src/components/ui/card.tsx`, `apps/web/src/components/ui/input.tsx`, `apps/web/src/components/ui/textarea.tsx`, `apps/web/src/components/ui/badge.tsx`, `apps/web/src/components/ui/alert.tsx`, `apps/web/src/components/agent-ui/ApprovalCard.tsx`, `apps/web/src/components/agent-ui/ToolExecution.tsx`, `apps/web/src/components/agent-ui/StreamingStatus.tsx`, `apps/web/tests/ApprovalCard.spec.tsx`, `apps/web/tests/ToolExecution.spec.tsx`, `apps/web/tests/StreamingStatus.spec.tsx`, `apps/web/tests/e2e/css-cascade.spec.ts`
   _Depends:_ 1.3, 1.4, 1.5, 1.6
   _Requirements:_ 1.2, 1.4, 1.7, 2.6
@@ -61,6 +61,42 @@ _Traces:_ REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007, REQ-008
 
 ### Implementation Notes
 
+#### §1 完了記録 (2025-10-04)
+
+**CSS ベースライン (Tailwind 導入前):** 19.94 kB (brotli)
+
+**Cascade layer contract の実装方法:**
+- Sass 技法: `sass:meta` の `load-css()` を `@layer carbon {}` ブロック内で使用
+  - `@use "sass:meta"` を `global.scss` 先頭に置き、`@layer carbon { @include meta.load-css("...") }` で Carbon 出力を包む
+  - これにより Carbon の unlayered セレクタが全て `@layer carbon` に収まり、Tailwind utilities が必ず勝つ
+- Layer 順序の宣言場所: `tailwind.css`（PostCSS pipeline が通るファイル）
+  - `@layer carbon, theme, base, components, utilities;` を `@import "tailwindcss/utilities"` より前に配置
+  - PostCSS が Tailwind 自身の `@layer theme, base, components, utilities` より前にこの宣言を出力することで `carbon` が最弱レイヤーになる
+
+**非空虚性の確認 (PROVE):**
+- `global.scss` の `@layer carbon { ... }` を削除すると `css-cascade.spec.ts` の behaviour test（`padding`・`border-width`・`border-radius` が 0 でないことの検査）が失敗することを確認
+- 失敗メッセージ: `expect(computed paddingTop).not.toBe('0px')` — Carbon の `padding: 0` reset が Tailwind utilities を上書きするため
+
+**@source false positive 対策:**
+- `@import "tailwindcss/utilities" source("../../**/*")` で scan root を `apps/web/src/` に明示固定
+  - これにより `@source not` の base が一致し、negated 除外が機能するようになった
+- `@source not "../../app/api/**/*.ts"` — `"no-transform"` 文字列による `.transform` compat utility の誤生成を防止
+- `@source not "../../features/jobs/*.tsx"` — `Array.prototype.filter()` メソッド呼び出しによる `.filter` compat utility の誤生成を防止
+
+**CSS 最終サイズ (Branch A):**
+- **21.9 kB (brotli) ≤ 22 kB** → **Branch A 確定**
+- 削減の主な変更:
+  - `badge.tsx`, `button.tsx` から `transition-colors` を除去
+  - `input.tsx` から `transition-colors`, `file:*` バリアント, `md:text-sm` を除去
+  - `tailwind.css` の `@theme` から `--default-transition-*` を除去
+  - `@source not` + `source("../../**/*")` で `.filter`/`.transform` compat utilities を除去
+
+**全テスト結果:**
+- unit tests: 79 files / 903 tests GREEN (1 skipped)
+- E2E (css-cascade + a11y): 4 tests GREEN
+- typecheck: pass
+- lint (Biome): pass
+- size-limit: Client JS 384.2 kB / Client CSS 21.9 kB (両方 GREEN)
 
 
 ---

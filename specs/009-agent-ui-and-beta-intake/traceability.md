@@ -18,19 +18,19 @@ spec.md は要件を `<Requirement>.<n>` の番号で書く。`REQ-###` はそ�
 
 | Requirement | Design | Task | Test | Commit |
 |-------------|--------|------|------|--------|
-| REQ-001 | DES-1.1 | T-1.1, T-1.2 | | |
-| REQ-002 | DES-1.1 | T-1.1, T-1.7 | | |
-| REQ-003 | DES-1.1 | T-1.1 | | |
-| REQ-004 | DES-1.1, DES-1.5, DES-1.6 | T-1.7, T-2.2, T-3.3 | | |
-| REQ-005 | DES-1.1, DES-1.11 | T-1.1, T-1.3 | | |
-| REQ-006 | DES-1.11 | T-1.3 | | |
-| REQ-007 | DES-1.1, DES-1.5, DES-1.6 | T-1.1, T-1.2, T-1.7, T-2.2, T-3.1, T-3.3 | | |
-| REQ-008 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | | |
-| REQ-009 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | | |
-| REQ-010 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | | |
-| REQ-011 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | | |
-| REQ-012 | DES-1.1, DES-1.2, DES-1.3, DES-1.4 | T-1.1, T-1.2, T-1.4, T-1.5, T-1.6 | | |
-| REQ-013 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-1.4, T-1.5, T-1.6, T-1.7, T-3.1, T-3.2, T-3.3 | | |
+| REQ-001 | DES-1.1 | T-1.1, T-1.2 | `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `feat(web): add shadcn primitives and utility cn helper` |
+| REQ-002 | DES-1.1 | T-1.1, T-1.7 | `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers` |
+| REQ-003 | DES-1.1 | T-1.1 | `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers` |
+| REQ-004 | DES-1.1, DES-1.5, DES-1.6 | T-1.7, T-2.2, T-3.3 | `css-cascade.spec.ts`, `size-limit` | `feat(web): introduce Tailwind v4 and configure cascade layers` |
+| REQ-005 | DES-1.1, DES-1.11 | T-1.1, T-1.3 | `dependabot.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `ci(repo): add Dependabot groups for UI dependencies` |
+| REQ-006 | DES-1.11 | T-1.3 | `dependabot.spec.ts` | `ci(repo): add Dependabot groups for UI dependencies` |
+| REQ-007 | DES-1.1, DES-1.5, DES-1.6 | T-1.1, T-1.2, T-1.7, T-2.2, T-3.1, T-3.3 | `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `feat(web): add shadcn primitives and utility cn helper` |
+| REQ-008 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `StreamingStatus.spec.tsx` | `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
+| REQ-009 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `StreamingStatus.spec.tsx` | `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
+| REQ-010 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `StreamingStatus.spec.tsx` | `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
+| REQ-011 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `StreamingStatus.spec.tsx` | `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
+| REQ-012 | DES-1.1, DES-1.2, DES-1.3, DES-1.4 | T-1.1, T-1.2, T-1.4, T-1.5, T-1.6 | `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `StreamingStatus.spec.tsx`, `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `feat(web): add shadcn primitives and utility cn helper`, `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
+| REQ-013 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-1.4, T-1.5, T-1.6, T-1.7, T-3.1, T-3.2, T-3.3 | `StreamingStatus.spec.tsx`, `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
 | REQ-014 | DES-1.5, DES-1.6 | T-2.1, T-3.1 | | |
 | REQ-015 | DES-1.5 | T-2.1, T-2.2 | | |
 | REQ-016 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-3.1, T-3.2, T-3.3 | | |
