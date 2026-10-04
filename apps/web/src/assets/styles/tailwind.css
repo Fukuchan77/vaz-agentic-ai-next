@@ -1,0 +1,85 @@
+/*
+ * Tailwind CSS entry for apps/web.
+ *
+ * Layer order declaration MUST come first to make `carbon` the weakest layer.
+ * (plan.md §Cascade layer contract). Tailwind v4 generates its own
+ * `@layer theme, base, components, utilities` as the first statement in the
+ * processed output; prepending `carbon` here in a single statement ensures
+ * `carbon` is declared before the Tailwind-generated statement, making it
+ * the weakest layer of all.
+ *
+ * Coexistence period (UI-1 through UI-3):
+ *   - No preflight: Carbon's unlayered reset sits in `@layer carbon` (weakest).
+ *   - Source detection scoped to apps/web/src only (no node_modules scan).
+ *   - utilities layer only (no full default theme import — only agent-ui tokens).
+ */
+
+/* Establish layer order: carbon must be the weakest (declared first). */
+@layer carbon, theme, base, components, utilities;
+
+/* Restrict scanning to apps/web/src only (avoids scanning workspace packages).
+ * Note: the source() parameter on the import replaces the default **\/* root scan,
+ * making @source not paths match relative to the same base (this CSS file's dir). */
+@source not "../../app/api/**/*.ts";
+@source not "../../features/jobs/*.tsx";
+
+@import "tailwindcss/utilities" source("../../**/*");
+
+/*
+ * Minimal theme tokens for agent-ui components.
+ * Only tokens actually referenced by shadcn primitives and agent-ui components.
+ * NOT a wholesale copy of defaults — only what agent-ui uses (plan.md DES-1.1).
+ */
+@theme {
+	/* Spacing scale — required for h-*, w-*, p-*, m-*, gap-* utilities */
+	--spacing: 0.25rem;
+
+	/* Typography size scale for text-sm, text-xs, text-base utilities */
+	--text-xs: 0.75rem;
+	--text-sm: 0.875rem;
+	--text-base: 1rem;
+
+	/* Font weight utilities for font-medium, font-semibold */
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+
+	/* System font stack (replaces IBM Plex Sans after Carbon retirement) */
+	--font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		Roboto, "Helvetica Neue", Arial, sans-serif;
+
+	/* shadcn semantic colour tokens — mapped to neutral grays for now */
+	/* Uses hex/sRGB to avoid @supports(lab) duplicate declarations overhead. */
+	/* These will be themed by the consuming screen after Carbon retirement. */
+	--color-background: #ffffff;
+	--color-foreground: #0a0a0a;
+	--color-card: #ffffff;
+	--color-card-foreground: #0a0a0a;
+	--color-primary: #171717;
+	--color-primary-foreground: #fafafa;
+	--color-secondary: #f5f5f5;
+	--color-secondary-foreground: #171717;
+	--color-muted: #f5f5f5;
+	--color-muted-foreground: #737373;
+	--color-accent: #f5f5f5;
+	--color-accent-foreground: #171717;
+	--color-destructive: #e40014;
+	--color-destructive-foreground: #fafafa;
+	--color-border: #e5e5e5;
+	--color-input: #e5e5e5;
+
+	/* Border radius tokens used by shadcn new-york */
+	--radius-sm: 0.125rem;
+	--radius-md: 0.375rem;
+	--radius-lg: 0.5rem;
+	--radius-xl: 0.75rem;
+
+	/* Approval / status semantics (agent-ui only) */
+	--color-pending: oklch(0.85 0.08 220);
+	--color-pending-fg: oklch(0.25 0.08 220);
+	--color-denied: oklch(0.85 0.08 25);
+	--color-denied-fg: oklch(0.25 0.08 25);
+	--color-success: oklch(0.85 0.1 145);
+	--color-success-fg: oklch(0.2 0.1 145);
+	--color-error: oklch(0.82 0.12 25);
+	--color-error-fg: oklch(0.22 0.12 25);
+}
