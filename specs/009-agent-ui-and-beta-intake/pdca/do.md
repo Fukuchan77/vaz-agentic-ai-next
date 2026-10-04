@@ -169,3 +169,87 @@ Completed: 2025-10-05
 
 **Branch A 継続確定:** CSS 22 kB 未超のため停止なし。
 
+
+---
+
+## §3 タスク別記録
+
+Phase: §3 (tasks 3.1–3.3)
+Completed: 2025-10-06
+
+### 3.1 — Chat/ChatComposer shadcn/Tailwind 移行
+
+**RED → GREEN サイクル:**
+- `Chat.spec.tsx` に 11 件の新テストを追加（StreamingStatus integration × 6、composer shadcn migration × 3、streaming × 2 は既存）
+- RED 確認済み: 6 件失敗（Carbon InlineLoading/InlineNotification が残存、role='status' が無い）
+- `Chat.tsx` から Carbon `Theme`/`Content`/`Grid`/`Column`/`InlineLoading`/`InlineNotification`/`Button` を除去し、`StreamingStatus` + shadcn `Button` + Tailwind layout に移行
+- `ChatComposer.tsx` から Carbon `Form`/`TextArea`/`Button` を除去し、native `<form>` + shadcn `Textarea`/`Button` + `<label htmlFor>` に移行
+- 全 25 テスト GREEN
+
+**技術的判断:**
+- `useChat` status 型は `"streaming" | "submitted" | "error" | "ready"` — `"idle"` は存在しないため `status === "idle"` を除去
+- エラー状態: `StreamingStatus` に `errorMessage={error?.message}` を渡し、`isError={status === "error"}` で error variant を表示
+- 再試行ボタン: `status === "error"` の判定で条件 render（`StreamingStatus` の外側）
+
+**PROVE:**
+- `StreamingStatus` を除去 → `[role='status']` が null → "renders a live-region status element while submitted" 失敗確認
+- `ChatComposer` に Carbon `Form` を戻す → `cds--form` class が現れる → "composer does not use Carbon Form" 失敗確認
+
+---
+
+### 3.2 — MessageItem → ApprovalCard + ToolExecution 移行
+
+**RED → GREEN サイクル (Chat.spec.tsx への追加):**
+- 6 件の新テスト追加: toolOutput class 維持、tool name 表示、Carbon Tag/Tile 非存在、role label、requestReason 表示
+- RED 確認済み: 2 件失敗（Carbon Tag/Tile が残存）
+- `MessageItem.tsx` から Carbon `Tile`/`Tag`/`Button` を除去し `ApprovalCard` + `ToolExecution` + Tailwind layout に移行
+- 全 31 テスト GREEN
+
+**AI SDK v7 対応 (ToolExecution.spec.tsx / ToolExecution.tsx への追加):**
+- AI SDK v7 の tool part states が `ToolExecutionState` に含まれずに typecheck エラー
+- `ToolExecution.spec.tsx` に 5 件の新テストを先に追加して RED → `ToolExecutionState` を拡張して GREEN
+  - 追加 states: `"input-streaming"`, `"input-available"`, `"approval-responded"`, `"output-available"`, `"output-error"`, `"output-denied"`
+
+**設計決定 — `ToolApprovalRequest` の実装方針:**
+- 当初 `ToolExecution` を `ApprovalCard` の wrapper として使おうとしたが、tool name が 2 箇所に表示されてしまい、既存テスト `queryByText(/sendEmail/)` が "Found multiple elements" で失敗
+- `ApprovalCard` を直接使い（`ToolExecution` wrapper なし）tool name を 1 箇所のみ表示するよう修正
+- `displayArguments={part.approval.requestReason}` で requestReason を `<pre>` に表示 → `queryByText` で検索可能
+
+**PROVE:**
+- Carbon Tile を戻す → `[class*='cds--tile']` が現れる → "message container does not use Carbon Tile" 失敗確認
+- `ToolExecutionState` から `"input-streaming"` を除去 → 対応テスト失敗確認
+
+---
+
+### 3.3 — E2E 基準固定・Carbon CSS 除去・最終ゲート
+
+**追加ファイル:**
+- `apps/web/tests/e2e/fixtures/approval-requested-stream.ts` — model-free AI SDK v7 stream fixture（HITL テスト用）
+- `apps/web/tests/e2e/a11y.spec.ts` — chat approval a11y test を追加（error state via route mock）
+- `apps/web/tests/e2e/css-cascade.spec.ts` — §3 chat element 計算済みスタイル検査を追加（message container、message list gap、composer padding）
+
+**global.scss から除去した Carbon CSS entries:**
+- `grid`, `tile`, `ui-shell/content`, `form`, `text-area`, `button`, `tag`, `inline-loading`, `notification`
+- `Chat.module.scss` 削除（全インポート元がなくなったため）
+- 残留 entries（`reset`, `zone`, `fonts`, `type`）は §4 で Carbon 完全撤去時に除去予定
+
+**lint 修正:**
+- `ToolExecution.tsx` の `hasResult` 算出式が 100 chars 上限を超過 → 改行して Biome フォーマット修正
+- `approval-requested-stream.ts` のコメント内バックティックが Biome の JSDoc パースエラーを引き起こす → バックティックをエスケープ
+
+**最終ゲート結果:**
+- unit tests: 79 files / 923 tests GREEN (1 skipped)（+20 テスト from §1/§2/§3 baseline 903→923）
+- typecheck: pass（全 packages）
+- lint (Biome): pass（0 errors）
+- `mise run build`: GREEN
+- `mise run size`:
+  - Client JS: **236.75 kB** brotli (上限 420 kB) ← §2 の 384.2 kB から 147.45 kB 削減 ✓
+  - Client CSS: **6.61 kB** brotli (上限 22 kB) ← §2 の 21.18 kB から 14.57 kB 削減 ✓
+- **Branch A 確定**（CSS 6.61 kB << 22 kB 上限）
+
+**検証ゲート (`mise run check`) 最終結果:**
+- test:run: 79 files / 923 tests GREEN (1 skipped) ✓
+- typecheck: all packages pass ✓
+- lint (Biome): 0 errors, no fixes applied ✓
+- audit: No known vulnerabilities ✓
+- lint:model-ids: No hardcoded model IDs ✓

@@ -171,17 +171,17 @@ _Depends:_ 2.2
 _Requirements:_ 1.4, 1.7, 2.1, 2.2, 2.3, 2.4, 2.6, 3.1, 3.3, 3.4, 3.5
 _Traces:_ REQ-004, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-013, REQ-014, REQ-016, REQ-017, REQ-018, DES-1.2, DES-1.3, DES-1.4, DES-1.6
 
-- [ ] 3.1 chat unit tests に streaming/finish/abort/error と composer interaction の期待を先に追加し、`Chat` と `ChatComposer` を shadcn/Tailwind presentation へ移す。IME、focus、busy、send、stop、retry、follow-bottom を維持し、`useChat` の client-observable state だけを `StreamingStatus` へ渡す。`StreamingStatus` の props や振る舞いを変える場合は、先に `StreamingStatus.spec.tsx` へ失敗するテストを足す（原則 9）。
+- [x] 3.1 chat unit tests に streaming/finish/abort/error と composer interaction の期待を先に追加し、`Chat` と `ChatComposer` を shadcn/Tailwind presentation へ移す。IME、focus、busy、send、stop、retry、follow-bottom を維持し、`useChat` の client-observable state だけを `StreamingStatus` へ渡す。`StreamingStatus` の props や振る舞いを変える場合は、先に `StreamingStatus.spec.tsx` へ失敗するテストを足す（原則 9）。
   _Boundary:_ `apps/web/src/features/chat/Chat.tsx`, `apps/web/src/features/chat/ChatComposer.tsx`, `apps/web/src/features/chat/Chat.module.scss`, `apps/web/src/components/agent-ui/StreamingStatus.tsx`, `apps/web/tests/StreamingStatus.spec.tsx`, `apps/web/tests/Chat.spec.tsx`
   _Depends:_ 2.2, 1.6
   _Requirements:_ 1.7, 2.1, 2.2, 2.3, 2.4, 2.6, 3.1, 3.3, 3.4
   _Traces:_ REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-013, REQ-014, REQ-016, REQ-017, DES-1.4, DES-1.6
-- [ ] 3.2 AI SDK tool parts の call/result/error/approval states を unit test で固定してから、`MessageItem` を `ApprovalCard` と `ToolExecution` へ写像する。`addToolApprovalResponse` の id/approved contract、citation rendering、message role container、`toolOutput` hook、argument の画面表示だけを維持し、transport・監査・logging の新経路を作らない。`ApprovalCard` / `ToolExecution` の props や振る舞いを変える場合は、先にそれぞれの `*.spec.tsx` へ失敗するテストを足して RED を確認する（原則 9）。
+- [x] 3.2 AI SDK tool parts の call/result/error/approval states を unit test で固定してから、`MessageItem` を `ApprovalCard` と `ToolExecution` へ写像する。`addToolApprovalResponse` の id/approved contract、citation rendering、message role container、`toolOutput` hook、argument の画面表示だけを維持し、transport・監査・logging の新経路を作らない。`ApprovalCard` / `ToolExecution` の props や振る舞いを変える場合は、先にそれぞれの `*.spec.tsx` へ失敗するテストを足して RED を確認する（原則 9）。
   _Boundary:_ `apps/web/src/features/chat/MessageItem.tsx`, `apps/web/src/components/agent-ui/ApprovalCard.tsx`, `apps/web/src/components/agent-ui/ToolExecution.tsx`, `apps/web/tests/ApprovalCard.spec.tsx`, `apps/web/tests/ToolExecution.spec.tsx`, `apps/web/tests/Chat.spec.tsx`
   _Depends:_ 3.1, 1.4, 1.5
   _Requirements:_ 2.1, 2.2, 2.3, 2.4, 2.6, 3.3
   _Traces:_ REQ-008, REQ-009, REQ-010, REQ-011, REQ-013, REQ-016, DES-1.2, DES-1.3, DES-1.6
-- [ ] 3.3 model-free UI message stream fixture と chat approval a11y test を追加し、既存 HITL、approval-resume、citation、provider E2E を実行する。`approval-resume` / `hitl-approval` は変更しない。citation と provider E2E で locator 変更が必要な場合は、semantic locator へ移し、理由を PR 本文に書く（R3.3）。`role="status"` と message container の契約を守る。`css-cascade.spec.ts` に、マウント済みの chat の要素（メッセージ枠、承認カード、ツール出力、composer、停止理由の表示）の計算済みスタイル（`padding`・`border-width`・`border-radius`・`gap`）を固定する検査を足し、§4 の preflight 有効化で見た目が変わらないことを確かめる基準にする。`font-family` は §4 で意図して変わるので、この基準に含めない。最後に chat 専用 SCSS/Carbon `@use` を除去し、check/build/size/E2E と PR の前後サイズ記録を完了する。ここで Client CSS が 22 kB を超える場合（Carbon がまだ残っているため）は **Branch B** とし、判定と実測値をこのフェーズの Implementation Notes に記録して、§4 を同じ PR で行う。Branch B では §3 単独の敵対的レビューは行わず、§4 の完了後に PR 全体を 1 フェーズとして 1 回レビューする（記録は `reviews/ui3-ui4-r<n>.md`）。
+- [x] 3.3 model-free UI message stream fixture と chat approval a11y test を追加し、既存 HITL、approval-resume、citation、provider E2E を実行する。`approval-resume` / `hitl-approval` は変更しない。citation と provider E2E で locator 変更が必要な場合は、semantic locator へ移し、理由を PR 本文に書く（R3.3）。`role="status"` と message container の契約を守る。`css-cascade.spec.ts` に、マウント済みの chat の要素（メッセージ枠、承認カード、ツール出力、composer、停止理由の表示）の計算済みスタイル（`padding`・`border-width`・`border-radius`・`gap`）を固定する検査を足し、§4 の preflight 有効化で見た目が変わらないことを確かめる基準にする。`font-family` は §4 で意図して変わるので、この基準に含めない。最後に chat 専用 SCSS/Carbon `@use` を除去し、check/build/size/E2E と PR の前後サイズ記録を完了する。ここで Client CSS が 22 kB を超える場合（Carbon がまだ残っているため）は **Branch B** とし、判定と実測値をこのフェーズの Implementation Notes に記録して、§4 を同じ PR で行う。Branch B では §3 単独の敵対的レビューは行わず、§4 の完了後に PR 全体を 1 フェーズとして 1 回レビューする（記録は `reviews/ui3-ui4-r<n>.md`）。
   _Boundary:_ `apps/web/src/features/chat/Chat.module.scss`, `apps/web/src/assets/styles/global.scss`, `apps/web/tests/Chat.spec.tsx`, `apps/web/tests/e2e/a11y.spec.ts`, `apps/web/tests/e2e/css-cascade.spec.ts`, `apps/web/tests/e2e/fixtures/approval-requested-stream.ts`, `apps/web/tests/e2e/locator-citation.spec.ts`, `apps/web/tests/e2e/chat-anthropic.spec.ts`, `apps/web/tests/e2e/chat-openai.spec.ts`, `apps/web/tests/e2e/chat-ollama.spec.ts`
   _Run (unchanged):_ `apps/web/tests/e2e/approval-resume.spec.ts`, `apps/web/tests/e2e/hitl-approval.spec.ts`
   _Depends:_ 3.2
@@ -190,7 +190,51 @@ _Traces:_ REQ-004, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-013, REQ-014
 
 ### Implementation Notes
 
+#### §3 完了記録 (2025-10-XX)
 
+**移行前 CSS:** 21.18 kB (brotli) — §2 完了時点
+**移行後 CSS:** 6.61 kB (brotli) — chat 専用 Carbon CSS entry 除去後（14.57 kB 削減）
+**Client JS:** 236.75 kB (brotli) — §2 時点 384.2 kB から 147.45 kB 削減（Carbon JS 除去）
+
+**判定: Branch A**（CSS 6.61 kB << 22 kB 上限。Branch B 対象外）
+
+**移行方針:**
+- `Chat.tsx`: Carbon `Theme`/`Content`/`Grid`/`Column`/`InlineLoading`/`InlineNotification`/`Button` → shadcn `Button` + `StreamingStatus` + Tailwind layout
+- `ChatComposer.tsx`: Carbon `Form`/`TextArea`/`Button` → shadcn `Textarea`/`Button` + native `<form>` + `<label htmlFor>` accessible pattern
+- `MessageItem.tsx`: Carbon `Tile`/`Tag` → Tailwind `<div>` + `ApprovalCard` + `ToolExecution`
+
+**AI SDK v7 tool part states 対応 (task 3.2):**
+- `ToolExecutionState` を拡張: `"input-streaming"`, `"input-available"`, `"approval-responded"`, `"output-available"`, `"output-error"`, `"output-denied"` を追加
+- 先に `ToolExecution.spec.tsx` に失敗するテストを足して RED 確認後、`ToolExecutionState` を拡張して GREEN
+
+**PROVE（非空虚性の確認）:**
+- "approval-requested does not render Carbon Tag component": MessageItem に Carbon Tag を戻すと `[class*='cds--tag']` が現れてテスト失敗
+- "message container does not use Carbon Tile": MessageItem に Tile を戻すと `[class*='cds--tile']` が現れてテスト失敗
+- "does not render a Carbon InlineLoading component while submitted": Chat に InlineLoading を戻すと `cds--inline-loading` が現れてテスト失敗
+- "renders a live-region status element while submitted": `StreamingStatus` を除去すると `[role='status']` が null になりテスト失敗
+
+**除去した Carbon CSS entries (global.scss):**
+- `grid` — Chat の Grid/Column
+- `tile` — MessageItem の Tile
+- `ui-shell/content` — Chat の Content
+- `form` — ChatComposer の Form
+- `text-area` — ChatComposer の TextArea
+- `button` — Chat/ChatComposer/MessageItem の Button
+- `tag` — MessageItem の Tag
+- `inline-loading` — Chat の InlineLoading
+- `notification` — Chat の InlineNotification
+
+**E2E ロケーター変更なし:**
+- `getByPlaceholder(/メッセージを入力/)` ✓（`<textarea>` の `placeholder` は維持）
+- `getByRole("button", { name: "送信" })` ✓（Button の accessible name は維持）
+- `getByText("You", { exact: true })` / `getByText("AI", { exact: true })` ✓（role label は維持）
+- `[class*="toolOutput"]` ✓（`ToolExecution` の `toolOutput` CSS class hook は維持）
+
+**全テスト結果:**
+- unit tests: 79 files / 923 tests GREEN (1 skipped)
+- typecheck: pass
+- lint (Biome): pass
+- size-limit: Client JS 236.75 kB / Client CSS 6.61 kB（両方 << 上限 GREEN）
 
 ---
 
