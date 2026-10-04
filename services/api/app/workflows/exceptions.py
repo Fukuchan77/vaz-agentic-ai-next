@@ -4,6 +4,8 @@ Domain-specific exceptions for the Corrective RAG workflow, providing
 explicit error classification for better error handling and retry logic.
 """
 
+from typing import Self
+
 import httpx
 from pydantic_ai.exceptions import FallbackExceptionGroup
 from pydantic_ai.exceptions import ModelHTTPError
@@ -205,7 +207,7 @@ class RAGTransientError(RAGWorkflowError):
         return True
 
     @classmethod
-    def from_exception(cls, exception: Exception) -> "RAGTransientError":
+    def from_exception(cls, exception: Exception) -> Self:
         """Create a RAGTransientError from an existing exception.
 
         Args:
@@ -252,7 +254,7 @@ class RAGPermanentError(RAGWorkflowError):
         return False
 
     @classmethod
-    def from_exception(cls, exception: Exception) -> "RAGPermanentError":
+    def from_exception(cls, exception: Exception) -> Self:
         """Create a RAGPermanentError from an existing exception.
 
         Args:

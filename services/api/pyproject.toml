@@ -243,6 +243,19 @@ filterwarnings = [
     # it is scoped to the single emitting module, so a deprecation raised anywhere
     # else still hard-fails.
     "ignore::DeprecationWarning:chromadb.types",
+    # Emitters: `workflows.runtime.types.step_function` (llama-index-workflows
+    # 2.25.0, the latest release) and `chromadb.telemetry.opentelemetry` (0.6.3).
+    # Python 3.14 deprecated `asyncio.iscoroutinefunction` (removal in 3.16) in
+    # favour of `inspect.iscoroutinefunction`, and both packages still call the
+    # asyncio one. Under 3.14 the `error::DeprecationWarning` above turned it
+    # into 58 test failures (pydantic-ai-sandbox `docs/hub-intake-2026-10.md` §6).
+    # Inert on 3.13, which never emits it. Scoped to this one message from these
+    # two modules, so any other deprecation they raise still hard-fails. Remove
+    # each entry once its package ships a release on `inspect.iscoroutinefunction`
+    # (chromadb's only ever lands in the shelved 1.x line, so that one goes with
+    # the `chromadb<1.0` cap).
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:workflows.runtime.types.step_function",
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:chromadb.telemetry.opentelemetry",
 ]
 
 # ============================================================================
