@@ -31,11 +31,11 @@ spec.md は要件を `<Requirement>.<n>` の番号で書く。`REQ-###` はそ�
 | REQ-011 | DES-1.2, DES-1.3, DES-1.4, DES-1.5, DES-1.6 | T-1.4, T-1.5, T-1.6, T-2.1, T-3.1, T-3.2 | `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `StreamingStatus.spec.tsx` | `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
 | REQ-012 | DES-1.1, DES-1.2, DES-1.3, DES-1.4 | T-1.1, T-1.2, T-1.4, T-1.5, T-1.6 | `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `StreamingStatus.spec.tsx`, `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `feat(web): add shadcn primitives and utility cn helper`, `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
 | REQ-013 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-1.4, T-1.5, T-1.6, T-1.7, T-3.1, T-3.2, T-3.3 | `StreamingStatus.spec.tsx`, `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
-| REQ-014 | DES-1.5, DES-1.6 | T-2.1, T-3.1 | | |
-| REQ-015 | DES-1.5 | T-2.1, T-2.2 | | |
+| REQ-014 | DES-1.5, DES-1.6 | T-2.1, T-3.1 | `ApprovalPanel.spec.tsx` (pending step selection, editable JSON validation, approve/deny flow) | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
+| REQ-015 | DES-1.5 | T-2.1, T-2.2 | `ApprovalPanel.spec.tsx` (all 10 regression tests GREEN), `jobs-approve-route.spec.ts` | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
 | REQ-016 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-3.1, T-3.2, T-3.3 | | |
-| REQ-017 | DES-1.5, DES-1.6, DES-1.7 | T-2.1, T-3.1, T-3.3 | | |
-| REQ-018 | DES-1.5, DES-1.6 | T-2.2, T-3.3 | | |
+| REQ-017 | DES-1.5, DES-1.6, DES-1.7 | T-2.1, T-3.1, T-3.3 | `ApprovalPanel.spec.tsx` (denial reason + HTTP error mapping) | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
+| REQ-018 | DES-1.5, DES-1.6 | T-2.2, T-3.3 | `jobs-approve-route.spec.ts` (30 tests: 400/404/409/429 and existence-hiding 404 aggregation) | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
 | REQ-019 | DES-1.7 | T-4.1 | | |
 | REQ-020 | DES-1.7 | T-4.2 | | |
 | REQ-021 | DES-1.7 | T-4.2 | | |
