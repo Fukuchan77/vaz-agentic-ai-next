@@ -31,6 +31,38 @@ describe("ToolExecution — running / call state", () => {
 		render(<ToolExecution toolName="send-email" state="partial-call" />);
 		expect(screen.getByText(/実行中|実行/)).not.toBeNull();
 	});
+
+	// AI SDK v7 states (task 3.2 migration)
+	test("renders a call state indicator for AI SDK v7 'input-streaming' state", () => {
+		render(<ToolExecution toolName="send-email" state="input-streaming" />);
+		expect(screen.getByText(/実行中|実行/)).not.toBeNull();
+	});
+
+	test("renders a call state indicator for AI SDK v7 'input-available' state", () => {
+		render(<ToolExecution toolName="send-email" state="input-available" />);
+		expect(screen.getByText(/実行中|実行/)).not.toBeNull();
+	});
+});
+
+describe("ToolExecution — AI SDK v7 output states (task 3.2)", () => {
+	test("renders a result indicator for AI SDK v7 'output-available' state", () => {
+		render(<ToolExecution toolName="send-email" state="output-available" output='{"ok":true}' />);
+		expect(screen.getByText(/完了/)).not.toBeNull();
+	});
+
+	test("renders the toolOutput element for 'output-available' state", () => {
+		const { container } = render(
+			<ToolExecution toolName="send-email" state="output-available" output="done" />,
+		);
+		expect(container.querySelector(".toolOutput")).not.toBeNull();
+	});
+
+	test("approval-responded state renders without crashing", () => {
+		const { container } = render(
+			<ToolExecution toolName="send-email" state="approval-responded" />,
+		);
+		expect(container).not.toBeNull();
+	});
 });
 
 describe("ToolExecution — result state", () => {

@@ -5,7 +5,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type ToolExecutionState = "call" | "partial-call" | "result" | "approval-requested";
+/**
+ * Tool execution states supported by ToolExecution.
+ *
+ * Includes both legacy AI SDK v5/v6 states ("call", "partial-call", "result") and
+ * AI SDK v7 states ("input-streaming", "input-available", "output-available",
+ * "output-error", "output-denied", "approval-responded") for forwards compatibility
+ * with the MessageItem adapter (task 3.2 / DES-1.6).
+ */
+export type ToolExecutionState =
+	| "call"
+	| "partial-call"
+	| "result"
+	| "approval-requested"
+	| "input-streaming"
+	| "input-available"
+	| "approval-responded"
+	| "output-available"
+	| "output-error"
+	| "output-denied";
 
 export interface ToolExecutionProps {
 	/** The name of the tool being executed. */
@@ -43,8 +61,18 @@ export function ToolExecution({
 	approvalSlot,
 	className,
 }: ToolExecutionProps) {
-	const isRunning = state === "call" || state === "partial-call";
+	const isRunning =
+		state === "call" ||
+		state === "partial-call" ||
+		state === "input-streaming" ||
+		state === "input-available" ||
+		state === "approval-responded";
 	const isApproval = state === "approval-requested";
+	const hasResult =
+		state === "result" ||
+		state === "output-available" ||
+		state === "output-error" ||
+		state === "output-denied";
 
 	return (
 		<div className={cn("flex flex-col gap-1", className)}>
@@ -60,7 +88,7 @@ export function ToolExecution({
 						承認待ち
 					</Badge>
 				)}
-				{state === "result" && !errorText && (
+				{hasResult && !errorText && (
 					<Badge variant="default" className="text-xs">
 						完了
 					</Badge>

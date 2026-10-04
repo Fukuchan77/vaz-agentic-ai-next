@@ -1,9 +1,9 @@
 "use client";
 
-import { Button, Form, TextArea } from "@carbon/react";
 import type { KeyboardEvent } from "react";
 import { useRef, useState } from "react";
-import styles from "./Chat.module.scss";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Chat input. Owns the draft text so a keystroke re-renders only this
@@ -56,36 +56,37 @@ export function ChatComposer({
 	}
 
 	return (
-		<Form
-			className={styles.form}
+		<form
+			className="sticky bottom-0 flex flex-row items-start gap-2 py-3 pb-4 bg-background"
 			onSubmit={(event) => {
 				event.preventDefault();
 				submit();
 			}}
 		>
-			<div className={styles.composerInput}>
-				<TextArea
+			<div className="flex-1 min-w-0">
+				<label htmlFor="chat-input" className="sr-only">
+					メッセージ
+				</label>
+				<Textarea
 					ref={inputRef}
 					id="chat-input"
-					labelText="メッセージ"
-					hideLabel
-					helperText="Enter で送信 / Shift+Enter で改行"
 					placeholder="メッセージを入力…(例: 東京の現在時刻は?)"
 					rows={2}
 					value={input}
 					onChange={(event) => setInput(event.target.value)}
 					onKeyDown={handleKeyDown}
 					autoFocus
+					className="field-sizing-content min-h-12 max-h-48 resize-none"
 				/>
 			</div>
 			<Button type="submit" disabled={!canSend}>
 				送信
 			</Button>
 			{isBusy && (
-				<Button type="button" kind="secondary" onClick={onStop}>
+				<Button type="button" variant="secondary" onClick={onStop}>
 					停止
 				</Button>
 			)}
-		</Form>
+		</form>
 	);
 }

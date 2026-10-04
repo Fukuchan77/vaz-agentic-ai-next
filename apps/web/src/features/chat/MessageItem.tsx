@@ -1,6 +1,5 @@
 "use client";
 
-import { Button, Tag, Tile } from "@carbon/react";
 import type {
 	ChatAddToolApproveResponseFunction,
 	DynamicToolUIPart,
@@ -11,7 +10,8 @@ import type {
 	UITools,
 } from "ai";
 import { getToolName, isToolUIPart } from "ai";
-import styles from "./Chat.module.scss";
+import { ApprovalCard } from "@/components/agent-ui/ApprovalCard";
+import { ToolExecution } from "@/components/agent-ui/ToolExecution";
 
 /**
  * Renders a `needsApproval` tool call's approval-request state (HITL, R3.4)
@@ -21,6 +21,8 @@ import styles from "./Chat.module.scss";
  * `part.approval.isAutomatic` guards out the (currently unused) automatic-
  * approval/denial states per the AI SDK's own `useChat` example: only a
  * manual `'user-approval'` decision needs buttons.
+ *
+ * Uses ApprovalCard (shadcn/Tailwind) — see plan.md DES-1.2/DES-1.6.
  */
 function ToolApprovalRequest({
 	part,
@@ -34,29 +36,18 @@ function ToolApprovalRequest({
 	if (part.approval.isAutomatic) {
 		return null;
 	}
+	// Use ApprovalCard directly (without ToolExecution wrapper) so the tool name
+	// appears exactly once — the existing tests (R3.2) rely on queryByText(/sendEmail/)
+	// returning a single match.
 	return (
-		<span className={styles.tool}>
-			<Tag type="magenta" size="sm">
-				🔒 {toolName}: 承認待ち
-			</Tag>
-			{part.approval.requestReason && (
-				<p className={styles.approvalReason}>{part.approval.requestReason}</p>
-			)}
-			<Button
-				size="sm"
-				kind="primary"
-				onClick={() => onRespond({ id: part.approval.id, approved: true })}
-			>
-				承認
-			</Button>
-			<Button
-				size="sm"
-				kind="danger--tertiary"
-				onClick={() => onRespond({ id: part.approval.id, approved: false })}
-			>
-				却下
-			</Button>
-		</span>
+		<ApprovalCard
+			toolName={toolName}
+			displayArguments={part.approval.requestReason ?? undefined}
+			onApprove={() => onRespond({ id: part.approval.id, approved: true })}
+			onDeny={() => onRespond({ id: part.approval.id, approved: false })}
+			labels={{ approve: "承認", deny: "却下" }}
+			className="my-2"
+		/>
 	);
 }
 
@@ -68,10 +59,10 @@ function MessagePart({
 	onRespondToApproval: ChatAddToolApproveResponseFunction;
 }) {
 	if (part.type === "text") {
-		return <span className={styles.text}>{part.text}</span>;
+		return <span className="block whitespace-pre-wrap overflow-wrap-anywhere">{part.text}</span>;
 	}
 	// Tool calls (static `tool-{name}` and MCP-style dynamic tools alike) are
-	// surfaced as a tag showing execution state.
+	// surfaced via ToolExecution showing execution state.
 	if (isToolUIPart(part)) {
 		const toolName = getToolName(part);
 		if (part.state === "approval-requested") {
@@ -79,14 +70,10 @@ function MessagePart({
 				<ToolApprovalRequest part={part} toolName={toolName} onRespond={onRespondToApproval} />
 			);
 		}
-		const output = "output" in part && part.output != null ? JSON.stringify(part.output) : null;
+		const output =
+			"output" in part && part.output != null ? JSON.stringify(part.output) : undefined;
 		return (
-			<span className={styles.tool}>
-				<Tag type="teal" size="sm">
-					🔧 {toolName}
-				</Tag>
-				{output && <code className={styles.toolOutput}>{output}</code>}
-			</span>
+			<ToolExecution toolName={toolName} state={part.state} output={output} className="my-1" />
 		);
 	}
 	return null;
@@ -98,6 +85,8 @@ function MessagePart({
  * `useChat` replaces only the last message object, so every earlier message
  * keeps its identity and skips re-rendering (incl. the tool-output
  * `JSON.stringify`) on each streamed chunk.
+ *
+ * Uses shadcn/Tailwind layout — Carbon Tile removed (plan.md DES-1.6).
  */
 export function MessageItem({
 	message,
@@ -107,13 +96,13 @@ export function MessageItem({
 	onRespondToApproval: ChatAddToolApproveResponseFunction;
 }) {
 	return (
-		<Tile className={styles.message}>
-			<strong className={styles.role}>{message.role === "user" ? "You" : "AI"}</strong>
+		<div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm whitespace-pre-wrap overflow-wrap-anywhere">
+			<strong className="block mb-1">{message.role === "user" ? "You" : "AI"}</strong>
 			{message.parts.map((part, index) => {
 				// Parts are append-only within a message, so the index is a stable key.
 				const key = `${message.id}-${index}`;
 				return <MessagePart key={key} part={part} onRespondToApproval={onRespondToApproval} />;
 			})}
-		</Tile>
+		</div>
 	);
 }

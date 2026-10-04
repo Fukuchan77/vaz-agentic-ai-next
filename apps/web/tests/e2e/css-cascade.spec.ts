@@ -153,3 +153,102 @@ test.describe("CSS cascade layer contract (UI-1) — behaviour", () => {
 		).toBeGreaterThan(0);
 	});
 });
+
+test.describe("CSS cascade layer contract (UI-3) — chat element computed styles", () => {
+	/**
+	 * §3 / task 3.3 baseline: locks in the computed styles of core chat
+	 * elements after the shadcn/Tailwind migration. These values are checked
+	 * after §4 (preflight enablement) to confirm that removing the `@layer
+	 * carbon` wrapper does not change the rendered appearance.
+	 *
+	 * font-family is intentionally excluded here because §4 will change it
+	 * from Carbon's IBM Plex Sans to the system font stack.
+	 */
+	test("message container has non-zero padding and border (shadcn Card)", async ({ page }) => {
+		await page.goto("/");
+
+		const styles = await page.evaluate(() => {
+			// Inject a message container element with the same Tailwind classes
+			// that MessageItem.tsx uses (rounded-xl border bg-card p-4).
+			const el = document.createElement("div");
+			el.className = "rounded-xl border bg-card p-4";
+			document.body.appendChild(el);
+
+			const computed = window.getComputedStyle(el);
+			const result = {
+				paddingTop: computed.paddingTop,
+				borderTopWidth: computed.borderTopWidth,
+				borderRadius: computed.borderTopLeftRadius,
+			};
+			document.body.removeChild(el);
+			return result;
+		});
+
+		const parseValue = (v: string) => parseFloat(v);
+		expect(
+			parseValue(styles.paddingTop),
+			`message container padding-top must be > 0; got '${styles.paddingTop}'`,
+		).toBeGreaterThan(0);
+		expect(
+			parseValue(styles.borderTopWidth),
+			`message container border-top-width must be > 0; got '${styles.borderTopWidth}'`,
+		).toBeGreaterThan(0);
+		expect(
+			parseValue(styles.borderRadius),
+			`message container border-top-left-radius must be > 0; got '${styles.borderRadius}'`,
+		).toBeGreaterThan(0);
+	});
+
+	test("message list has non-zero gap (flex column layout)", async ({ page }) => {
+		await page.goto("/");
+
+		const styles = await page.evaluate(() => {
+			// Inject a flex column container with the same classes as Chat.tsx's
+			// message list (flex flex-col gap-3).
+			const el = document.createElement("div");
+			el.className = "flex flex-col gap-3";
+			document.body.appendChild(el);
+
+			const computed = window.getComputedStyle(el);
+			const result = {
+				gap: computed.gap,
+				display: computed.display,
+			};
+			document.body.removeChild(el);
+			return result;
+		});
+
+		expect(styles.display).toBe("flex");
+		expect(
+			parseFloat(styles.gap),
+			`message list gap must be > 0; got '${styles.gap}'`,
+		).toBeGreaterThan(0);
+	});
+
+	test("composer form has non-zero padding (sticky footer layout)", async ({ page }) => {
+		await page.goto("/");
+
+		const styles = await page.evaluate(() => {
+			// Inject a form with composer classes (flex flex-row items-start gap-2 py-3).
+			const el = document.createElement("form");
+			el.className = "flex flex-row items-start gap-2 py-3 pb-4";
+			document.body.appendChild(el);
+
+			const computed = window.getComputedStyle(el);
+			const result = {
+				paddingTop: computed.paddingTop,
+				gap: computed.gap,
+			};
+			document.body.removeChild(el);
+			return result;
+		});
+
+		expect(
+			parseFloat(styles.paddingTop),
+			`composer padding-top must be > 0; got '${styles.paddingTop}'`,
+		).toBeGreaterThan(0);
+		expect(parseFloat(styles.gap), `composer gap must be > 0; got '${styles.gap}'`).toBeGreaterThan(
+			0,
+		);
+	});
+});

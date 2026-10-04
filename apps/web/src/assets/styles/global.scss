@@ -18,27 +18,20 @@
 @layer carbon {
 	// reset: Carbon's unlayered element selectors (div, button, input …)
 	@include meta.load-css("@carbon/styles/scss/reset");
-	// Theme-zone classes (cds--g10, etc.) applied by <Theme theme="g10">
+	// Theme-zone classes (cds--g10, etc.)
 	@include meta.load-css("@carbon/styles/scss/zone");
 	// Emit @font-face only for the fonts in use
 	@include meta.load-css("@carbon/styles/scss/fonts");
 	@include meta.load-css("@carbon/styles/scss/type");
-	// <Grid> / <Column>
-	@include meta.load-css("@carbon/styles/scss/grid");
-	// <Tile>
-	@include meta.load-css("@carbon/styles/scss/components/tile");
-	// <Content>
-	@include meta.load-css("@carbon/styles/scss/components/ui-shell/content");
-	// <Form>
-	@include meta.load-css("@carbon/styles/scss/components/form");
-	// <TextArea> (chat composer)
-	@include meta.load-css("@carbon/styles/scss/components/text-area");
-	// <Button>
-	@include meta.load-css("@carbon/styles/scss/components/button");
-	// <Tag> (tool-execution display)
-	@include meta.load-css("@carbon/styles/scss/components/tag");
-	// <InlineLoading> (shown while streaming)
-	@include meta.load-css("@carbon/styles/scss/components/inline-loading");
-	// <InlineNotification> (error display)
-	@include meta.load-css("@carbon/styles/scss/components/notification");
+	// Carbon component entries removed in §3 (all chat/MessageItem screens migrated):
+	// - grid (was for Chat's Grid/Column)
+	// - tile (was for MessageItem's Tile)
+	// - ui-shell/content (was for Chat's Content wrapper)
+	// - form (was for ChatComposer's Form)
+	// - text-area (was for ChatComposer's TextArea)
+	// - button (was for Carbon Buttons in Chat/ChatComposer/MessageItem)
+	// - tag (was for MessageItem's Tag)
+	// - inline-loading (was for Chat's InlineLoading)
+	// - notification (was for Chat's InlineNotification)
+	// Remaining entries (reset/zone/fonts/type) are removed in §4 (CarbonRetirement).
 }
