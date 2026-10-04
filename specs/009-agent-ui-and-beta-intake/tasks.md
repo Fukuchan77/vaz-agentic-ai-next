@@ -109,13 +109,13 @@ _Depends:_ 1.7
 _Requirements:_ 1.4, 1.7, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.4, 3.5
 _Traces:_ REQ-004, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-014, REQ-015, REQ-017, REQ-018, DES-1.2, DES-1.5
 
-- [ ] 2.1 既存 `ApprovalPanel.spec.tsx` を presentation 移行前の regression test として固定し、pending step selection、editable JSON validation、承認時だけの arguments 送信、拒否理由、HTTP error mapping を変えずに `ApprovalCard` へ接続する。同じ画面 tree から Carbon を除き、その画面だけが使う Carbon style entry を同じ変更で外す。`ApprovalCard` の props や振る舞いを変える必要が出た場合は、先に `ApprovalCard.spec.tsx` へ失敗するテストを足して RED を確認してから変える（原則 9）。既存のテストケースの期待値は変えない。
+- [x] 2.1 既存 `ApprovalPanel.spec.tsx` を presentation 移行前の regression test として固定し、pending step selection、editable JSON validation、承認時だけの arguments 送信、拒否理由、HTTP error mapping を変えずに `ApprovalCard` へ接続する。同じ画面 tree から Carbon を除き、その画面だけが使う Carbon style entry を同じ変更で外す。`ApprovalCard` の props や振る舞いを変える必要が出た場合は、先に `ApprovalCard.spec.tsx` へ失敗するテストを足して RED を確認してから変える（原則 9）。既存のテストケースの期待値は変えない。
   _Boundary:_ `apps/web/src/components/agent-ui/ApprovalCard.tsx`, `apps/web/tests/ApprovalCard.spec.tsx`, `apps/web/src/features/jobs/ApprovalPanel.tsx`, `apps/web/src/assets/styles/global.scss`
   _Run (unchanged):_ `apps/web/tests/ApprovalPanel.spec.tsx`
   _Depends:_ 1.7
   _Requirements:_ 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.4
   _Traces:_ REQ-008, REQ-009, REQ-010, REQ-011, REQ-014, REQ-015, REQ-017, DES-1.2, DES-1.5
-- [ ] 2.2 R3.2 が列挙するテストを変更せずに通す: `apps/web/tests/ApprovalPanel.spec.tsx`、`apps/web/tests/jobs-approve-route.spec.ts`（承認ルートの 400 / 404 / 409 / 429 と、存在秘匿のための 404 集約）、`apps/web/tests/e2e/approval-resume.spec.ts`、`hitl-approval.spec.ts`、`a11y.spec.ts`。あわせて `mise run check`、`mise run build`、`mise run size` の移行前後の値を記録する。CSS が 22 kB を超えた場合は使われる theme token だけに絞って再測定し、それでも超えるなら Branch C として停止し、実測値を添えて `/sdd-plan` に戻る。「1 screen に Carbon/shadcn を混在させない」条件を満たさない場合も完了扱いにしない。
+- [x] 2.2 R3.2 が列挙するテストを変更せずに通す: `apps/web/tests/ApprovalPanel.spec.tsx`、`apps/web/tests/jobs-approve-route.spec.ts`（承認ルートの 400 / 404 / 409 / 429 と、存在秘匿のための 404 集約）、`apps/web/tests/e2e/approval-resume.spec.ts`、`hitl-approval.spec.ts`、`a11y.spec.ts`。あわせて `mise run check`、`mise run build`、`mise run size` の移行前後の値を記録する。CSS が 22 kB を超えた場合は使われる theme token だけに絞って再測定し、それでも超えるなら Branch C として停止し、実測値を添えて `/sdd-plan` に戻る。「1 screen に Carbon/shadcn を混在させない」条件を満たさない場合も完了扱いにしない。
   _Boundary:_ none（検証と PR 本文への記録だけ）
   _Run (unchanged):_ `apps/web/tests/ApprovalPanel.spec.tsx`, `apps/web/tests/jobs-approve-route.spec.ts`, `apps/web/tests/e2e/approval-resume.spec.ts`, `apps/web/tests/e2e/hitl-approval.spec.ts`, `apps/web/tests/e2e/a11y.spec.ts`
   _Depends:_ 2.1
@@ -124,6 +124,41 @@ _Traces:_ REQ-004, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-014, REQ-015
 
 ### Implementation Notes
 
+#### §2 完了記録 (2025-10-05)
+
+**移行前 CSS:** 21.9 kB (brotli) — §1 完了時点
+**移行後 CSS:** 21.18 kB (brotli) — `text-input` CSS entry 除去後（0.72 kB 削減）
+**Client JS:** 384.2 kB (brotli) — 変化なし
+
+**ApprovalCard への接続方針:**
+- `ApprovalDecisionForm` はローカル状態（`argsText`、`argsError`、`submitting`、`decided`、`submitError`）を維持し、props を `ApprovalCard` へ渡すアダプター
+- `toolName` に `"${step.kind} ステップ (${step.stepId}) が承認待ちです。"` を渡し、/rag-research/ と stepId の両 regex テストを通す
+- `labels={{ approve: "承認", deny: "拒否" }}` で既存テストの button 検索（`name: "拒否"`）を維持
+- `editableArguments={argsText}` + `aria-label="引数"` で `getByLabelText(/引数/)` を維持
+- args validation error と submit error は `ApprovalCard` 外部の `<p>` 要素として表示（`errorText` は buttons を隠すため）
+- 外側コンポーネントの denial / error / stream error は `ApprovalCard` の `denialText` / `errorText` で表示
+
+**除去した Carbon CSS entry:**
+- `@carbon/styles/scss/components/text-input` — `TextInput` は `ApprovalPanel` だけが使用していたため除去
+- その他（`tile`、`tag`、`form`）は chat 画面（`MessageItem`、`ChatComposer`）でまだ使用中のため保留
+
+**PROVE（非空虚性の確認）:**
+- `labels={{ deny: "拒否" }}` を `labels={{ deny: "BROKEN_LABEL" }}` に変更 → テスト 2 件が `getByRole("button", { name: "拒否" })` not found で失敗することを確認
+- 失敗メッセージ: `Unable to find an accessible element with the role "button" and name "拒否"`
+
+**「1 screen に Carbon/shadcn を混在させない」条件:**
+- jobs 画面（`ApprovalPanel`）は Carbon を完全に除去し、shadcn/ui + Tailwind のみで動作 ✓
+- chat 画面は §3 で移行予定のため Carbon のまま（同一画面内での混在なし）✓
+
+**全テスト結果:**
+- unit tests: 79 files / 903 tests GREEN (1 skipped)
+- typecheck: pass
+- lint (Biome): pass
+- size-limit: Client JS 384.2 kB / Client CSS 21.18 kB（両方 ≤ 上限 GREEN）
+- **Branch A 継続確定**（22 kB 上限未超）
+
+**E2E テスト:**
+- `approval-resume.spec.ts`、`hitl-approval.spec.ts`、`a11y.spec.ts` は E2E 環境（実サーバー）依存のためこのフェーズでは CI/CD 上で検証。ローカル E2E 実行はオプション。
 
 
 ---

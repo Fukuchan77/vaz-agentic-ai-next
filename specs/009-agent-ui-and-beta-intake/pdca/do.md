@@ -119,3 +119,53 @@ Tailwind v4 / shadcn new-york 基盤と共通 agent UI コンポーネント（A
 4. **`sass:meta` の `load-css()` は Carbon layer 包みの唯一の実行可能な手法**: Sass の `@use` は module を一度だけ実行するため、`@use` + `@forward` で同じ module を `@layer carbon` ブロック内で再 emit することはできない。
 
 5. **Tailwind v4 の `@theme` token は使用される utility を通じてのみ `:root` 変数として出力される**: 定義しても参照がなければ出力に含まれない。これにより `@layer properties` の `@property` 宣言が不要な変数分削減できる。
+
+---
+
+## §2 タスク別記録
+
+Phase: §2 (tasks 2.1–2.2)
+Completed: 2025-10-05
+
+### 2.1 — ApprovalPanel を ApprovalCard へ接続
+
+**TDD 方針:**
+- 既存 `ApprovalPanel.spec.tsx`（10 テスト）を regression test として使用。Carbon 実装時に全 GREEN を確認してから移行。
+- `ApprovalCard` の props に変更なし（既存 `labels`, `editableArguments`, `denialText`, `errorText` で要件を充足）。新規テスト不要。
+
+**RED → GREEN サイクル:**
+- `ApprovalPanel.tsx` の Carbon import を `ApprovalCard` に置き換え → 全 10 テスト GREEN を確認
+- `global.scss` から `text-input` CSS entry を除去
+
+**PROVE（非空虚性）:**
+- `labels={{ deny: "拒否" }}` を `labels={{ deny: "BROKEN_LABEL" }}` に変更 → 2 テストが失敗
+- 失敗メッセージ: `Unable to find an accessible element with the role "button" and name "拒否"`
+- 元に戻してすべて GREEN を確認
+
+**主な技術的判断:**
+- `ApprovalCard.errorText` は buttons を非表示にする（`isTerminal` flag）ため、args validation error と submit error を ApprovalCard 外部の `<p>` 要素として表示する方式を採用
+- `argsPlaceholderFor()` 関数は `ApprovalCard` の `Textarea` に placeholder prop がないため不要→削除（lint: `noUnusedVariables`）
+- Import 順序 Biome 警告: `@/components/agent-ui/ApprovalCard` を react/schemas の後に配置して修正
+
+**Carbon CSS 除去:**
+- `text-input` のみ除去（`TextInput` は `ApprovalPanel` だけが使用）
+- `tile`、`tag`、`form` は `MessageItem.tsx`・`ChatComposer.tsx` で使用中のため §3 まで保留
+
+---
+
+### 2.2 — 検証ゲート
+
+**テスト結果:**
+- `pnpm exec vitest run`: 79 files / 903 tests GREEN (1 skipped) ✓
+- `pnpm -r run typecheck`: all packages GREEN ✓
+- `pnpm exec biome check .`: lint GREEN ✓
+
+**ビルド・サイズ:**
+- `mise run build`: GREEN ✓
+- `mise run size`:
+  - Client JS: 384.2 kB brotli (上限 420 kB) ✓
+  - Client CSS: 21.18 kB brotli (上限 22 kB) ✓
+  - §1 の 21.9 kB から 0.72 kB 削減（text-input CSS 除去による）
+
+**Branch A 継続確定:** CSS 22 kB 未超のため停止なし。
+

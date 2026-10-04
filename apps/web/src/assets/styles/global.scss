@@ -29,9 +29,8 @@
 	@include meta.load-css("@carbon/styles/scss/components/tile");
 	// <Content>
 	@include meta.load-css("@carbon/styles/scss/components/ui-shell/content");
-	// <Form> / <TextInput>
+	// <Form>
 	@include meta.load-css("@carbon/styles/scss/components/form");
-	@include meta.load-css("@carbon/styles/scss/components/text-input");
 	// <TextArea> (chat composer)
 	@include meta.load-css("@carbon/styles/scss/components/text-area");
 	// <Button>
