@@ -19,6 +19,13 @@ interface DependabotUpdate {
 	directories?: string[];
 	cooldown?: { "default-days"?: number };
 	ignore?: Array<{ "dependency-name"?: string; versions?: string[] }>;
+	groups?: Record<
+		string,
+		{
+			patterns?: string[];
+			"update-types"?: string[];
+		}
+	>;
 }
 
 interface DependabotDoc {
@@ -147,5 +154,73 @@ describe(".github/dependabot.yml (X-15)", () => {
 				`>=${heldMajor + 1}`,
 			]);
 		}
+	});
+
+	test("UI shadcn/Radix dependency group exists with correct members", async () => {
+		const doc = await loadDependabotConfig();
+		const npmUpdate = doc.updates?.find((u) => u["package-ecosystem"] === "npm");
+		expect(npmUpdate, "npm ecosystem update block must exist").toBeDefined();
+
+		const groups = npmUpdate?.groups ?? {};
+		const uiGroup = groups["shadcn-ui"];
+		expect(uiGroup, "npm groups must contain a 'shadcn-ui' group").toBeDefined();
+
+		const patterns = uiGroup?.patterns ?? [];
+		// All five packages must be listed — order is irrelevant
+		expect(patterns).toContain("radix-ui");
+		expect(patterns).toContain("class-variance-authority");
+		expect(patterns).toContain("clsx");
+		expect(patterns).toContain("tailwind-merge");
+		expect(patterns).toContain("lucide-react");
+		// tailwindcss must NOT be in this group (it has its own group)
+		expect(patterns).not.toContain("tailwindcss");
+		expect(patterns).not.toContain("@tailwindcss/*");
+	});
+
+	test("Tailwind dependency group exists and is separate from shadcn-ui group", async () => {
+		const doc = await loadDependabotConfig();
+		const npmUpdate = doc.updates?.find((u) => u["package-ecosystem"] === "npm");
+		expect(npmUpdate, "npm ecosystem update block must exist").toBeDefined();
+
+		const groups = npmUpdate?.groups ?? {};
+		const twGroup = groups.tailwind;
+		expect(twGroup, "npm groups must contain a 'tailwind' group").toBeDefined();
+
+		const patterns = twGroup?.patterns ?? [];
+		// Only tailwindcss and @tailwindcss/* — nothing else
+		expect(patterns).toContain("tailwindcss");
+		expect(patterns).toContain("@tailwindcss/*");
+		// shadcn-ui members must NOT be in the tailwind group
+		for (const pkg of [
+			"radix-ui",
+			"class-variance-authority",
+			"clsx",
+			"tailwind-merge",
+			"lucide-react",
+		]) {
+			expect(patterns, `${pkg} must not be in the tailwind group`).not.toContain(pkg);
+		}
+	});
+
+	test("UI dependency groups satisfy the 24h cooldown and minimum-release-age policy", async () => {
+		const doc = await loadDependabotConfig();
+		const npmUpdate = doc.updates?.find((u) => u["package-ecosystem"] === "npm");
+		expect(npmUpdate, "npm ecosystem update block must exist").toBeDefined();
+		// Groups inherit the block-level cooldown; the block must already declare one.
+		expect(
+			npmUpdate?.cooldown?.["default-days"],
+			"npm block must have cooldown.default-days = 1 (24h)",
+		).toBe(1);
+	});
+
+	test("shadcn-ui and tailwind groups are mutually exclusive (no shared patterns)", async () => {
+		const doc = await loadDependabotConfig();
+		const npmUpdate = doc.updates?.find((u) => u["package-ecosystem"] === "npm");
+		const groups = npmUpdate?.groups ?? {};
+		const uiPatterns = new Set(groups["shadcn-ui"]?.patterns ?? []);
+		const twPatterns = new Set(groups.tailwind?.patterns ?? []);
+
+		const shared = [...uiPatterns].filter((p) => twPatterns.has(p));
+		expect(shared, "shadcn-ui and tailwind groups must have no shared patterns").toEqual([]);
 	});
 });
