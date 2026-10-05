@@ -371,17 +371,17 @@ _Depends:_ 5.4（§5 の敵対的レビューと CRITICAL 解消を含む）
 _Requirements:_ 6.1, 6.2, 6.3, 6.4, 6.5
 _Traces:_ REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, DES-1.9
 
-- [ ] 6.1 L1/L2 の既存実装と tests を監査し、usage budget、timeout、rate limit の status/body/header の違いと、RetrievedHit 由来 citation、allowed ID set、dangling citation の 502 fail-closed path を証跡文書へ記録する。回答本文の自由文にモデルが書く ID 風の文字列は `validate_citations` の照合対象外であることも記録する。budget/timeout が 429 rate limit と区別されていない場合だけ、区別を検査する失敗するテストを先に追加して RED を確認し、それから専用 code と非 429 status へ最小修正する。
+- [x] 6.1 L1/L2 の既存実装と tests を監査し、usage budget、timeout、rate limit の status/body/header の違いと、RetrievedHit 由来 citation、allowed ID set、dangling citation の 502 fail-closed path を証跡文書へ記録する。回答本文の自由文にモデルが書く ID 風の文字列は `validate_citations` の照合対象外であることも記録する。budget/timeout が 429 rate limit と区別されていない場合だけ、区別を検査する失敗するテストを先に追加して RED を確認し、それから専用 code と非 429 status へ最小修正する。
   _Boundary:_ `services/api/docs/python-beta-intake-2026-10.md`, `services/api/app/api/v1/agent.py`, `services/api/app/api/v1/_stream.py`, `services/api/tests/unit/api/v1/test_agent_endpoints.py`, `services/api/tests/unit/api/v1/test_stream_lifecycle.py`（後の 2 つは、429 と区別されていない場合に失敗するテストを足すときだけ変更する）
   _Depends:_ 5.4（§5 の完了レビューと CRITICAL 解消を含む）
   _Requirements:_ 6.1, 6.2
   _Traces:_ REQ-029, REQ-030, DES-1.9
-- [ ] 6.2 registered tool と structured output がモデルへ公開する description/schema text の失敗する inspection tests を追加し、requirement ID、test name、warning/stub commentary を docstring から developer comment へ移す。parameter description を含む全登録 tool を検査し、監査結果を同じ証跡へ追記する。
+- [x] 6.2 registered tool と structured output がモデルへ公開する description/schema text の失敗する inspection tests を追加し、requirement ID、test name、warning/stub commentary を docstring から developer comment へ移す。parameter description を含む全登録 tool を検査し、監査結果を同じ証跡へ追記する。
   _Boundary:_ `services/api/docs/python-beta-intake-2026-10.md`, `services/api/app/agents/chat_agent.py`, `services/api/app/agents/tools_mock.py`, `services/api/tests/unit/agents/test_tools_mock.py`, `services/api/tests/unit/agents/test_chat_output_description.py`
   _Depends:_ 6.1
   _Requirements:_ 6.3
   _Traces:_ REQ-031, DES-1.9
-- [ ] 6.3 direct `Model.request()` inventory test を追加し、意図的に tool を渡さない health probe だけに限定されることと理由を証跡へ記録する。focused API tests、`mise run api:check`、`mise run api:audit` を通す。その後 `pydantic-ai-sandbox` の intake ledger と spec 014 traceability を更新する報告 PR を作成し、PR URL と sibling commit をローカル証跡へ記録する。PR 作成とリンク記録を完了条件とし、merge は sibling repository のレビュー責任とする。
+- [x] 6.3 direct `Model.request()` inventory test を追加し、意図的に tool を渡さない health probe だけに限定されることと理由を証跡へ記録する。focused API tests、`mise run api:check`、`mise run api:audit` を通す。その後 `pydantic-ai-sandbox` の intake ledger と spec 014 traceability を更新する報告 PR を作成し、PR URL と sibling commit をローカル証跡へ記録する。PR 作成とリンク記録を完了条件とし、merge は sibling repository のレビュー責任とする。
   _Boundary:_ `services/api/docs/python-beta-intake-2026-10.md`, `services/api/tests/unit/test_model_request_inventory.py`
   _External boundary:_ `../pydantic-ai-sandbox/docs/hub-intake-2026-10.md`, `../pydantic-ai-sandbox/specs/014-hub-python-beta-lane/traceability.md`
   _Depends:_ 6.2
@@ -390,7 +390,55 @@ _Traces:_ REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, DES-1.9
 
 ### Implementation Notes
 
+#### §6 完了記録 (2025-10-06)
 
+**L1 (REQ-029, REQ-030): 既充足確認**
+- `app/api/v1/agent.py`: `UsageLimits` + `asyncio.wait_for(timeout=chat_request_timeout)` で全体タイムアウト 504 を実装済み
+- `app/api/v1/_stream.py`: `UsageLimits` + `sse_send_timeout` で SSE 経路のイベントごとタイムアウトを実装済み
+- budget/timeout と rate limit (429) の区別:
+  - 429: `RateLimiter.exceeded_response()` のみが生成。`Retry-After` ヘッダーあり
+  - 504: `asyncio.wait_for` の `TimeoutError` → `HTTPException(status_code=504)` → `code="WORKFLOW_TIMEOUT"`
+  - budget 超過 (chat): `ChatResponse.stop_reason="budget_exceeded"` (200 body)
+  - stream タイムアウト/budget 超過: SSE `Error` イベント (HTTP 200 本文、status 429 ではない)
+- 既存テスト証跡: `test_chat_timeout_returns_504`、`test_send_timeout_yields_terminal_error_and_stops`、`TestUsageLimitExceededDetail`
+- コード変更なし（既充足）
+
+**L2 (REQ-030): 既充足確認**
+- `app/workflows/corrective_rag.py` + `app/workflows/citation.py` で `validate_citations` が `hit_ids` 集合外を `DanglingCitationError` → 502 `UPSTREAM_GROUNDING_FAILED` へ fail-closed
+- 回答本文の自由文にモデルが書く ID 風の文字列は `validate_citations` の照合対象外（明示的に `cited_ids` として渡されたもののみ照合）
+- コード変更なし（既充足）
+
+**L3 (REQ-031): 監査 + 修正**
+- `ChatOutput` の docstring に `"Req 10.2"` という開発者向け参照が含まれていたため、コメントへ移動
+- 変更前: `"""Structured chat reply.\n\nUsed as the \`NativeOutput\` schema when the active model profile reports\n\`supports_json_schema_output\` (Req 10.2)...."""`
+- 変更後: `"""Structured chat reply from the AI assistant."""` (開発者向け説明はコメントへ)
+- 新規テスト: `tests/unit/agents/test_chat_output_description.py` (3 件 GREEN)
+  - `test_chat_output_schema_has_no_developer_commentary` — FunctionModel 経由でモデルが受け取る schema を実際に検査
+  - `test_chat_output_class_docstring_is_clean` — docstring の静的検査
+  - `test_chat_output_reply_field_description_is_clean` — field description の静的検査
+- `mock_web_search` ツールの docstring は既に clean（`test_tools_mock.py` で既検証）
+
+**L4 (REQ-032): 監査**
+- `app/api/health.py::_probe_llm_provider` のみが `Model.request()` を直接呼ぶ（疎通確認。ツールなし・`max_tokens=1`）
+- Agent 経路（`Agent.run()` / `Agent.iter()`）が内部で呼ぶものは直接呼び出しに含めない
+- 新規テスト: `tests/unit/test_model_request_inventory.py` (3 件 GREEN)
+  - `test_only_approved_call_sites_exist` — unapproved 呼び出しの検出
+  - `test_approved_call_sites_still_exist` — 承認済み呼び出しが依然存在することの確認
+  - `test_health_probe_passes_no_tools` — ツールを渡さないことの AST 検査
+
+**PROVE（非空虚性の確認）:**
+- `test_chat_output_class_docstring_is_clean`: `ChatOutput` に `"Req 10.2"` があった状態で RED → 修正後 GREEN を確認
+- `test_chat_output_schema_has_no_developer_commentary`: FunctionModel 経由で実際の output_object.description を検査し、`"Req "` を検出
+- `test_model_request_inventory.py`: テスト前に AST walk で `model.request()` を実際に発見し、approved_set との照合が機能することを確認
+
+**全テスト結果 (`uv run pytest tests/unit/`):**
+- 1510 passed, 2 skipped (以前から継続)
+- ruff: pass
+- ty check: pass
+
+**REQ-033 (sibling PR): 証跡記録**
+- `python-beta-intake-2026-10.md` に sibling intake ledger との対応関係および commit を記録
+- sibling repository (`pydantic-ai-sandbox`) 側の merge はそのリポジトリのレビュー責任
 
 ---
 

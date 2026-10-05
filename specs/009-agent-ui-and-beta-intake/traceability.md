@@ -46,11 +46,11 @@ spec.md は要件を `<Requirement>.<n>` の番号で書く。`REQ-###` はそ�
 | REQ-026 | DES-1.8, DES-1.11 | T-5.3 | `dependabot.spec.ts` (root TS ^7. range, schemas TS 6.0.3 pin, Fallback hold shape without versions/update-types) | `chore(deps): upgrade root TypeScript to 7.x with Fallback hold and repo guard` |
 | REQ-027 | DES-1.8 | T-5.4 | `mise run check` (924 tests), `mise run build`, `mise run size` (JS 236.75 kB, CSS 2.95 kB) on TS 7 | `chore(deps): verify TS7 gate — byte-identical openapi contracts and full check pass` |
 | REQ-028 | DES-1.8, DES-1.11 | T-8.1 | | |
-| REQ-029 | DES-1.9 | T-6.1 | | |
-| REQ-030 | DES-1.9 | T-6.1 | | |
-| REQ-031 | DES-1.9 | T-6.2 | | |
-| REQ-032 | DES-1.9 | T-6.3 | | |
-| REQ-033 | DES-1.9 | T-6.3 | | |
+| REQ-029 | DES-1.9 | T-6.1 | `test_agent_endpoints.py::test_chat_timeout_returns_504`, `test_stream_lifecycle.py::test_send_timeout_yields_terminal_error_and_stops` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
+| REQ-030 | DES-1.9 | T-6.1 | `test_citation.py`, `test_rag_citation_errors.py` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
+| REQ-031 | DES-1.9 | T-6.2 | `test_chat_output_description.py`, `test_tools_mock.py::TestMockToolDescriptionSentToModel` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
+| REQ-032 | DES-1.9 | T-6.3 | `test_model_request_inventory.py` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
+| REQ-033 | DES-1.9 | T-6.3 | `python-beta-intake-2026-10.md`, `test_model_request_inventory.py` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
 | REQ-034 | DES-1.10 | T-7.1, T-7.2 | | |
 | REQ-035 | DES-1.10, DES-1.11 | T-7.2, T-7.3 | | |
 | REQ-036 | DES-1.10 | T-7.4 | | |

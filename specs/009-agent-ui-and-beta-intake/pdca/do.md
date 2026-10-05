@@ -344,3 +344,27 @@ Completed: 2025-10-06
 - `mise run build`（Next.js Turbopack build）完了。
 - `mise run size`（Client JS 236.75 kB / CSS 2.95 kB）全緑。
 - Playwright E2E（`css-cascade.spec.ts`, `a11y.spec.ts`）9 passed。
+
+---
+
+## §6 タスク別記録 (Python ベータレーン L1〜L4 の証跡取り込み)
+
+Phase: §6 (tasks 6.1–6.3)
+Completed: 2025-10-06
+
+### 6.1 — L1/L2 監査と証跡記録
+
+- `services/api/docs/python-beta-intake-2026-10.md` に L1 (`UsageLimits` + timeout 504 / 200 budget_exceeded / 429 rate limit) と L2 (`RetrievedHit` citation fail-closed / dangling 502) の充足状況を文書化。
+- 既存の timeout, rate limit, citation テストが適切に分離されていることを確認（コード修正不要）。
+
+### 6.2 — L3 description/schema 監査と検査テスト
+
+- `ChatOutput` の class docstring に含まれていた開発者用参照（`"Req 10.2"`）を内部コメントへ移動。
+- `services/api/tests/unit/agents/test_chat_output_description.py` を追加（3 件の検査テスト: FunctionModel 経由の NativeOutput schema 検査、docstring 検査、field description 検査）。
+- `test_tools_mock.py` の `TestMockToolDescriptionSentToModel` と合わせてモデル向け schema/description に開発者コメントが含まれないことを保証。
+
+### 6.3 — L4 `Model.request()` inventory test と証跡更新
+
+- `services/api/tests/unit/test_model_request_inventory.py` を追加（AST walk で `services/api/app` 内の direct `model.request()` を検出し、`app/api/health.py::_probe_llm_provider` 以外の呼び出しを禁止）。
+- `services/api/docs/python-beta-intake-2026-10.md` の L4 証跡を記録。
+- `mise run api:check`（ruff, ty, pytest 1630 passed）が全緑であることを確認。
