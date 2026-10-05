@@ -10,8 +10,6 @@
 	},
 	"dependencies": {
 		"@ai-sdk/react": "^4.0.130",
-		"@carbon/react": "^1.117.0",
-		"@carbon/styles": "^1.116.0",
 		"@vaz/agents": "workspace:*",
 		"@vaz/config": "workspace:*",
 		"@vaz/schemas": "workspace:*",

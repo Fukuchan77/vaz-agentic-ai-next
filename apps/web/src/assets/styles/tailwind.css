@@ -1,21 +1,10 @@
 /*
  * Tailwind CSS entry for apps/web.
  *
- * Layer order declaration MUST come first to make `carbon` the weakest layer.
- * (plan.md §Cascade layer contract). Tailwind v4 generates its own
- * `@layer theme, base, components, utilities` as the first statement in the
- * processed output; prepending `carbon` here in a single statement ensures
- * `carbon` is declared before the Tailwind-generated statement, making it
- * the weakest layer of all.
- *
- * Coexistence period (UI-1 through UI-3):
- *   - No preflight: Carbon's unlayered reset sits in `@layer carbon` (weakest).
- *   - Source detection scoped to apps/web/src only (no node_modules scan).
- *   - utilities layer only (no full default theme import — only agent-ui tokens).
+ * Carbon retirement (UI-4, §4): Carbon removed, preflight enabled.
+ * Full Tailwind import (preflight + base + utilities) with source detection
+ * scoped to apps/web/src only.
  */
-
-/* Establish layer order: carbon must be the weakest (declared first). */
-@layer carbon, theme, base, components, utilities;
 
 /* Restrict scanning to apps/web/src only (avoids scanning workspace packages).
  * Note: the source() parameter on the import replaces the default **\/* root scan,
@@ -23,7 +12,7 @@
 @source not "../../app/api/**/*.ts";
 @source not "../../features/jobs/*.tsx";
 
-@import "tailwindcss/utilities" source("../../**/*");
+@import "tailwindcss" source("../../**/*");
 
 /*
  * Minimal theme tokens for agent-ui components.

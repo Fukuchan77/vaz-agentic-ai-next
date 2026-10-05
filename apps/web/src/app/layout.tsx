@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import "@/assets/styles/global.scss";
 import "@/assets/styles/tailwind.css";
 
 export const metadata: Metadata = {

@@ -53,7 +53,6 @@ pmOnFail: ignore
 
 # pnpm blocks dependency install/postinstall scripts by default.
 # allowBuilds (pnpm 12) records the audited decision explicitly (false = deny):
-# - @carbon/* / @ibm/plex*: the only script is ibmtelemetry (telemetry collection).
 # - @parcel/watcher: works from prebuilt binaries in optionalDependencies.
 # - sharp: works from prebuilt binaries (@img/sharp-*). Only consider flipping to
 #   true if next/image optimization ever needs a native build.
@@ -63,29 +62,10 @@ pmOnFail: ignore
 #   So install is not blocked even under strictDepBuilds (default true), but we
 #   record default-deny explicitly as a fail-safe should a future version add an
 #   install script.
+# @carbon/* and @ibm/plex* entries removed in §4 (Carbon retired from apps/web,
+# packages no longer installed).
 # To permit a script, flip the relevant entry to true (requires an audit).
 allowBuilds:
-  "@carbon/colors": false
-  "@carbon/feature-flags": false
-  "@carbon/grid": false
-  "@carbon/icon-helpers": false
-  "@carbon/icons-react": false
-  "@carbon/layout": false
-  "@carbon/motion": false
-  "@carbon/react": false
-  "@carbon/styles": false
-  "@carbon/themes": false
-  "@carbon/type": false
-  "@carbon/utilities": false
-  "@ibm/plex": false
-  "@ibm/plex-mono": false
-  "@ibm/plex-sans": false
-  "@ibm/plex-sans-arabic": false
-  "@ibm/plex-sans-devanagari": false
-  "@ibm/plex-sans-hebrew": false
-  "@ibm/plex-sans-thai": false
-  "@ibm/plex-sans-thai-looped": false
-  "@ibm/plex-serif": false
   "@parcel/watcher": false
   # inngest (Phase 3 durable-engine SDK): the published package has no install
   # script (only dev release/build). Recorded default-deny as a fail-safe.

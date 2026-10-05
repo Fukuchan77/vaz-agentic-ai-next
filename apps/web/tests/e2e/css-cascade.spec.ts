@@ -1,35 +1,33 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * UI-1 cascade layer contract (plan.md §Cascade layer contract):
+ * UI-4 cascade layer contract (plan.md §Cascade layer contract):
  *
- * During the Carbon/Tailwind coexistence period, Carbon's unlayered reset
- * (`div`/`span`/`p` → padding:0, `button`/`input` → border-radius:0) must be
- * placed in the weakest `carbon` layer so Tailwind utilities in `@layer utilities`
- * can override them. Without the wrap, padding/border/border-radius collapse to 0
- * on migrated shadcn components.
+ * After Carbon retirement (§4), there must be no `carbon` CSSLayerBlockRule.
+ * Tailwind preflight must be active (base layer rules present), and the
+ * system font stack declared in @theme (--font-sans) must be applied to body.
  *
- * Structural assertion: Carbon rules live inside a `CSSLayerBlockRule` named
- * "carbon", and in the layer order declarations, "carbon" appears before "theme"
- * and before "utilities" (making it the weakest of these layers).
+ * Structural assertion: no CSSLayerBlockRule named "carbon" exists; a
+ * `@layer base` block (from Tailwind preflight) is present.
  *
- * Behaviour assertion (UI-1): shadcn Button / Card class strings injected into
- * `/` have non-zero computed padding, border-width and border-radius.
+ * Font assertion: `window.getComputedStyle(document.body).fontFamily`
+ * contains at least one of the system-font tokens defined in tailwind.css
+ * (`--font-sans`).
+ *
+ * Behaviour assertion (UI-3, unchanged from §3): shadcn Button / Card class
+ * strings injected into `/` have non-zero computed padding, border-width and
+ * border-radius — these must still pass after preflight is enabled.
  */
 
-test.describe("CSS cascade layer contract (UI-1)", () => {
-	test("Carbon rules sit inside a 'carbon' CSSLayerBlockRule, carbon precedes theme in layer order", async ({
-		page,
-	}) => {
+test.describe("CSS cascade layer contract (UI-4) — Carbon retired, preflight active", () => {
+	test("no @layer carbon block exists after Carbon retirement", async ({ page }) => {
 		await page.goto("/");
 
 		const layerData = await page.evaluate(() => {
 			const sheets = Array.from(document.styleSheets);
 
-			// Find whether any CSSLayerBlockRule named "carbon" exists
 			let hasCarbonLayer = false;
-			let hasCarbonResetInsideLayer = false;
-			// Track all layer names in declaration order across all @layer statements
+			let hasBaseLayer = false;
 			const layerOrder: string[] = [];
 
 			for (const sheet of sheets) {
@@ -51,53 +49,60 @@ test.describe("CSS cascade layer contract (UI-1)", () => {
 							}
 						}
 					}
-					// CSSLayerBlockRule — the @layer carbon { … } block
+					// CSSLayerBlockRule — check for carbon (must be absent) and base (must be present)
 					if (rule.constructor.name === "CSSLayerBlockRule") {
 						const block = rule as unknown as { name: string; cssRules: CSSRuleList };
 						if (block.name === "carbon") {
 							hasCarbonLayer = true;
-							// Check that at least one Carbon reset rule lives inside this block.
-							// Carbon's reset emits a rule targeting `div` or `button` with padding:0 / border-radius:0.
-							for (const inner of Array.from(block.cssRules)) {
-								const style = inner as CSSStyleRule;
-								if (
-									style.selectorText &&
-									(style.selectorText.includes("button") || style.selectorText.includes("div"))
-								) {
-									hasCarbonResetInsideLayer = true;
-									break;
-								}
+						}
+						if (block.name === "base") {
+							// Tailwind preflight emits a @layer base block with rules for html, body, *, etc.
+							// Confirm there is at least one rule inside it.
+							if (block.cssRules.length > 0) {
+								hasBaseLayer = true;
 							}
 						}
 					}
 				}
 			}
 
-			const carbonIdx = layerOrder.indexOf("carbon");
-			const themeIdx = layerOrder.indexOf("theme");
-			const utilitiesIdx = layerOrder.indexOf("utilities");
-
-			return {
-				hasCarbonLayer,
-				hasCarbonResetInsideLayer,
-				layerOrder,
-				carbonBeforeTheme: carbonIdx !== -1 && themeIdx !== -1 && carbonIdx < themeIdx,
-				carbonBeforeUtilities: carbonIdx !== -1 && utilitiesIdx !== -1 && carbonIdx < utilitiesIdx,
-			};
+			return { hasCarbonLayer, hasBaseLayer, layerOrder };
 		});
 
-		expect(layerData.hasCarbonLayer, "A @layer carbon { … } block must exist").toBe(true);
 		expect(
-			layerData.hasCarbonResetInsideLayer,
-			"Carbon reset rules (targeting button/div) must be inside the carbon layer",
+			layerData.hasCarbonLayer,
+			"@layer carbon block must NOT exist after Carbon retirement",
+		).toBe(false);
+		expect(
+			layerData.hasBaseLayer,
+			"@layer base block (Tailwind preflight) must be present after Carbon retirement",
 		).toBe(true);
+	});
+
+	test("body uses the system font stack declared in --font-sans", async ({ page }) => {
+		await page.goto("/");
+
+		const fontFamily = await page.evaluate(() => window.getComputedStyle(document.body).fontFamily);
+
+		// --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, ...
+		// Browsers may resolve or normalise the value, but at least one token must be present.
+		const systemFontTokens = [
+			"ui-sans-serif",
+			"system-ui",
+			"-apple-system",
+			"BlinkMacSystemFont",
+			"Segoe UI",
+			"Roboto",
+			"Helvetica Neue",
+			"Arial",
+			"sans-serif",
+		];
+		const matchesSystemFont = systemFontTokens.some((token) =>
+			fontFamily.toLowerCase().includes(token.toLowerCase()),
+		);
 		expect(
-			layerData.carbonBeforeTheme,
-			`'carbon' must be declared before 'theme' in the layer order; got: ${layerData.layerOrder.join(", ")}`,
-		).toBe(true);
-		expect(
-			layerData.carbonBeforeUtilities,
-			`'carbon' must be declared before 'utilities' in the layer order; got: ${layerData.layerOrder.join(", ")}`,
+			matchesSystemFont,
+			`body font-family must include a system-font token; got: '${fontFamily}'`,
 		).toBe(true);
 	});
 });
@@ -106,11 +111,11 @@ test.describe("CSS cascade layer contract (UI-1) — behaviour", () => {
 	/**
 	 * Non-vacuous behaviour assertion (plan.md §Cascade layer contract):
 	 * shadcn primitives use Tailwind utility classes (p-*, border, rounded-*).
-	 * These must produce non-zero computed values even with Carbon loaded,
-	 * which proves the `@layer carbon` wrap is actually working.
+	 * These must produce non-zero computed values.
 	 *
-	 * Non-vacuousness verification (task 1.7): temporarily removing the
-	 * `@layer carbon` wrap makes this test fail (verified during task 1.7).
+	 * After Carbon retirement, Tailwind preflight is active. The UI-3 computed-
+	 * style baseline (§3 task 3.3) must still pass — if preflight shifts layout
+	 * values, fix the styles not this baseline.
 	 */
 	test("shadcn Button/Card class strings produce non-zero padding, border-width, and border-radius", async ({
 		page,
@@ -137,11 +142,13 @@ test.describe("CSS cascade layer contract (UI-1) — behaviour", () => {
 		});
 
 		// All three must be non-zero — Carbon's reset would have collapsed them to 0
-		// if it were not wrapped in the weakest `@layer carbon`.
+		// if it were not wrapped in the weakest `@layer carbon` (coexistence period).
+		// After Carbon retirement these pass because Tailwind preflight and utilities
+		// are both active without conflict.
 		const parseValue = (v: string) => parseFloat(v);
 		expect(
 			parseValue(styles.paddingLeft),
-			`padding-left must be > 0; got '${styles.paddingLeft}' — Carbon reset may be overriding Tailwind utilities`,
+			`padding-left must be > 0; got '${styles.paddingLeft}'`,
 		).toBeGreaterThan(0);
 		expect(
 			parseValue(styles.borderTopWidth),
