@@ -373,7 +373,7 @@ run = """
 set -e
 mkdir -p packages/schemas/src/generated
 cd services/agent && uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > ../../packages/schemas/src/generated/openapi.snapshot.json
-cd ../.. && pnpm exec openapi-typescript packages/schemas/src/generated/openapi.snapshot.json -o packages/schemas/src/generated/agent-service.ts
+cd ../.. && pnpm --filter @vaz/schemas exec openapi-typescript src/generated/openapi.snapshot.json -o src/generated/agent-service.ts
 # services/api (spec 008 R3). Its Settings fail fast without a valid key pair and
 # model id, none of which the exported contract depends on, so throwaway values are
 # minted per run (random, never committed — a literal here would be a gitleaks hit)
@@ -386,6 +386,6 @@ export SESSION_SIGNING_KEY="$(uv run python -c 'import secrets; print(secrets.to
 export LLM_MODEL="ollama:openapi-export"
 PYTHONPATH=. uv run python scripts/export_contract.py openapi > ../../packages/schemas/src/generated/api-service.openapi.snapshot.json
 PYTHONPATH=. uv run python scripts/export_contract.py sse-events > ../../packages/schemas/src/generated/api-service.sse-events.schema.json
-cd ../.. && pnpm exec openapi-typescript packages/schemas/src/generated/api-service.openapi.snapshot.json -o packages/schemas/src/generated/api-service.ts
+cd ../.. && pnpm --filter @vaz/schemas exec openapi-typescript src/generated/api-service.openapi.snapshot.json -o src/generated/api-service.ts
 """
 description = "Regenerate the committed OpenAPI snapshots + generated TS types for services/agent (agent-service.ts) and services/api (api-service.ts, plus its SSE-event JSON Schema)"
