@@ -22,8 +22,8 @@
   import は `@vaz/<package>/<subpath>` を使う。
 - **FastAPI の正本は `services/api`** — 旧 standalone repository へ修正を戻さない
   （ADR-0007）。
-- **新しい agent UI は shadcn/ui + Tailwind CSS** — 既存 Carbon 画面は段階移行し、
-  Carbon の wholesale import は禁止する（ADR-0008）。
+- **agent UI は shadcn/ui + Tailwind CSS** — Carbon は spec 009 §4 で完全撤去済み（ADR-0008）。
+  `@carbon/react`・`@carbon/styles`・SCSS は `apps/web` に追加しない。
 - **MCP は条件付き不採用** — 少数の in-process tool を維持し、複数ホスト再利用などの
   採用条件が成立した場合だけ再評価する（ADR-0001）。
 - **耐久ワークフローは Inngest** — ジョブ orchestration の独自実装を増やさない（ADR-0005）。

@@ -31,7 +31,7 @@ UI 部品の標準（[ADR-0008](../../docs/adr/0008-ui-component-standard.md)）
 
 - Carbon を import しているのは `apps/web/src/features/chat/{Chat,ChatComposer,MessageItem}.tsx` と
   `apps/web/src/features/jobs/ApprovalPanel.tsx` の 4 ファイルと、
-  [`global.scss`](../../apps/web/src/assets/styles/global.scss)（`@use` 15 行。うち部品別は 9 行、残る 6 行は config / reset / zone / fonts / type / grid の基盤）だけである。
+  `global.scss`（`@use` 15 行。§4 で削除済み）だけである。
 - `.size-limit.json` の上限は Client JS 420 kB / Client CSS 22 kB（brotli）。
 - `ApprovalPanel` はどのページにもマウントされていない（`apps/web/src/app` の `page.tsx` は `/` の `Chat` だけ）。
   その契約（送信本文・JSON 検証・否認理由の表示）を守っているのは単体テスト `apps/web/tests/ApprovalPanel.spec.tsx` である

@@ -253,3 +253,53 @@ Completed: 2025-10-06
 - lint (Biome): 0 errors, no fixes applied ✓
 - audit: No known vulnerabilities ✓
 - lint:model-ids: No hardcoded model IDs ✓
+
+---
+
+## §4 タスク記録 (2025-10-05)
+
+### 4.1 — Carbon 全撤去・Tailwind preflight 有効化
+
+**TDD サイクル:**
+- **RED**: `css-cascade.spec.ts` を更新し、`no @layer carbon block exists` テストが `Expected: false / Received: true` で失敗することを確認（Carbon がまだ存在する状態）
+- **GREEN**:
+  - `apps/web/src/assets/styles/global.scss` を削除
+  - `apps/web/src/assets/styles/tailwind.css`: `@layer carbon, ...;` 除去、`@import "tailwindcss/utilities"` → `@import "tailwindcss"` (preflight 含む)
+  - `apps/web/src/app/layout.tsx`: `global.scss` import 除去
+  - `apps/web/next.config.ts`: `sassOptions` 除去
+  - `apps/web/package.json`: `@carbon/react`・`@carbon/styles` 除去
+  - `package.json` (root): `sass` devDependency 除去
+  - `pnpm-workspace.yaml`: `@carbon/*`・`@ibm/plex*` allowBuilds entries 除去
+
+**副次的修正:**
+- `specs/009-agent-ui-and-beta-intake/gap-analysis.md` と `spec.md` の `global.scss` 向けリンクをコードスパンへ変換（doc-links.spec.ts の dangling link 修正）
+
+**測定値:**
+- Client CSS: **2.95 kB** brotli (§3 の 6.61 kB から 3.66 kB 削減)
+- Client JS: **236.75 kB** brotli（変化なし）
+- E2E: 9 tests GREEN (chromium, PORT=3001)
+
+### 4.2 — 予算・文書更新
+
+**CSS 上限計算:**
+- measured = 2.95 kB
+- ceil_0.1kB(2.95 + max(1.0, 2.95 × 0.10)) = ceil_0.1kB(3.95) = **4.0 kB**
+- 4.0 kB < 22 kB → 引き下げ実施
+
+**更新ファイル:**
+- `.size-limit.json`: CSS limit `22 kB` → `4.0 kB`
+- `AGENTS.md`: Carbon 規約 → shadcn/Tailwind 正式規約
+- `CLAUDE.md`: VAZ stack 記述・Feature colocation・Carbon styles bullet を更新
+- `.sdd/steering/tech.md`: UI Key Decisions 行を更新
+- `README.md`: Tech Stack の UI components 行を更新
+- `docs/adr/0008-ui-component-standard.md`: Status を「移行完了（2025-10-05）」に更新
+
+**最終ゲート結果 (`mise run check`):**
+- unit tests: 79 files / 923 tests GREEN (1 skipped) ✓
+- typecheck: all packages pass ✓
+- lint (Biome): 0 errors ✓
+- audit: No known vulnerabilities ✓
+- lint:model-ids: pass ✓
+- `mise run build`: GREEN ✓
+- `mise run size`: Client JS 236.75 kB / Client CSS 2.95 kB (新上限 4.0 kB) ✓
+- E2E (css-cascade + a11y): 9 tests GREEN (chromium) ✓

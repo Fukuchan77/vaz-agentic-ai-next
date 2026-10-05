@@ -33,13 +33,13 @@ spec.md は要件を `<Requirement>.<n>` の番号で書く。`REQ-###` はそ�
 | REQ-013 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-1.4, T-1.5, T-1.6, T-1.7, T-3.1, T-3.2, T-3.3 | `StreamingStatus.spec.tsx`, `ApprovalCard.spec.tsx`, `ToolExecution.spec.tsx`, `css-cascade.spec.ts` | `feat(web): introduce Tailwind v4 and configure cascade layers`, `feat(web): implement ApprovalCard presentation component with unit tests`, `feat(web): implement ToolExecution presentation component with unit tests`, `feat(web): implement StreamingStatus presentation component with unit tests` |
 | REQ-014 | DES-1.5, DES-1.6 | T-2.1, T-3.1 | `ApprovalPanel.spec.tsx` (pending step selection, editable JSON validation, approve/deny flow) | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
 | REQ-015 | DES-1.5 | T-2.1, T-2.2 | `ApprovalPanel.spec.tsx` (all 10 regression tests GREEN), `jobs-approve-route.spec.ts` | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
-| REQ-016 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-3.1, T-3.2, T-3.3 | `Chat.spec.tsx` (StreamingStatus integration × 6, MessageItem tool rendering × 6), `ToolExecution.spec.tsx` (AI SDK v7 states × 5), `css-cascade.spec.ts` (chat element computed styles × 3), `a11y.spec.ts` (chat approval a11y) | TBD (§3 ship commit) |
+| REQ-016 | DES-1.2, DES-1.3, DES-1.4, DES-1.6 | T-3.1, T-3.2, T-3.3 | `Chat.spec.tsx` (StreamingStatus integration × 6, MessageItem tool rendering × 6), `ToolExecution.spec.tsx` (AI SDK v7 states × 5), `css-cascade.spec.ts` (chat element computed styles × 3), `a11y.spec.ts` (chat approval a11y) | `feat(web): migrate chat UI to shadcn/Tailwind; remove Carbon chat entries` |
 | REQ-017 | DES-1.5, DES-1.6, DES-1.7 | T-2.1, T-3.1, T-3.3 | `ApprovalPanel.spec.tsx` (denial reason + HTTP error mapping) | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
 | REQ-018 | DES-1.5, DES-1.6 | T-2.2, T-3.3 | `jobs-approve-route.spec.ts` (30 tests: 400/404/409/429 and existence-hiding 404 aggregation) | `feat(web): migrate ApprovalPanel to ApprovalCard; remove Carbon text-input` |
-| REQ-019 | DES-1.7 | T-4.1 | | |
-| REQ-020 | DES-1.7 | T-4.2 | | |
-| REQ-021 | DES-1.7 | T-4.2 | | |
-| REQ-022 | DES-1.7 | T-4.2 | | |
+| REQ-019 | DES-1.7 | T-4.1 | `css-cascade.spec.ts` (no @layer carbon block, preflight base rules, system font-family, computed style regression × 6 E2E tests GREEN) | `feat(web): remove Carbon and enable Tailwind preflight` |
+| REQ-020 | DES-1.7 | T-4.2 | `size-limit` (Client CSS 2.95 kB ≤ 4.0 kB new limit) | `docs(spec): update budget, ADR-0008, and steering for §4 completion` |
+| REQ-021 | DES-1.7 | T-4.2 | `AGENTS.md`, `CLAUDE.md`, `.sdd/steering/tech.md`, `README.md` updated | `docs(spec): update budget, ADR-0008, and steering for §4 completion` |
+| REQ-022 | DES-1.7 | T-4.2 | `docs/adr/0008-ui-component-standard.md` Status → 移行完了（2025-10-05） | `docs(spec): update budget, ADR-0008, and steering for §4 completion` |
 | REQ-023 | DES-1.8 | T-5.1, T-5.2, T-5.4 | | |
 | REQ-024 | DES-1.8 | T-5.2 | | |
 | REQ-025 | DES-1.8 | T-5.4 | | |

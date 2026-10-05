@@ -247,12 +247,12 @@ _Traces:_ REQ-019, REQ-020, REQ-021, REQ-022, DES-1.7
 
 Branch B（3.3 で判定し、§3 の Implementation Notes に記録）のときは、4.1・4.2 を 3.3 と同じ PR で行う。その PR の Boundary は §3 と §4 の和で、R3.5 の前後サイズ記録には Carbon 撤去後の値も含める。§3 と §4 は 1 つのフェーズとして扱い、敵対的レビューは 4.2 の後に PR 全体へ 1 回だけ行う（Conventions の「フェーズの完了条件」の例外。中間状態はマージされないため）。
 
-- [ ] 4.1 repository-wide scan で Carbon/SCSS/Sass/CDN font の残存 consumer が無いことを確認し、Carbon（`apps/web/package.json`）と不要になった Sass dependency（ルート `package.json` の `sass`）、`global.scss` import、Carbon-only Next config を撤去する。Tailwind preflight を有効化し、system font と theme tokens を最終形へ移す。`pnpm ignored-builds` を再確認し、UI behavior を変更しない。撤去の前に `css-cascade.spec.ts` を先に変えて RED を確認する。変えるのは、構造の検査を「`carbon` layer が無く、preflight の base 規則がある」へ置き換えることと、意図した `font-family`（system font）の期待値を足すことだけである。3.3 で固定した計算済みスタイルの基準は変えずに通す。基準が落ちたら、基準ではなくスタイルを直す。
+- [x] 4.1 repository-wide scan で Carbon/SCSS/Sass/CDN font の残存 consumer が無いことを確認し、Carbon（`apps/web/package.json`）と不要になった Sass dependency（ルート `package.json` の `sass`）、`global.scss` import、Carbon-only Next config を撤去する。Tailwind preflight を有効化し、system font と theme tokens を最終形へ移す。`pnpm ignored-builds` を再確認し、UI behavior を変更しない。撤去の前に `css-cascade.spec.ts` を先に変えて RED を確認する。変えるのは、構造の検査を「`carbon` layer が無く、preflight の base 規則がある」へ置き換えることと、意図した `font-family`（system font）の期待値を足すことだけである。3.3 で固定した計算済みスタイルの基準は変えずに通す。基準が落ちたら、基準ではなくスタイルを直す。
   _Boundary:_ `apps/web/package.json`, `package.json`, `pnpm-lock.yaml`, `apps/web/src/assets/styles/tailwind.css`, `apps/web/src/assets/styles/global.scss`, `apps/web/src/app/layout.tsx`, `apps/web/next.config.ts`, `apps/web/tests/e2e/css-cascade.spec.ts`
   _Depends:_ 3.3
   _Requirements:_ 4.1
   _Traces:_ REQ-019, DES-1.7
-- [ ] 4.2 `mise run check`、`mise run build`、`mise run size`、`mise run test:e2e` を通し、新しい Client CSS 上限を `ceil_0.1kB(measured + max(1.0 kB, measured × 10%))` で算出して引き下げる。計算結果が 22 kB 未満でなければ停止して plan を改訂する。Carbon 共存規約を shadcn/Tailwind 正式規約へ置換し、`AGENTS.md` / `CLAUDE.md` / steering と `README.md` の技術スタック表の UI 行を同期する。ADR-0008 の Status を「移行完了」にし、日付には最後の UI gate が成功した日を使う。
+- [x] 4.2 `mise run check`、`mise run build`、`mise run size`、`mise run test:e2e` を通し、新しい Client CSS 上限を `ceil_0.1kB(measured + max(1.0 kB, measured × 10%))` で算出して引き下げる。計算結果が 22 kB 未満でなければ停止して plan を改訂する。Carbon 共存規約を shadcn/Tailwind 正式規約へ置換し、`AGENTS.md` / `CLAUDE.md` / steering と `README.md` の技術スタック表の UI 行を同期する。ADR-0008 の Status を「移行完了」にし、日付には最後の UI gate が成功した日を使う。
   _Boundary:_ `.size-limit.json`, `AGENTS.md`, `CLAUDE.md`, `.sdd/steering/tech.md`, `README.md`, `docs/adr/0008-ui-component-standard.md`
   _Depends:_ 4.1
   _Requirements:_ 4.2, 4.3, 4.4
@@ -260,6 +260,42 @@ Branch B（3.3 で判定し、§3 の Implementation Notes に記録）のとき
 
 ### Implementation Notes
 
+#### §4 完了記録 (2025-10-05)
+
+**移行前 CSS:** 6.61 kB (brotli) — §3 完了時点
+**移行後 CSS:** 2.95 kB (brotli) — Carbon 全撤去・Tailwind preflight 有効化後（3.66 kB 削減）
+**Client JS:** 236.75 kB (brotli) — 変化なし
+
+**Branch A 継続確定**（CSS 2.95 kB << 22 kB 旧上限。新上限 4.0 kB = ceil_0.1kB(2.95 + max(1.0, 2.95 × 10%)) = ceil_0.1kB(3.95) = 4.0 kB）
+
+**撤去内容:**
+- `apps/web/src/assets/styles/global.scss` — 削除（Carbon SCSS entry 全体）
+- `apps/web/src/app/layout.tsx` — `global.scss` import 除去
+- `apps/web/next.config.ts` — `sassOptions.silenceDeprecations` 除去
+- `apps/web/package.json` — `@carbon/react`・`@carbon/styles` 除去
+- `package.json` (root) — `sass` devDependency 除去
+- `pnpm-workspace.yaml` — `@carbon/*`・`@ibm/plex*` allowBuilds entries 除去
+
+**tailwind.css の変更:**
+- `@layer carbon, ...;` 宣言を除去
+- `@import "tailwindcss/utilities"` → `@import "tailwindcss"`（preflight 含む full import）
+
+**doc-links.spec.ts 修正:**
+- `specs/009-agent-ui-and-beta-intake/gap-analysis.md` と `spec.md` の `global.scss` 向けリンクをコードスパンへ変換（ファイル削除に伴う dangling link 修正）
+
+**PROVE（非空虚性の確認）:**
+- RED 確認: `css-cascade.spec.ts` の「no @layer carbon block」テストが `Expected: false / Received: true` で失敗することを確認（Carbon がまだ残っている状態で）
+- 変更後 GREEN: 6 件すべて通過（chromium, PORT=3001, CI=true で確認）
+
+**全テスト結果 (`mise run check`):**
+- unit tests: 79 files / 923 tests GREEN (1 skipped)
+- typecheck: pass
+- lint (Biome): pass
+- audit: pass
+- size-limit: Client JS 236.75 kB / Client CSS 2.95 kB（両方 << 上限 GREEN、新上限 4.0 kB）
+
+**E2E テスト (`PORT=3001 CI=true playwright test css-cascade.spec.ts a11y.spec.ts`):**
+- 9 tests GREEN (chromium, 6 css-cascade + 3 a11y)
 
 
 ---
