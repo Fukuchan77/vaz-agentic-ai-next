@@ -61,7 +61,7 @@ _Traces:_ REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-006, REQ-007, REQ-008
 
 ### Implementation Notes
 
-#### §1 完了記録 (2025-10-04)
+#### §1 完了記録 (2026-10-04)
 
 **CSS ベースライン (Tailwind 導入前):** 19.94 kB (brotli)
 
@@ -124,7 +124,7 @@ _Traces:_ REQ-004, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-014, REQ-015
 
 ### Implementation Notes
 
-#### §2 完了記録 (2025-10-05)
+#### §2 完了記録 (2026-10-04)
 
 **移行前 CSS:** 21.9 kB (brotli) — §1 完了時点
 **移行後 CSS:** 21.18 kB (brotli) — `text-input` CSS entry 除去後（0.72 kB 削減）
@@ -190,7 +190,7 @@ _Traces:_ REQ-004, REQ-007, REQ-008, REQ-009, REQ-010, REQ-011, REQ-013, REQ-014
 
 ### Implementation Notes
 
-#### §3 完了記録 (2025-10-XX)
+#### §3 完了記録 (2026-10-04)
 
 **移行前 CSS:** 21.18 kB (brotli) — §2 完了時点
 **移行後 CSS:** 6.61 kB (brotli) — chat 専用 Carbon CSS entry 除去後（14.57 kB 削減）
@@ -260,7 +260,7 @@ Branch B（3.3 で判定し、§3 の Implementation Notes に記録）のとき
 
 ### Implementation Notes
 
-#### §4 完了記録 (2025-10-05)
+#### §4 完了記録 (2026-10-05)
 
 **移行前 CSS:** 6.61 kB (brotli) — §3 完了時点
 **移行後 CSS:** 2.95 kB (brotli) — Carbon 全撤去・Tailwind preflight 有効化後（3.66 kB 削減）
@@ -330,7 +330,7 @@ _Traces:_ REQ-023, REQ-024, REQ-025, REQ-026, REQ-027, DES-1.8, DES-1.11
 
 ### Implementation Notes
 
-#### §5 完了記録 (2025-10-05)
+#### §5 完了記録 (2026-10-05)
 
 **二層コンパイラ構成の導入:**
 - ルート `package.json`: `typescript: ^7.0.0`（実解決 `7.0.2`）へ昇格
@@ -390,7 +390,7 @@ _Traces:_ REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, DES-1.9
 
 ### Implementation Notes
 
-#### §6 完了記録 (2025-10-06)
+#### §6 完了記録 (2026-10-05)
 
 **L1 (REQ-029, REQ-030): 既充足確認**
 - `app/api/v1/agent.py`: `UsageLimits` + `asyncio.wait_for(timeout=chat_request_timeout)` で全体タイムアウト 504 を実装済み

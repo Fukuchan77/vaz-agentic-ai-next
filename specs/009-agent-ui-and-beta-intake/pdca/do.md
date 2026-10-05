@@ -2,7 +2,7 @@
 
 Feature: `009-agent-ui-and-beta-intake`
 Phase: §5 (tasks 5.1–5.4)
-Completed: 2025-10-05
+Completed: 2026-10-04
 
 ---
 
@@ -125,7 +125,7 @@ Tailwind v4 / shadcn new-york 基盤と共通 agent UI コンポーネント（A
 ## §2 タスク別記録
 
 Phase: §2 (tasks 2.1–2.2)
-Completed: 2025-10-05
+Completed: 2026-10-04
 
 ### 2.1 — ApprovalPanel を ApprovalCard へ接続
 
@@ -175,7 +175,7 @@ Completed: 2025-10-05
 ## §3 タスク別記録
 
 Phase: §3 (tasks 3.1–3.3)
-Completed: 2025-10-06
+Completed: 2026-10-04
 
 ### 3.1 — Chat/ChatComposer shadcn/Tailwind 移行
 
@@ -256,7 +256,7 @@ Completed: 2025-10-06
 
 ---
 
-## §4 タスク記録 (2025-10-05)
+## §4 タスク記録 (2026-10-05)
 
 ### 4.1 — Carbon 全撤去・Tailwind preflight 有効化
 
@@ -292,7 +292,7 @@ Completed: 2025-10-06
 - `CLAUDE.md`: VAZ stack 記述・Feature colocation・Carbon styles bullet を更新
 - `.sdd/steering/tech.md`: UI Key Decisions 行を更新
 - `README.md`: Tech Stack の UI components 行を更新
-- `docs/adr/0008-ui-component-standard.md`: Status を「移行完了（2025-10-05）」に更新
+- `docs/adr/0008-ui-component-standard.md`: Status を「移行完了（2026-10-05）」に更新
 
 **最終ゲート結果 (`mise run check`):**
 - unit tests: 79 files / 923 tests GREEN (1 skipped) ✓
@@ -350,7 +350,7 @@ Completed: 2025-10-06
 ## §6 タスク別記録 (Python ベータレーン L1〜L4 の証跡取り込み)
 
 Phase: §6 (tasks 6.1–6.3)
-Completed: 2025-10-06
+Completed: 2026-10-05
 
 ### 6.1 — L1/L2 監査と証跡記録
 

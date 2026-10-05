@@ -1,8 +1,8 @@
 # ADR-0008: HITL を含むエージェント UI 部品の標準を shadcn/ui + Tailwind CSS にする
 
-- **Status**: 移行完了（2025-10-05）
+- **Status**: 移行完了（2026-10-05）
 - **Date**: 2026-10-03
-- **Migration completed**: 2025-10-05（spec 009 §4 完了。Carbon 全撤去・Tailwind preflight 有効化・CSS 上限 4.0 kB 更新）
+- **Migration completed**: 2026-10-05（spec 009 §4 完了。Carbon 全撤去・Tailwind preflight 有効化・CSS 上限 4.0 kB 更新）
 - **仕様根拠**: [`specs/008-hub-consolidation-followup/spec.md`](../../specs/008-hub-consolidation-followup/spec.md) R6
 
 散文は日本語、識別子・型・パス・コードは英語（`spec.json` `language: ja`）。
