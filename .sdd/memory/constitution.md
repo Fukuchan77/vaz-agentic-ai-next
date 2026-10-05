@@ -1,23 +1,21 @@
 <!--
 SYNC IMPACT REPORT
-Version Change: 2.1.0 → 2.1.1
+Version Change: 2.1.1 → 2.2.0
 Modified Principles:
   - none
 Modified Sections:
-  - Additional Constraints / CI security → 完了済みの SHA pin・permissions・repo guard を現状として反映
-  - 改訂履歴 → 2.1.1 の事実訂正を追加
+  - Additional Constraints / ツールチェーン → ルート TS 7 採用と @vaz/schemas TS 6 隔離構成（ADR-0009）を反映
+  - 改訂履歴 → 2.2.0 の MINOR 改正を追加
 Added Sections:
   - none
 Removed Sections:
   - none
 Templates Status:
-  ✅ specs/009-agent-ui-and-beta-intake/reviews/remediation-constitution-r1.md - 事実訂正レビューと承認根拠を記録
-  ✅ tests/repo/ci-workflows.spec.ts - 現行の機械検証パスとして確認
-  ✅ .github/workflows/*.yml - SHA pin と permissions 宣言を確認
-  ✅ AGENTS.md / CLAUDE.md - 影響なし
+  ✅ docs/adr/0009-typescript-7-adoption.md - TS 7 採用と TS 6 隔離の ADR 起票
+  ✅ specs/009-agent-ui-and-beta-intake/reviews/ts7-constitution-r1.md - MINOR 改正レビューと承認根拠を記録
+  ✅ AGENTS.md / CLAUDE.md - TS 7 採用に伴い 5.3 で更新予定
 Deferred Items:
   - TODO(BRANCH_COVERAGE_THRESHOLD): 実測ベースライン取得後に確定（継続）
-  - TODO(TYPESCRIPT_MAJOR): TypeScript 7 採否の ADR 確定後に反映（継続）
 -->
 # vaz-agentic-ai-next Constitution
 
@@ -268,8 +266,7 @@ allowlist を 1 か所に集約する。
 
 **ツールチェーン**: バージョンは `mise.toml` で固定する。Python 3.13（3.14 では slowapi 0.1.10 が
 `DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 12 系（厳密なビルドは root `package.json` の `packageManager` で完全固定し、これを正本とする）、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
-`futureFlags.experimentalPythonWorkspaces` に必要）。TypeScript は 6.x 継続とし、7.x の採否は
-TODO(TYPESCRIPT_MAJOR) として `docs/adr/` で単独判断する。
+`futureFlags.experimentalPythonWorkspaces` に必要）。TypeScript はルートワークスペースで 7.x 安定版を採用し、`openapi-typescript` によるコード生成のみ `@vaz/schemas` 内の TypeScript 6.0.3 に隔離する（ADR-0009。上流の TS 7 対応後に一本化）。
 コマンドは推測せず `mise.toml` を読む。素の `ruff` / `pytest` / `biome` を直接叩かず、
 `mise run <task>` → `uv run` → `pnpm exec` の優先順で実行する。
 
@@ -354,18 +351,16 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 | 2.0.0 | 2026-10-03 | MAJOR | 正本を `.sdd/memory/constitution.md` へ移設し、`.gitignore` に憲章だけの追跡例外を追加。正本パスを前提とするツールとの後方互換性が変わるため MAJOR とした。旧 `specs/memory/constitution.md` はリンク互換の案内として維持。 |
 | 2.1.0 | 2026-10-03 | MINOR | `.sdd/steering/` を persistent project knowledge として追跡対象に追加し、product / technology / structure の判断パターンを bootstrap。原則 10 と Governance に steering の永続性と粒度を追加。 |
 | 2.1.1 | 2026-10-03 | PATCH | CI / GH Actions の「現状」を実装済みの SHA pin・`permissions:`・`tests/repo/ci-workflows.spec.ts` に合わせて事実訂正。規範自体は変更なし。 |
+| 2.2.0 | 2026-10-05 | MINOR | ルートワークスペースで TypeScript 7.x を採用し、OpenAPI codegen 向けに @vaz/schemas に TypeScript 6.0.3 を隔離（ADR-0009、TODO(TYPESCRIPT_MAJOR) を解消） |
 
 ### 未決事項（Deferred）
 
 - **TODO(BRANCH_COVERAGE_THRESHOLD)**: 分岐カバレッジの数値しきい値は P0 で `vitest --coverage` /
   `pytest` の実測ベースラインを取得したあと、次回改正（MINOR）で確定する。根拠のない数値を先に固定すると
   原則 8（実測主義）に反するため、意図的に保留する（REQ-7.7）。
-- **TODO(TYPESCRIPT_MAJOR)**: TypeScript 6.x 継続か 7.x 採用か（spec §12 R9）。`docs/adr/` で
-  単独判断し、決定後に Additional Constraints へ反映する。6.x 継続の理由は AGENTS.md に
-  「Three majors are deliberately held back」節として記録済み（2026-09-19 再実測）。
 
 ---
 
-**Version**: 2.1.1 |
+**Version**: 2.2.0 |
 **Ratified**: 2026-08-29 |
-**Last amended**: 2026-10-03
+**Last amended**: 2026-10-05
