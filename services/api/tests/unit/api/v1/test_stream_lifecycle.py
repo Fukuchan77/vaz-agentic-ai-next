@@ -7,6 +7,7 @@ verified deterministically, without depending on pydantic-ai internals.
 
 import asyncio
 from collections.abc import AsyncGenerator
+from typing import Self
 
 import pytest
 from pydantic_ai import RunUsage
@@ -44,7 +45,7 @@ class _TrackingAsyncGen:
         self._agen = agen
         self.closed = False
 
-    def __aiter__(self) -> "_TrackingAsyncGen":
+    def __aiter__(self) -> Self:
         return self
 
     async def __anext__(self) -> SSEEvent:
