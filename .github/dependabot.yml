@@ -61,10 +61,10 @@ updates:
     # is a decision (see the "held on purpose" bullet there), not a stale
     # range Dependabot should try to close.
     ignore:
-      # TypeScript 7.0 is the native port; adopting it is an ADR-level
-      # decision, not a range refresh.
+      # TypeScript 7.x adopted at root (ADR-0009); @vaz/schemas isolates TypeScript 6.0.3
+      # for openapi-typescript codegen. Using Fallback hold (ignore without versions/update-types)
+      # to prevent bot mis-upgrades; root minor/patch tracked manually per docs/dependency-policy.md §8.
       - dependency-name: "typescript"
-        versions: [">=7"]
       # @types/node tracks the Node major mise.toml pins (24 LTS); bump it in
       # the same change that moves the runtime, never before.
       - dependency-name: "@types/node"

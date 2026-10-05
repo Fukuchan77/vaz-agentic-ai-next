@@ -41,7 +41,6 @@ const ROOT = new URL("../../", import.meta.url);
 // Deliberately-held-back majors (AGENTS.md / CLAUDE.md): package.json pins the
 // range below; dependabot.yml must ignore the next major and above.
 const HELD_BACK: ReadonlyArray<{ name: string; heldMajor: number }> = [
-	{ name: "typescript", heldMajor: 6 },
 	{ name: "@types/node", heldMajor: 24 },
 ];
 
@@ -154,6 +153,46 @@ describe(".github/dependabot.yml (X-15)", () => {
 				`>=${heldMajor + 1}`,
 			]);
 		}
+	});
+
+	test("typescript compiler split: root TS 7, schemas TS 6, and Fallback hold in dependabot.yml", async () => {
+		const [doc, rootPackageJsonText, schemasPackageJsonText] = await Promise.all([
+			loadDependabotConfig(),
+			readFile(new URL("package.json", ROOT), "utf8"),
+			readFile(new URL("packages/schemas/package.json", ROOT), "utf8"),
+		]);
+		expect(rootPackageJsonText, "root package.json must be readable").toBeDefined();
+		expect(schemasPackageJsonText, "packages/schemas/package.json must be readable").toBeDefined();
+
+		const rootPackageJson = JSON.parse(rootPackageJsonText) as PackageJson;
+		const schemasPackageJson = JSON.parse(schemasPackageJsonText) as PackageJson;
+
+		// 1. Root TypeScript range must be ^7.
+		const rootTs = rootPackageJson.devDependencies?.typescript;
+		expect(rootTs, "root typescript must be a devDependency").toBeDefined();
+		expect(rootTs, "root typescript range must be ^7.x").toMatch(/^[~^]?7\./);
+
+		// 2. packages/schemas TypeScript must be 6.0.3 series
+		const schemasTs = schemasPackageJson.devDependencies?.typescript;
+		expect(schemasTs, "packages/schemas typescript must be a devDependency").toBeDefined();
+		expect(schemasTs, "packages/schemas typescript must be 6.0.3").toMatch(/^[~^]?6\.0\.3/);
+
+		// 3. Fallback hold in dependabot.yml: ignore entry has dependency-name: "typescript" with NO versions and NO update-types
+		const npmUpdate = doc.updates?.find((u) => u["package-ecosystem"] === "npm");
+		expect(npmUpdate).toBeDefined();
+
+		const tsIgnore = (npmUpdate?.ignore ?? []).find(
+			(entry) => entry["dependency-name"] === "typescript",
+		);
+		expect(tsIgnore, "dependabot.yml must contain an ignore entry for typescript").toBeDefined();
+		expect(
+			(tsIgnore as Record<string, unknown>).versions,
+			"Fallback hold must not declare versions",
+		).toBeUndefined();
+		expect(
+			(tsIgnore as Record<string, unknown>)["update-types"],
+			"Fallback hold must not declare update-types",
+		).toBeUndefined();
 	});
 
 	test("UI shadcn/Radix dependency group exists with correct members", async () => {

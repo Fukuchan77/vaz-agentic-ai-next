@@ -21,7 +21,7 @@ By eliminating boilerplate optimization via the React Compiler and leveraging a 
 | Framework                | [Next.js 16](https://nextjs.org) App Router (Turbopack)                                                                                        |
 | Compiler                 | [React Compiler](https://react.dev/learn/react-compiler) (automatic memoization)                                                               |
 | Runtime validation       | [Zod v4](https://zod.dev)                                                                                                                      |
-| Language                 | [TypeScript 6](https://www.typescriptlang.org)                                                                                                 |
+| Language                 | [TypeScript 7](https://www.typescriptlang.org)                                                                                                 |
 | Lint / Format            | [Biome 2.5+](https://biomejs.dev)                                                                                                              |
 | Unit testing             | [Vitest 5](https://vitest.dev) + [Testing Library](https://testing-library.com)                                                                |
 | E2E testing              | [Playwright](https://playwright.dev) (Chromium / Firefox)                                                                                      |

@@ -62,7 +62,7 @@
 
 ## Constraints
 
-- Node 24 LTS、pnpm 12、TypeScript 6.x、Python 3.13 の宣言済み major を勝手に変更しない。
+- Node 24 LTS、pnpm 12、TypeScript 7.x（root）/ 6.0.3（@vaz/schemas codegen 隔離、ADR-0009）、Python 3.13 の宣言済み major を勝手に変更しない。
 - LLM model ID は allowlist と明示済み fallback 以外へ hardcode しない。
 - 埋め込み dimension は 768 固定。同一 corpus で provider/model を混在させない。
 - Supervisor plan は `MAX_PLAN_STEPS` を超えさせない。上限変更はレビュー対象のコード変更とする。

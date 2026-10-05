@@ -195,9 +195,10 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
   失敗する。このゲートを迂回する設定(`--ignore-scripts` の既定化等)は行わない —
   ボット PR も人間の PR と同じ audited-decision フローに従う。
 - **保留中メジャーとの整合**: AGENTS.md / CLAUDE.md の据え置き記述
-  (typescript / @types/node)は `.github/dependabot.yml` の `ignore` と
-  `tests/repo/dependabot.spec.ts` の `HELD_BACK` 表に写してある。
+  (@types/node 24、および root TS 7 / @vaz/schemas TS 6.0.3 隔離構成 ADR-0009)は `.github/dependabot.yml` の `ignore` と
+  `tests/repo/dependabot.spec.ts` に写してある。
   据え置き判断を追加・撤回するときは 3 つを同じ PR で更新する。
+- **TypeScript 7 手動更新の定期確認 (Fallback hold)**: `typescript` は Fallback hold として Dependabot の ignore に置かれているため、root `package.json` の TypeScript 7.x minor/patch は Dependabot PR が自動作成されない。定期メンテナンスタスク（週次・月次）で root `typescript` の安定版 minor/patch を手動確認して更新する。上流 `openapi-typescript` が TS 7 対応して TS 6 隔離が撤去された段階で semver-major hold に戻す。
 - **レビュー負荷**: 自動生成 PR が `pnpm-workspace.yaml`(overrides/allowBuilds)を触る場合、
   §6 の撤去条件表・レビュー運用と重複しないよう、「ボット PR も `pnpm-workspace.yaml`
   変更時レビュー対象」の運用に一本化する。
@@ -228,7 +229,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 
 | 据え置き | 障害（正本） | ベータレーンで示すべきこと |
 |---|---|---|
-| `typescript` 6.x | TS 7 はネイティブ移植で、JS の compiler API が無い（[`CLAUDE.md`](../CLAUDE.md)） | ハブが使う compiler API 依存のツール（`openapi-typescript`、`next typegen` など）が TS 7 下で通ること |
+| `typescript` 6.x（@vaz/schemas 隔離） | `openapi-typescript` 7.13.0 が TS 6 compiler API に依存（[ADR-0009](../docs/adr/0009-typescript-7-adoption.md)） | `openapi-typescript` が TS 7 に対応した新版をリリースし、`mise run openapi:gen` が root TS 7 で byte-identical に完走すること |
 | `@types/node` `^24` | ランタイムの Node 24 LTS に合わせている | Node のランタイム側を上げる判断が先。型だけを先行させない |
 | `services/api` の Python 3.13 固定 | 元の原因だった slowapi と starlette 0.52 は 2026-10-03 に解消（`fastapi` / `starlette` の cap も同時に撤去済み）。3.15 は `chromadb<1.0` → `onnxruntime` と `sentence-transformers` → `torch` に cp315 の wheel が無く解決しない（`services/api/CLAUDE.md`「Dependency pins that are load-bearing」） | 3.14 で `uv sync` と `api:check` が green であること（`pydantic-ai-sandbox` の `docs/hub-intake-2026-10.md` §2.5） |
 
