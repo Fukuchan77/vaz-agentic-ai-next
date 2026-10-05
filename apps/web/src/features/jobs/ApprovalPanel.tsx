@@ -1,8 +1,8 @@
 "use client";
 
-import { Button, InlineNotification, Tag, TextInput, Tile } from "@carbon/react";
 import type { JobEvent, SpecialistKind } from "@vaz/schemas/workflows";
-import { useId, useState } from "react";
+import { useState } from "react";
+import { ApprovalCard } from "@/components/agent-ui/ApprovalCard";
 import { useJobStream } from "./useJobStream";
 
 /**
@@ -29,22 +29,6 @@ type ErrorEvent = JobEvent & { type: "error" };
  * `ApprovalDeniedReason`) — read the typed field rather than parsing the
  * human-readable `message` string. */
 const APPROVAL_DENIAL_REASONS = new Set(["rejected", "expired", "misconfigured"]);
-
-/** A JSON example of the pending step's editable arguments (R3.4), tailored
- * to its specialist `kind` so the operator edits a shape that actually
- * matches what will run. */
-function argsPlaceholderFor(kind: SpecialistKind): string {
-	switch (kind) {
-		case "rag-research":
-			return '{"query":"...","topK":5}';
-		case "document-generation":
-			return '{"instructions":"...","format":"markdown"}';
-		case "data-processing":
-			return '{"operation":"...","input":{}}';
-		default:
-			return "{}";
-	}
-}
 
 /**
  * The most recent `step-start` event that (a) satisfies `requiresApproval` and
@@ -89,26 +73,12 @@ function parseDenial(error: ErrorEvent): { stepId: string; reason: string } | nu
 }
 
 /**
- * `ApprovalPanel` — the HITL approve / reject / edit-args UI (R3.4). Consumes
- * `useJobStream` and, for the step currently awaiting a decision, POSTs to
- * `/api/jobs/:id/approve`: the step's `stepId` is sent as `toolCallId` (the
- * HTTP↔engine naming bridge `POST /api/jobs/:id/approve` establishes) with
- * `decision` and an optional edited `args` JSON payload.
- *
- * `args` starts empty rather than pre-filled from a `tool-call` event: a
- * gated step suspends in `createDurableStepRunner` *before* its specialist
- * function runs, so no `tool-call` event (which only fires from inside that
- * function) exists yet to read defaults from — editing here is a plain
- * override the operator supplies, not a pre-filled correction.
- */
-/**
  * The decision form for one pending step. Keyed by `step.stepId` from the
  * parent so a *new* pending step remounts this component fresh — the
  * idiomatic React reset-on-identity-change, in place of a `useEffect` that
  * would otherwise reset local state without ever reading `step` in its body.
  */
 function ApprovalDecisionForm({ jobId, step }: { jobId: string; step: StepStartEvent }) {
-	const argsInputId = useId();
 	const [argsText, setArgsText] = useState("");
 	const [argsError, setArgsError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
@@ -149,45 +119,32 @@ function ApprovalDecisionForm({ jobId, step }: { jobId: string; step: StepStartE
 		}
 	}
 
+	// Surface inline errors (args validation and submit errors) below the card
+	const inlineError = argsError ?? submitError;
+	const inlineErrorPrefix = argsError ? "" : submitError ? "送信エラー: " : "";
+
 	return (
-		<div>
-			<p>
-				<Tag type="purple" size="sm">
-					{step.kind}
-				</Tag>{" "}
-				ステップ ({step.stepId}) が承認待ちです。
-			</p>
-			<TextInput
-				id={argsInputId}
-				labelText="引数を編集(JSON, 任意)"
-				placeholder={argsPlaceholderFor(step.kind)}
-				value={argsText}
-				onChange={(event) => setArgsText(event.target.value)}
-				disabled={submitting || decided}
-				invalid={argsError !== null}
-				invalidText={argsError ?? undefined}
+		<>
+			<ApprovalCard
+				toolName={`${step.kind} ステップ (${step.stepId}) が承認待ちです。`}
+				editableArguments={argsText}
+				onEditableArgumentsChange={(value) => {
+					setArgsText(value);
+					setArgsError(null);
+				}}
+				pending={submitting || decided}
+				labels={{ approve: "承認", deny: "拒否" }}
+				onApprove={() => submitDecision("approve")}
+				onDeny={() => submitDecision("reject")}
 			/>
-			<Button
-				kind="primary"
-				type="button"
-				disabled={submitting || decided}
-				onClick={() => submitDecision("approve")}
-			>
-				承認
-			</Button>
-			<Button
-				kind="danger"
-				type="button"
-				disabled={submitting || decided}
-				onClick={() => submitDecision("reject")}
-			>
-				拒否
-			</Button>
-			{decided && !submitError && <p>決定を送信しました。結果を待っています…</p>}
-			{submitError && (
-				<InlineNotification kind="error" title="送信エラー" subtitle={submitError} lowContrast />
+			{inlineError && (
+				<p>
+					{inlineErrorPrefix}
+					{inlineError}
+				</p>
 			)}
-		</div>
+			{decided && !submitError && <p>決定を送信しました。結果を待っています…</p>}
+		</>
 	);
 }
 
@@ -199,34 +156,34 @@ export function ApprovalPanel({ jobId, requiresApproval = () => false }: Approva
 	const denial = latestError ? parseDenial(latestError) : null;
 
 	return (
-		<Tile>
+		<div>
 			<h2>承認</h2>
 			{pendingStep ? (
 				<ApprovalDecisionForm key={pendingStep.stepId} jobId={jobId} step={pendingStep} />
 			) : denial ? (
-				<InlineNotification
-					kind="error"
-					title="承認が完了しませんでした"
-					subtitle={`ステップ ${denial.stepId}: ${denial.reason}`}
-					lowContrast
+				<ApprovalCard
+					toolName="承認が完了しませんでした"
+					denialText={`ステップ ${denial.stepId}: ${denial.reason}`}
+					onApprove={() => {}}
+					onDeny={() => {}}
 				/>
 			) : latestError ? (
-				<InlineNotification
-					kind="error"
-					title="エラー"
-					subtitle={latestError.message}
-					lowContrast
+				<ApprovalCard
+					toolName="エラー"
+					errorText={latestError.message}
+					onApprove={() => {}}
+					onDeny={() => {}}
 				/>
 			) : status === "error" && streamError ? (
-				<InlineNotification
-					kind="error"
-					title="接続エラー"
-					subtitle={streamError.message}
-					lowContrast
+				<ApprovalCard
+					toolName="接続エラー"
+					errorText={streamError.message}
+					onApprove={() => {}}
+					onDeny={() => {}}
 				/>
 			) : (
 				<p>承認待ちのステップはありません。</p>
 			)}
-		</Tile>
+		</div>
 	);
 }

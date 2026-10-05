@@ -162,7 +162,13 @@ playwright/.cache/
 # Coding agent directories
 .bob/
 .claude/
-.sdd/
+.sdd/*
+!.sdd/memory/
+.sdd/memory/*
+!.sdd/memory/constitution.md
+!.sdd/steering/
+.sdd/steering/*
+!.sdd/steering/*.md
 .specify/
 .serena/
 

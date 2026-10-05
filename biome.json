@@ -6,7 +6,11 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!packages/schemas/src/generated"]
+		"includes": [
+			"**",
+			"!packages/schemas/src/generated",
+			"!apps/web/src/assets/styles/tailwind.css"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -24,5 +28,24 @@
 		"formatter": {
 			"quoteStyle": "double"
 		}
-	}
+	},
+	"css": {
+		"parser": {
+			"cssModules": false
+		},
+		"linter": {
+			"enabled": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["apps/web/src/assets/styles/tailwind.css"],
+			"linter": {
+				"enabled": false
+			},
+			"formatter": {
+				"enabled": false
+			}
+		}
+	]
 }

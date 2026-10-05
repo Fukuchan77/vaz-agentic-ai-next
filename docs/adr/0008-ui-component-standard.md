@@ -1,7 +1,8 @@
 # ADR-0008: HITL を含むエージェント UI 部品の標準を shadcn/ui + Tailwind CSS にする
 
-- **Status**: Accepted（移行は未着手。本 ADR は標準の決定のみを記録する）
+- **Status**: 移行完了（2026-10-05）
 - **Date**: 2026-10-03
+- **Migration completed**: 2026-10-05（spec 009 §4 完了。Carbon 全撤去・Tailwind preflight 有効化・CSS 上限 4.0 kB 更新）
 - **仕様根拠**: [`specs/008-hub-consolidation-followup/spec.md`](../../specs/008-hub-consolidation-followup/spec.md) R6
 
 散文は日本語、識別子・型・パス・コードは英語（`spec.json` `language: ja`）。
@@ -35,15 +36,13 @@ shadcn/ui + Tailwind CSS とする。**
 
 ## Consequences
 
-- **新規の UI 部品は shadcn/ui + Tailwind で書く。** 既存の Carbon 部品は移行が終わるまで残す。
-  同じ画面に両方式を混在させない（画面単位で移行する）。
-- ハブの移行は別 spec で行う。少なくとも次を含める。
-  - Tailwind v4 と shadcn/ui の導入（`apps/web`）
-  - `ApprovalPanel` から順に、画面単位で置き換える
-  - `.size-limit.json` の予算の再測定（Carbon の SCSS が消えると CSS 予算が下がる見込み）
-  - `CLAUDE.md` / `AGENTS.md` の Carbon 規約（`"use client"` 必須、`global.scss` への部品別 `@use`）
-    の撤去。ペアで更新する
-- 移行が終わるまで、ハブの `CLAUDE.md` / `AGENTS.md` にある Carbon 規約は有効のままとする。
+- **すべての UI 部品は shadcn/ui + Tailwind で書く。** Carbon は spec 009 §4 で完全撤去済み。
+  `@carbon/react`・`@carbon/styles`・SCSS を `apps/web` に追加しない。
+- spec 009 で実施した移行の内容:
+  - §1: Tailwind v4 と shadcn/ui を `apps/web` へ導入（preflight なし・Carbon 共存）
+  - §2: `ApprovalPanel` を `ApprovalCard`（shadcn/ui）へ移行
+  - §3: chat 画面（`Chat`・`ChatComposer`・`MessageItem`）を shadcn/ui + Tailwind へ移行
+  - §4: Carbon 全撤去・Tailwind preflight 有効化・`.size-limit.json` CSS 上限を 4.0 kB へ引き下げ・`CLAUDE.md`/`AGENTS.md` 更新
 
 ## Re-trigger Conditions
 

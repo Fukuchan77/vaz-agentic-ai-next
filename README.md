@@ -21,11 +21,11 @@ By eliminating boilerplate optimization via the React Compiler and leveraging a 
 | Framework                | [Next.js 16](https://nextjs.org) App Router (Turbopack)                                                                                        |
 | Compiler                 | [React Compiler](https://react.dev/learn/react-compiler) (automatic memoization)                                                               |
 | Runtime validation       | [Zod v4](https://zod.dev)                                                                                                                      |
-| Language                 | [TypeScript 6](https://www.typescriptlang.org)                                                                                                 |
+| Language                 | [TypeScript 7](https://www.typescriptlang.org)                                                                                                 |
 | Lint / Format            | [Biome 2.5+](https://biomejs.dev)                                                                                                              |
 | Unit testing             | [Vitest 5](https://vitest.dev) + [Testing Library](https://testing-library.com)                                                                |
 | E2E testing              | [Playwright](https://playwright.dev) (Chromium / Firefox)                                                                                      |
-| UI components            | [Carbon Design System](https://carbondesignsystem.com) (`@carbon/react`, per-component SCSS)                                                   |
+| UI components            | [shadcn/ui](https://ui.shadcn.com) + [Tailwind CSS v4](https://tailwindcss.com) (Carbon retired in spec 009, [ADR-0008](docs/adr/0008-ui-component-standard.md)) |
 | Database                 | [PostgreSQL](https://www.postgresql.org) + [pgvector](https://github.com/pgvector/pgvector) via [Drizzle ORM](https://orm.drizzle.team)        |
 | Durable workflow engine  | [Inngest](https://www.inngest.com) (self-hosted, drives `apps/worker`)                                                                          |
 | Auth                     | [Auth.js](https://authjs.dev) (`next-auth@5`; Entra ID / Google Workspace)                                                                      |

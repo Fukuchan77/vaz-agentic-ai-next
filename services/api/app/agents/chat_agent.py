@@ -17,15 +17,12 @@ from app.config import get_settings
 from app.llm.factory import supports_native_output
 
 
+# REQ-031 (spec 009 task 6.2): this class is the NativeOutput schema sent to
+# the model; its docstring is the model-facing description and must contain only
+# production prose. Implementation note: used when the active model profile
+# reports `supports_json_schema_output` (Req 10.2 internal reference).
 class ChatOutput(BaseModel):
-    """Structured chat reply.
-
-    Used as the `NativeOutput` schema when the active model profile reports
-    `supports_json_schema_output` (Req 10.2).
-
-    Attributes:
-        reply: The agent's response to the user message.
-    """
+    """Structured chat reply from the AI assistant."""
 
     model_config = ConfigDict(extra="forbid")
 
