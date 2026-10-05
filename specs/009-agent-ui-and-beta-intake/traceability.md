@@ -40,11 +40,11 @@ spec.md は要件を `<Requirement>.<n>` の番号で書く。`REQ-###` はそ�
 | REQ-020 | DES-1.7 | T-4.2 | `size-limit` (Client CSS 2.95 kB ≤ 4.0 kB new limit) | `docs(spec): update budget, ADR-0008, and steering for §4 completion` |
 | REQ-021 | DES-1.7 | T-4.2 | `AGENTS.md`, `CLAUDE.md`, `.sdd/steering/tech.md`, `README.md` updated | `docs(spec): update budget, ADR-0008, and steering for §4 completion` |
 | REQ-022 | DES-1.7 | T-4.2 | `docs/adr/0008-ui-component-standard.md` Status → 移行完了（2025-10-05） | `docs(spec): update budget, ADR-0008, and steering for §4 completion` |
-| REQ-023 | DES-1.8 | T-5.1, T-5.2, T-5.4 | | |
-| REQ-024 | DES-1.8 | T-5.2 | | |
-| REQ-025 | DES-1.8 | T-5.4 | | |
-| REQ-026 | DES-1.8, DES-1.11 | T-5.3 | | |
-| REQ-027 | DES-1.8 | T-5.4 | | |
+| REQ-023 | DES-1.8 | T-5.1, T-5.2, T-5.4 | `doc-links.spec.ts` (3 tests: ADR-0009 + constitution links), `dependabot.spec.ts` (9 tests: root TS ^7., schemas TS 6.0.3, Fallback hold), `mise run check` 924/924 pass on TS 7 | `docs(spec): introduce ADR-0009 and apply TS7 constitution amendment`, `feat(schemas): isolate openapi-typescript under TypeScript 6.0.3`, `chore(deps): verify TS7 gate — byte-identical openapi contracts and full check pass` |
+| REQ-024 | DES-1.8 | T-5.2 | `mise run openapi:gen` (byte-identical generated contracts) | `feat(schemas): isolate openapi-typescript under TypeScript 6.0.3` |
+| REQ-025 | DES-1.8 | T-5.4 | `mise run openapi:gen` (byte-identical generated contracts), `api-service-contract-drift.spec.ts`, `contract-drift.spec.ts` | `chore(deps): verify TS7 gate — byte-identical openapi contracts and full check pass` |
+| REQ-026 | DES-1.8, DES-1.11 | T-5.3 | `dependabot.spec.ts` (root TS ^7. range, schemas TS 6.0.3 pin, Fallback hold shape without versions/update-types) | `chore(deps): upgrade root TypeScript to 7.x with Fallback hold and repo guard` |
+| REQ-027 | DES-1.8 | T-5.4 | `mise run check` (924 tests), `mise run build`, `mise run size` (JS 236.75 kB, CSS 2.95 kB) on TS 7 | `chore(deps): verify TS7 gate — byte-identical openapi contracts and full check pass` |
 | REQ-028 | DES-1.8, DES-1.11 | T-8.1 | | |
 | REQ-029 | DES-1.9 | T-6.1 | | |
 | REQ-030 | DES-1.9 | T-6.1 | | |

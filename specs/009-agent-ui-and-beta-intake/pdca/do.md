@@ -1,8 +1,8 @@
 # PDCA — Do フェーズ記録
 
 Feature: `009-agent-ui-and-beta-intake`
-Phase: §1 (tasks 1.1–1.7)
-Completed: 2025-10-04
+Phase: §5 (tasks 5.1–5.4)
+Completed: 2025-10-05
 
 ---
 
@@ -303,3 +303,44 @@ Completed: 2025-10-06
 - `mise run build`: GREEN ✓
 - `mise run size`: Client JS 236.75 kB / Client CSS 2.95 kB (新上限 4.0 kB) ✓
 - E2E (css-cascade + a11y): 9 tests GREEN (chromium) ✓
+
+---
+
+## §5 タスク別記録 (TypeScript 7 採用と二層コンパイラ隔離)
+
+### 5.1 — ADR-0009 起票と憲章 MINOR 改正
+
+- `docs/adr/0009-typescript-7-adoption.md` を起票（根拠、二層構成、撤去条件）。
+- `specs/009-agent-ui-and-beta-intake/reviews/ts7-constitution-r1.md` に MINOR 改正の承認記録を作成。
+- `.sdd/memory/constitution.md` を v2.2.0 へ改正（Additional Constraints のツールチェーン記述更新、TODO(TYPESCRIPT_MAJOR) 解消、改訂履歴追記）。
+- `tests/repo/doc-links.spec.ts` 3 passed 確認。
+
+---
+
+### 5.2 — openapi-typescript と TS 6.0.3 の @vaz/schemas 移設
+
+- ルート `package.json` から `openapi-typescript` を削除。
+- `packages/schemas/package.json` の devDependencies に `openapi-typescript: ^7.13.0` と `typescript: 6.0.3` を追加。
+- `mise.toml` の `openapi:gen` タスクを `pnpm --filter @vaz/schemas exec openapi-typescript src/generated/...` へ更新。
+- `mise run openapi:gen` 実行確認。
+
+---
+
+### 5.3 — Dependabot Fallback hold & root TS 7 昇格 & Repo Guard 更新
+
+- `dependabot-cli` コマンドが環境に無いため、plan.md DES-1.8 に基づき Fallback hold（`dependency-name: "typescript"`、versions/update-types なし）を採用。
+- `tests/repo/dependabot.spec.ts` に Fallback hold と root TS 7 / schemas TS 6 の専用アサーションを追加。
+- PROVE: ルート TS が 6.0.3 の状態でテストを実行し、`Expected: /^[~^]?7\./, Received: "^6.0.3"` で RED を確認。
+- ルート `package.json` の `typescript` を `^7.0.0`（実解決 7.0.2）へ昇格、`.github/dependabot.yml` を更新して GREEN。
+- `packages/evals/package.json` の standalone `tsc` typecheck を検証（GREEN）。
+- `AGENTS.md`, `CLAUDE.md`, `.sdd/steering/tech.md`, `README.md`, `docs/dependency-policy.md` §8 を同期。
+
+---
+
+### 5.4 — 契約同一性 (Byte-identity) と TS 7 Verification Gate
+
+- `mise run openapi:gen` 実行後の生成物 `packages/schemas/src/generated/*.ts` に差分がないこと（byte-identical）を確認。
+- `mise run check`（Biome + Typecheck + Vitest + Audit + Model-ID check）全緑。
+- `mise run build`（Next.js Turbopack build）完了。
+- `mise run size`（Client JS 236.75 kB / CSS 2.95 kB）全緑。
+- Playwright E2E（`css-cascade.spec.ts`, `a11y.spec.ts`）9 passed。

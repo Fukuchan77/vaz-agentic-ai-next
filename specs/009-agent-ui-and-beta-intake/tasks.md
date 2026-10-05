@@ -307,28 +307,58 @@ _Depends:_ 4.2（§4 の敵対的レビューと CRITICAL 解消を含む）
 _Requirements:_ 5.1, 5.2, 5.3, 5.4, 5.5
 _Traces:_ REQ-023, REQ-024, REQ-025, REQ-026, REQ-027, DES-1.8, DES-1.11
 
-- [ ] 5.1 TypeScript 7 を採る判断を `docs/adr/0009-typescript-7-adoption.md` として起票する。根拠には beta-lane の検証記録（`next-agentic-stack` の `docs/beta-lane/2026-10-03-ts7-compiler-api.md`）と、`openapi-typescript` を TS 6 に隔離する設計（plan.md DES-1.8）、その撤去条件（R5.6）を書く。続けて憲章改訂案を作り、新規コンテキストのレビューと人間承認を `reviews/ts7-constitution-r1.md` に記録してから MINOR 改正を適用する。改正するのは Additional Constraints「TypeScript は 6.x 継続」の文、Deferred の TODO(TYPESCRIPT_MAJOR)、冒頭の SYNC IMPACT REPORT、改訂履歴である。`mise run check`（`doc-links.spec.ts` を含む）を通し、承認済み改正までそろうまで 5.2 以降を始めない。
+- [x] 5.1 TypeScript 7 を採る判断を `docs/adr/0009-typescript-7-adoption.md` として起票する。根拠には beta-lane の検証記録（`next-agentic-stack` の `docs/beta-lane/2026-10-03-ts7-compiler-api.md`）と、`openapi-typescript` を TS 6 に隔離する設計（plan.md DES-1.8）、その撤去条件（R5.6）を書く。続けて憲章改訂案を作り、新規コンテキストのレビューと人間承認を `reviews/ts7-constitution-r1.md` に記録してから MINOR 改正を適用する。改正するのは Additional Constraints「TypeScript は 6.x 継続」の文、Deferred の TODO(TYPESCRIPT_MAJOR)、冒頭の SYNC IMPACT REPORT、改訂履歴である。`mise run check`（`doc-links.spec.ts` を含む）を通し、承認済み改正までそろうまで 5.2 以降を始めない。
   _Boundary:_ `docs/adr/0009-typescript-7-adoption.md`, `.sdd/memory/constitution.md`, `specs/009-agent-ui-and-beta-intake/reviews/ts7-constitution-r1.md`
   _Depends:_ 4.2（§4 の完了レビュー後）
   _Requirements:_ 5.1
   _Traces:_ REQ-023, DES-1.8
-- [ ] 5.2 beta-lane の TypeScript 7 / compiler API 検証記録を PR の根拠としてリンクし、`openapi-typescript` と TypeScript 6.0.3 の所有を `@vaz/schemas` へ移す。source-only package のまま build step を増やさず、`mise run openapi:gen` が filtered schemas compiler を使うようにする。
+- [x] 5.2 beta-lane の TypeScript 7 / compiler API 検証記録を PR の根拠としてリンクし、`openapi-typescript` と TypeScript 6.0.3 の所有を `@vaz/schemas` へ移す。source-only package のまま build step を増やさず、`mise run openapi:gen` が filtered schemas compiler を使うようにする。
   _Boundary:_ `package.json`, `packages/schemas/package.json`, `pnpm-lock.yaml`, `mise.toml`
   _Depends:_ 5.1
   _Requirements:_ 5.1, 5.2
   _Traces:_ REQ-023, REQ-024, DES-1.8
-- [ ] 5.3 `.github/dependabot.yml` を変える前に、plan.md DES-1.8「Dependabot hold verification」の dry-run を一時的な worktree で行う（`dependabot-cli`。ルートを最新より古い 7.x に下げた状態で、ルートの 7.x minor/patch が提案されること、その提案が `packages/schemas` の 6.0.3 を書き換えないこと、schemas の 6→7 が提案されないこと、の 3 点を観測する）。観測結果と、semver-major hold と Fallback hold のどちらを採ったかを Implementation Notes と ADR-0009 に記録する。3 点のどれかが満たされない場合、または dry-run を実行できない場合は Fallback hold を採り、`docs/dependency-policy.md` §8 の定期確認にルート TypeScript の手動更新を加える。そのうえで root TypeScript を stable 7.x へ上げ、`@vaz/evals` の standalone typecheck を最初に検証して必要な場合だけ script を互換化する。Dependabot の root TS policy と schemas の semver-major-only TS 6 hold、解除条件、paired agent instructions、dependency policy、`.sdd/steering/tech.md` の「TypeScript 6.x」、`README.md` の技術スタック表の言語行を repo guard とともに更新する。repo guard は plan.md DES-1.8「Repo guard design」の形へ先に作り直して RED を確認し、それから `.github/dependabot.yml` と manifest を変える。具体的には、`HELD_BACK` のループには `@types/node`（`versions: [">=25"]`）だけを残す。`typescript` は専用のアサーションにして、ルートの範囲が `^7.`、`packages/schemas` の devDependency が `6.0.3` 系、ignore が `update-types: ["version-update:semver-major"]` ちょうどで `versions` を持たないことを検査する。どちらの manifest も読めたことを先に検査する。Fallback hold の場合、ignore の検査は「`dependency-name` だけで `versions` も `update-types` も持たない」になる。マージ後の最初の定期実行で Dependabot の update log を確認し、観測と食い違えば Fallback hold へ移す修正 PR を出す（結果を Implementation Notes に追記）。
+- [x] 5.3 `.github/dependabot.yml` を変える前に、plan.md DES-1.8「Dependabot hold verification」の dry-run を一時的な worktree で行う（`dependabot-cli`。ルートを最新より古い 7.x に下げた状態で、ルートの 7.x minor/patch が提案されること、その提案が `packages/schemas` の 6.0.3 を書き換えないこと、schemas の 6→7 が提案されないこと、の 3 点を観測する）。観測結果と、semver-major hold と Fallback hold のどちらを採ったかを Implementation Notes と ADR-0009 に記録する。3 点のどれかが満たされない場合、または dry-run を実行できない場合は Fallback hold を採り、`docs/dependency-policy.md` §8 の定期確認にルート TypeScript の手動更新を加える。そのうえで root TypeScript を stable 7.x へ上げ、`@vaz/evals` の standalone typecheck を最初に検証して必要な場合だけ script を互換化する。Dependabot の root TS policy と schemas の semver-major-only TS 6 hold、解除条件、paired agent instructions、dependency policy、`.sdd/steering/tech.md` の「TypeScript 6.x」、`README.md` の技術スタック表の言語行を repo guard とともに更新する。repo guard は plan.md DES-1.8「Repo guard design」の形へ先に作り直して RED を確認し、それから `.github/dependabot.yml` と manifest を変える。具体的には、`HELD_BACK` のループには `@types/node`（`versions: [">=25"]`）だけを残す。`typescript` は専用のアサーションにして、ルートの範囲が `^7.`、`packages/schemas` の devDependency が `6.0.3` 系、ignore が `update-types: ["version-update:semver-major"]` ちょうどで `versions` を持たないことを検査する。どちらの manifest も読めたことを先に検査する。Fallback hold の場合、ignore の検査は「`dependency-name` だけで `versions` も `update-types` も持たない」になる。マージ後の最初の定期実行で Dependabot の update log を確認し、観測と食い違えば Fallback hold へ移す修正 PR を出す（結果を Implementation Notes に追記）。
   _Boundary:_ `package.json`, `pnpm-lock.yaml`, `packages/evals/package.json`, `.github/dependabot.yml`, `tests/repo/dependabot.spec.ts`, `AGENTS.md`, `CLAUDE.md`, `docs/dependency-policy.md`, `.sdd/steering/tech.md`, `README.md`, `docs/adr/0009-typescript-7-adoption.md`
   _Depends:_ 5.2
   _Requirements:_ 5.4
   _Traces:_ REQ-026, DES-1.8, DES-1.11
-- [ ] 5.4 `mise run openapi:gen` 後に generated contracts が byte-identical であることを確認し、差分があれば incidental change として受け入れず停止する。差分なしの場合だけ `mise run check`、`mise run build`、`mise run size`、`mise run test:e2e` を TS 7 上で完走し、1 major / 1 PR の検証結果を記録する。
+- [x] 5.4 `mise run openapi:gen` 後に generated contracts が byte-identical であることを確認し、差分があれば incidental change として受け入れず停止する。差分なしの場合だけ `mise run check`、`mise run build`、`mise run size`、`mise run test:e2e` を TS 7 上で完走し、1 major / 1 PR の検証結果を記録する。
   _Boundary:_ `packages/schemas/package.json`, `mise.toml`, `package.json`, `packages/evals/package.json`
   _Depends:_ 5.3
   _Requirements:_ 5.1, 5.3, 5.5
   _Traces:_ REQ-023, REQ-025, REQ-027, DES-1.8
 
 ### Implementation Notes
+
+#### §5 完了記録 (2025-10-05)
+
+**二層コンパイラ構成の導入:**
+- ルート `package.json`: `typescript: ^7.0.0`（実解決 `7.0.2`）へ昇格
+- `packages/schemas/package.json`: `openapi-typescript: ^7.13.0` と `typescript: 6.0.3` を devDependencies に隔離
+- `mise.toml`: `openapi:gen` タスクを `pnpm --filter @vaz/schemas exec openapi-typescript ...` へ更新（schemas 内の TS 6 toolchain で実行）
+- packages は source-only のままで独立した build step は追加せず
+
+**Dependabot hold の採択結果:**
+- `dependabot-cli` コマンドが環境に存在しないため、plan.md DES-1.8 の規定に従い **Fallback hold**（`dependency-name: "typescript"` のみ指定、`versions`/`update-types` なし）を採択
+- `docs/dependency-policy.md` §8 に root TypeScript 7.x minor/patch の手動確認運用を追加
+- `tests/repo/dependabot.spec.ts` に Fallback hold の専用アサーション（root TS `^7.`, schemas TS `6.0.3`, dependabot ignore に versions/update-types なし）を追加して検証
+
+**契約同一性 (Byte-identity) の確認:**
+- `mise run openapi:gen` 実行後の `packages/schemas/src/generated/*.ts` に差分なし（byte-identical / git diff ゼロ）
+
+**PROVE（非空虚性の確認）:**
+- `tests/repo/dependabot.spec.ts`: ルート `package.json` の typescript を `^6.0.3` のままテストを実行し、`Expected: /^[~^]?7\./, Received: "^6.0.3"` で RED となることを確認してから `^7.0.0` へ昇格
+
+**全テスト結果 (`mise run check` on TS 7):**
+- unit tests: 79 files / 924 tests GREEN (1 skipped)
+- typecheck: pass (root, apps/web, apps/worker, @vaz/evals)
+- lint (Biome): pass
+- audit: pass
+- model-ids: pass
+- size-limit: Client JS 236.75 kB / Client CSS 2.95 kB（GREEN）
+
+**E2E テスト (`PORT=3001 CI=true playwright test apps/web/tests/e2e/css-cascade.spec.ts apps/web/tests/e2e/a11y.spec.ts --project=chromium`):**
+- 9 passed (3.1s)
 
 
 
