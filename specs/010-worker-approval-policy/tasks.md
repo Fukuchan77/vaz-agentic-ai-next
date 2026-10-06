@@ -26,4 +26,4 @@
 
 - [x] 4.1 `mise run check` を通す。
 - [x] 4.2 `traceability.md` の Test / Commit 列を埋める。
-- [ ] 4.3 新規コンテキストで敵対的レビューを 1 回行い、`reviews/` に記録する（憲章 原則 10）。
+- [x] 4.3 新規コンテキストで敵対的レビューを 1 回行い、[`reviews/adversarial-r1.md`](reviews/adversarial-r1.md) に記録した（憲章 原則 10）。CRITICAL・HIGH 0 件、MEDIUM 1 件と LOW 3 件はすべて処置済み。

@@ -9,7 +9,7 @@ Commit 列はコミットの件名で書く。
 | REQ-002 | 1.2 | T-1.1, T-1.2 | `approval-policy.spec.ts`（`requiresApprovalForSpecialist`） | `feat(agents): add the committed per-kind specialist approval policy` |
 | REQ-003 | 1.3 | T-1.1 | `approval-policy.spec.ts`（全値 `false` の固定、`Object.isFrozen`） | `feat(agents): add the committed per-kind specialist approval policy` |
 | REQ-004 | 1.4 | T-1.2 | — | `feat(agents): add the committed per-kind specialist approval policy` |
-| REQ-005 | 2.1 | T-2.3 | `inngest.spec.ts`（committed policy で suspend しない） | `feat(worker): drive requiresApprovalForKind from the committed policy table` |
+| REQ-005 | 2.1 | T-2.3 | `start.spec.ts`（`requiresApprovalForKind` が `requiresApprovalForSpecialist` と同一）、`inngest.spec.ts`（committed policy で suspend しない） | `feat(worker): drive requiresApprovalForKind from the committed policy table`, `test(worker): pin start.ts's approval-policy wiring and close review r1` |
 | REQ-006 | 2.2 | T-2.2 | `workflows.spec.ts`（`requiresApproval` の除去） | `feat(worker): drive requiresApprovalForKind from the committed policy table` |
 | REQ-007 | 2.3 | T-2.1 | `inngest.spec.ts`（代替の表で suspend し `registerPending` を呼ぶ） | `feat(worker): drive requiresApprovalForKind from the committed policy table` |
 | REQ-008 | 3.1 | T-3.1 | — | `feat(worker): drive requiresApprovalForKind from the committed policy table` |

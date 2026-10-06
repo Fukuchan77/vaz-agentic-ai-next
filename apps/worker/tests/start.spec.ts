@@ -161,5 +161,8 @@ describe("main() job-store wiring (R5.1)", () => {
 		expect(options?.jobStore).toBe(jobStoreSentinel);
 		// C-11 / Task 8: JobStepStore must also be passed to registerJobFunction
 		expect(options?.jobStepStore).toBe(jobStepStoreSentinel);
+		// spec 010 R2.1: approval is decided by the committed per-kind policy table.
+		const { requiresApprovalForSpecialist } = await import("@vaz/agents/approval-policy");
+		expect(options?.requiresApprovalForKind).toBe(requiresApprovalForSpecialist);
 	});
 });
