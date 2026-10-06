@@ -78,8 +78,8 @@ jobs:
   # stack: api.yml is path-filtered to `services/api/**`, so on its own it only
   # ever fires on a PR that touches that lane — never on the case this workflow
   # exists for (a new advisory landing against an unchanged services/api/uv.lock).
-  # Without this job the lane carrying the largest --ignore-vuln list in the repo
-  # (9 entries suppressing 14 findings across starlette/chromadb/nltk, all of them
+  # Without this job a lane carrying an --ignore-vuln list
+  # (4 entries suppressing 4 findings across chromadb/nltk, all of them
   # "no fix release exists" exclusions whose reachability arguments are only valid
   # until upstream changes) had no standing detection net at all.
   api-audit:

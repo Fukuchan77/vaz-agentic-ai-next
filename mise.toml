@@ -227,7 +227,7 @@ run = "uv run pytest tests/local/ -v -m ollama"
 
 [tasks."api:test:redis"]
 dir = "services/api"
-description = "Run the Redis session store live lane (requires a reachable Redis server)"
+description = "Run the Redis live lane: session store + rate limiter (requires a reachable Redis server)"
 run = "uv run pytest -m redis -v"
 
 [tasks."api:test:ci"]
@@ -238,27 +238,16 @@ run = "uv run pytest tests/unit/ tests/integration/ tests/e2e/ -v --cov=app --co
 [tasks."api:audit"]
 dir = "services/api"
 description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
-# Ignored IDs fall into three groups.
+# Ignored IDs fall into two groups. (A former third group - five starlette
+# advisories, PYSEC-2026-161 / -248 / -249 / -2280 / -2281, suppressed while
+# slowapi held starlette below 1.0 - was closed by upgrading: slowapi was
+# replaced by `app/middleware/rate_limit.py` and pyproject.toml now declares
+# `starlette>=1.3.1`, the first release carrying every fix.)
 #
-# Group 1 - all on `starlette`, held below 1.0 (pyproject.toml) because
-# `slowapi` 0.1.10 is incompatible with starlette 1.x (see tasks.md Task 20.3).
-# Assessed in .sdd/specs/001-agent-architecture-enhancements/tasks.md Task 20.3:
-#   PYSEC-2026-161 - reachable (Host header into redirect Location), but
-#     mitigated at the app layer by TrustedHostMiddleware (app/main.py, Task
-#     20.1) regardless of the starlette version installed.
-#   PYSEC-2026-248 - unreachable: no `HTTPEndpoint` usage in this codebase.
-#   PYSEC-2026-249 - unreachable: no `request.form()` call; `python-multipart`
-#     isn't even installed (plain `fastapi`, not `fastapi[standard]`).
-#   PYSEC-2026-2280 - unreachable: no `HTTPEndpoint` usage.
-#   PYSEC-2026-2281 - unreachable: no `StaticFiles` usage; Windows-only UNC
-#     path issue besides.
-# Re-run `uv run pip-audit` (without --ignore-vuln) after any starlette bump
-# to confirm these still apply before renewing the ignore list.
-#
-# Group 2 - all on `chromadb` 0.6.3 (held below 1.0, pyproject.toml, as a
+# Group 1 - all on `chromadb` 0.6.3 (held below 1.0, pyproject.toml, as a
 # shelved major pending a client-compatibility pass - see
-# docs/dependency-runbook.md). Unlike the starlette group, these have no fix
-# release to upgrade into: PyPI/OSV list `fixed_in: []` for all three, and the
+# docs/dependency-runbook.md). Unlike the former starlette group, these have no
+# fix release to upgrade into: PyPI/OSV list `fixed_in: []` for all three, and the
 # affected range ("0.4.17 or later" / "0.5.0 or later") covers even the
 # latest chromadb (still 1.5.9, re-checked 2026-09-30) - so lifting the `<1.0` cap would
 # not close them either.
@@ -275,8 +264,9 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # 2026-09-22 refresh raw `pip-audit` prints *those* as the primary IDs rather
 # than the CVEs listed in `--ignore-vuln` below. The entries still match,
 # because pip-audit resolves `--ignore-vuln` against a vulnerability's aliases
-# as well as its primary ID (verified: raw output reports 14 findings, the
-# ignore list suppresses all 14). Do not "fix" the apparent mismatch by
+# as well as its primary ID (verified: raw output reports 4 findings - these
+# three plus nltk's - and the ignore list suppresses all 4; re-checked
+# 2026-10-03 after the starlette group was closed). Do not "fix" the apparent mismatch by
 # swapping the CVE ids out - keeping the CVE form is what makes this group
 # readable next to the GHSA links.
 # All three require ChromaDB's server (multi-tenant HTTP API, RBAC,
@@ -284,7 +274,7 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # vector_store/chroma.py` only ever constructs `chromadb.PersistentClient` or
 # `chromadb.Client()` (the embedded, in-process client) - no `HttpClient`, no
 # tenants, no RBAC config. Unreachable today.
-# These are NOT dormant like the starlette entries above: the moment
+# These are NOT dormant like the former starlette entries were: the moment
 # `ChromaVectorStore` (or any new code) switches to `chromadb.HttpClient` or
 # this app starts talking to a standalone Chroma server process - see the
 # example in docs/production_deployment.md - all three become reachable and
@@ -292,14 +282,14 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # pip-audit` (without --ignore-vuln) after any chromadb bump to check whether
 # upstream has since shipped a fix.
 #
-# Group 3 - `nltk` 3.10.3, a transitive of `llama-index-core` (nothing in
+# Group 2 - `nltk` 3.10.3, a transitive of `llama-index-core` (nothing in
 # `app/`, `evals/`, or `tests/` imports nltk directly). First seen in the
 # 2026-09-05 dependency refresh.
 #   PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp / CVE-2026-81726) - model-artifact
 #     import/export helpers call built-in `open()` on caller-controlled paths
 #     instead of the pathsec-aware helpers, so they read and write outside the
 #     allowed roots when NLTK path-security enforcement is on.
-# Like Group 2 this has no fix release: `fixed_in: []`, and 3.10.3 is the
+# Like Group 1 this has no fix release: `fixed_in: []`, and 3.10.3 is the
 # latest nltk on PyPI (re-checked 2026-09-30), so no bump closes it. Unreachable
 # here on two independent counts: (1) the advisory's own preconditions require
 # the application to enable `pathsec.ENFORCE` AND let untrusted input choose a
@@ -319,7 +309,7 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # `uv sync` by the time it reaches here, so --frozen is a no-op on that path; the
 # security-daily job calls this task cold, and --frozen is what makes that path
 # materialise the env from the lock instead of silently re-resolving it.
-run = "uv run --frozen pip-audit --ignore-vuln PYSEC-2026-161 --ignore-vuln PYSEC-2026-248 --ignore-vuln PYSEC-2026-249 --ignore-vuln PYSEC-2026-2280 --ignore-vuln PYSEC-2026-2281 --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833 --ignore-vuln PYSEC-2026-3740"
+run = "uv run --frozen pip-audit --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833 --ignore-vuln PYSEC-2026-3740"
 
 # No `api:hooks:install`: this lane's checks run as legs of the hub's own `.githooks/`
 # (activated by the root `prepare` script), via services/api/scripts/hooks/*.sh
@@ -383,7 +373,7 @@ run = """
 set -e
 mkdir -p packages/schemas/src/generated
 cd services/agent && uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > ../../packages/schemas/src/generated/openapi.snapshot.json
-cd ../.. && pnpm exec openapi-typescript packages/schemas/src/generated/openapi.snapshot.json -o packages/schemas/src/generated/agent-service.ts
+cd ../.. && pnpm --filter @vaz/schemas exec openapi-typescript src/generated/openapi.snapshot.json -o src/generated/agent-service.ts
 # services/api (spec 008 R3). Its Settings fail fast without a valid key pair and
 # model id, none of which the exported contract depends on, so throwaway values are
 # minted per run (random, never committed — a literal here would be a gitleaks hit)
@@ -396,6 +386,6 @@ export SESSION_SIGNING_KEY="$(uv run python -c 'import secrets; print(secrets.to
 export LLM_MODEL="ollama:openapi-export"
 PYTHONPATH=. uv run python scripts/export_contract.py openapi > ../../packages/schemas/src/generated/api-service.openapi.snapshot.json
 PYTHONPATH=. uv run python scripts/export_contract.py sse-events > ../../packages/schemas/src/generated/api-service.sse-events.schema.json
-cd ../.. && pnpm exec openapi-typescript packages/schemas/src/generated/api-service.openapi.snapshot.json -o packages/schemas/src/generated/api-service.ts
+cd ../.. && pnpm --filter @vaz/schemas exec openapi-typescript src/generated/api-service.openapi.snapshot.json -o src/generated/api-service.ts
 """
 description = "Regenerate the committed OpenAPI snapshots + generated TS types for services/agent (agent-service.ts) and services/api (api-service.ts, plus its SSE-event JSON Schema)"

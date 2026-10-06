@@ -1,17 +1,9 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import {
-	Button,
-	Column,
-	Content,
-	Grid,
-	InlineLoading,
-	InlineNotification,
-	Theme,
-} from "@carbon/react";
 import { lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
-import styles from "./Chat.module.scss";
+import { StreamingStatus } from "@/components/agent-ui/StreamingStatus";
+import { Button } from "@/components/ui/button";
 import { ChatComposer } from "./ChatComposer";
 import { MessageItem } from "./MessageItem";
 import { useFollowBottom } from "./useFollowBottom";
@@ -32,55 +24,57 @@ export function Chat() {
 
 	const isBusy = status === "submitted" || status === "streaming";
 
+	// Map useChat status to StreamingStatus display state.
+	// useChat status type: "streaming" | "submitted" | "error" | "ready"
+	// (no "idle" variant in AI SDK v7 — "ready" is the idle equivalent)
+	const displayStatus =
+		status === "submitted"
+			? "submitted"
+			: status === "streaming"
+				? "streaming"
+				: status === "error"
+					? "error"
+					: "idle"; // "ready" and any future unknown states → idle (no indicator)
+
 	return (
-		<Theme theme="g10">
-			<Content>
-				<Grid>
-					<Column lg={16} md={8} sm={4}>
-						<h1 className={styles.heading}>vaz-agentic-ai-next</h1>
-						<p className={styles.tagline}>
-							Vercel AI SDK × Next.js App Router × Zod — streaming chat demo
-						</p>
-					</Column>
+		<div className="mx-auto max-w-3xl px-4 py-6">
+			<h1 className="mb-2 text-xl font-semibold">vaz-agentic-ai-next</h1>
+			<p className="mb-6 text-sm text-muted-foreground">
+				Vercel AI SDK × Next.js App Router × Zod — streaming chat demo
+			</p>
 
-					{/* Messages and composer share one Column: the composer's sticky
-					    positioning is bounded by its parent, so it needs the list above it. */}
-					<Column lg={16} md={8} sm={4}>
-						<div className={styles.messages} aria-live="polite">
-							{messages.map((message) => (
-								<MessageItem
-									key={message.id}
-									message={message}
-									onRespondToApproval={addToolApprovalResponse}
-								/>
-							))}
-							{status === "submitted" && <InlineLoading description="考え中…" />}
-							{error && (
-								<div className={styles.error}>
-									<InlineNotification
-										kind="error"
-										title="エラー"
-										subtitle={error.message}
-										lowContrast
-									/>
-									<Button size="sm" kind="tertiary" onClick={() => regenerate()}>
-										再試行
-									</Button>
-								</div>
-							)}
-						</div>
+			<div className="flex flex-col gap-3 mb-6 min-h-48" aria-live="polite">
+				{messages.map((message) => (
+					<MessageItem
+						key={message.id}
+						message={message}
+						onRespondToApproval={addToolApprovalResponse}
+					/>
+				))}
 
-						<ChatComposer
-							isBusy={isBusy}
-							onSend={(text) => {
-								pinToBottom();
-								sendMessage({ text });
-							}}
-							onStop={() => stop()}
-						/>
-					</Column>
-				</Grid>
-			</Content>
-		</Theme>
+				<StreamingStatus
+					status={displayStatus}
+					errorMessage={error?.message}
+					isError={status === "error"}
+				/>
+
+				{status === "error" && (
+					<div className="flex flex-col items-start gap-2">
+						<Button size="sm" variant="outline" onClick={() => regenerate()}>
+							再試行
+						</Button>
+					</div>
+				)}
+			</div>
+
+			<ChatComposer
+				isBusy={isBusy}
+				onSend={(text) => {
+					pinToBottom();
+					sendMessage({ text });
+				}}
+				onStop={() => stop()}
+			/>
+		</div>
 	);
 }

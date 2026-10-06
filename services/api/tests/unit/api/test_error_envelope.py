@@ -110,10 +110,9 @@ def _rate_limited_client() -> TestClient:
         TestClient: A second call to `/limited` yields 429.
     """
     app = FastAPI()
-    limiter = add_rate_limiting(app, default_limits=["1/minute"])
+    add_rate_limiting(app, default_limit="1/minute")
 
     @app.get("/limited")
-    @limiter.limit("1/minute")
     async def _limited(request: Request) -> dict[str, bool]:
         return {"ok": True}
 

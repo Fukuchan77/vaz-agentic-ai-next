@@ -6,13 +6,14 @@ resolved a newer CPython than local development had, and the suite failed 63
 tests with 12 errors on that difference alone (PR CI run 31880991303) while the
 identical commit passed locally.
 
-The mechanism is specific to this project's dependency pins. Python 3.14
-deprecates `asyncio.iscoroutinefunction`; `starlette` 0.52.x and `slowapi`
-0.1.10 both still call it, and `starlette` is deliberately held below 1.0
-because slowapi 0.1.10 silently disables the global rate limit on starlette
-1.x. `filterwarnings = ["error::DeprecationWarning"]` then turns each of those
-calls into a hard failure. So the interpreter version is load-bearing until
-those two libraries migrate, and it must stay pinned rather than floating.
+The mechanism was specific to this project's dependency pins at the time:
+Python 3.14 deprecates `asyncio.iscoroutinefunction`, `starlette` 0.52.x and
+`slowapi` 0.1.10 both called it, and `filterwarnings =
+["error::DeprecationWarning"]` turned each call into a hard failure. Both are
+gone since 2026-10-03 (slowapi removed, starlette on 1.x), but the general
+lesson stands: the bare filter makes every interpreter change a re-census, so
+the version stays pinned and moves only as a reviewed change (3.14 next;
+3.15 lacks onnxruntime/torch wheels for this dependency set).
 
 Path note (2026-09-21, spec `006-repo-consolidation` Task 6): this repo now
 lives at `services/api` of the `vaz-agentic-ai-next` hub. `test_mise_pins_the_same_python_series`
@@ -72,6 +73,6 @@ def test_running_interpreter_matches_the_pin() -> None:
     running = f"{sys.version_info.major}.{sys.version_info.minor}"
     assert running == _EXPECTED_SERIES, (
         f"tests are running on Python {running}, not the pinned {_EXPECTED_SERIES}. "
-        f"starlette 0.52.x and slowapi 0.1.10 call asyncio.iscoroutinefunction, which "
-        f"Python 3.14 deprecates, and filterwarnings turns that into a hard failure."
+        f"filterwarnings turns any deprecation into a hard failure, so an interpreter "
+        f"change must re-run the warnings census before moving the pin."
     )

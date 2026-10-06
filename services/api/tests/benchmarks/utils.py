@@ -7,6 +7,7 @@ import asyncio
 import statistics
 import time
 from dataclasses import dataclass
+from typing import Self
 
 from httpx import AsyncClient
 
@@ -30,7 +31,7 @@ class BenchmarkResults:
     max: float
 
     @classmethod
-    def from_latencies(cls, latencies: list[float]) -> "BenchmarkResults":
+    def from_latencies(cls, latencies: list[float]) -> Self:
         """Create BenchmarkResults from a list of latency measurements.
 
         Args:

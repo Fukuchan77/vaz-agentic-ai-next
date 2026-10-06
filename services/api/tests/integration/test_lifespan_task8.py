@@ -1,7 +1,6 @@
 """Integration tests for Wiring components in app/main.py lifespan."""
 
 import pytest
-from fastapi.routing import APIRoute
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
@@ -52,8 +51,10 @@ class TestTask8ComponentWiring:
         """Test that v1 router is included in the app."""
         app = create_app(settings=_build_settings(), model=TestModel())
 
-        # Check that v1 routes are registered by filtering APIRoute instances
-        route_paths = [route.path for route in app.routes if isinstance(route, APIRoute)]
+        # Read the OpenAPI paths rather than `app.routes`: since fastapi 0.137,
+        # included routers sit in `app.routes` as `_IncludedRouter` wrappers,
+        # not as flattened `APIRoute`s.
+        route_paths = app.openapi()["paths"]
 
         # Expected v1 routes
         expected_v1_routes = [

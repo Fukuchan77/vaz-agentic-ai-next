@@ -7,6 +7,6 @@
 	{
 		"name": "Client CSS (brotli)",
 		"path": "apps/web/.next/static/chunks/**/*.css",
-		"limit": "22 kB"
+		"limit": "4.0 kB"
 	}
 ]

@@ -9,7 +9,7 @@
 - `CLAUDE.md` / `AGENTS.md` のペア編集規約（AE-2: エージェント向けコンテキストファイルを実態と
   乖離させない）
 - [`scripts/forbid-model-ids.sh`](../../scripts/forbid-model-ids.sh)（`lint:model-ids`）— 機械的ゲート（AE-3）の一例
-- `specs/00{1..6}-*/` — spec-driven な開発の実例（AE-2）。`specs/memory/constitution.md` §5.1 は
+- `specs/00{1..6}-*/` — spec-driven な開発の実例（AE-2）。`.sdd/memory/constitution.md` §5.1 は
   マルチエージェント採用のゲート判断（AE-1 の「まずシンプルに始める」を制度化したもの）
 
 ## (b) 兄弟リポジトリの教材

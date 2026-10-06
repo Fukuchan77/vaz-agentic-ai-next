@@ -33,10 +33,9 @@ def app_with_rate_limit_proxy(monkeypatch: pytest.MonkeyPatch) -> FastAPI:
 
     # Add rate limiting with test configuration
     # Use a very low limit for testing: 2 requests per minute
-    limiter = add_rate_limiting(app, default_limits=["2/minute"])
+    add_rate_limiting(app, default_limit="2/minute")
 
     @app.get("/test")
-    @limiter.limit("2/minute")
     async def test_endpoint(request: Request) -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
 
@@ -111,18 +110,21 @@ def test_rate_limit_fallback_to_remote_address_without_forwarded(client: TestCli
     assert response.status_code == 429
 
 
-def test_health_endpoint_not_rate_limited(client: TestClient) -> None:
-    """Test that /health endpoint is not subject to rate limiting.
+def test_health_endpoint_counts_against_the_global_limit(client: TestClient) -> None:
+    """`/health` spends the same per-client global budget as every other route.
 
-    Health check endpoints should not be rate limited to allow monitoring systems
-    to check service health without being blocked.
+    This used to assert the opposite, but only because this fixture never
+    installed `SlowAPIMiddleware`: an undecorated route was not limited at
+    all here, while the real app (`create_app`) limited `/health` at the
+    global 1000/minute all along (`tests/e2e/test_rate_limiting_enforcement.py`).
+    `add_rate_limiting` now installs the middleware itself, so the fixture and
+    the real app agree: health checks are counted, and the high global limit
+    is what keeps them from being blocked in practice.
     """
-    # Should be able to make many requests to /health
-    for _ in range(10):
+    for _ in range(2):
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy"}
+        assert "X-RateLimit-Limit" in response.headers
 
-    # Health endpoint should not have rate limit headers
     response = client.get("/health")
-    assert "X-RateLimit-Limit" not in response.headers
+    assert response.status_code == 429
