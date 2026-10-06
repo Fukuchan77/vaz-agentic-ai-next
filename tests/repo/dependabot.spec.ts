@@ -106,6 +106,45 @@ describe(".github/dependabot.yml (X-15)", () => {
 		expect(dockerfileDirs.filter((dir) => !covered.has(dir))).toEqual([]);
 	});
 
+	test("Python images: services/api on 3.14 (3.15 held), services/agent held on 3.13", async () => {
+		// spec 009 Task 7 / constitution 2.3.0: each Python lane moves on its own
+		// `.python-version`. services/api moved to 3.14 and must not drift to 3.15 while
+		// onnxruntime/torch lack cp315 wheels; services/agent stays on 3.13. A shared docker
+		// block can only express one Python ceiling, so services/api gets its own block.
+		const doc = await loadDependabotConfig();
+		const dockerBlocks = (doc.updates ?? []).filter((u) => u["package-ecosystem"] === "docker");
+		const dirsOf = (u: DependabotUpdate) => u.directories ?? (u.directory ? [u.directory] : []);
+		const pythonIgnore = (u: DependabotUpdate | undefined) =>
+			(u?.ignore ?? []).find((entry) => entry["dependency-name"] === "python")?.versions;
+
+		const apiBlocks = dockerBlocks.filter((u) => dirsOf(u).includes("/services/api"));
+		const agentBlocks = dockerBlocks.filter((u) => dirsOf(u).includes("/services/agent"));
+		expect(apiBlocks).toHaveLength(1);
+		expect(agentBlocks).toHaveLength(1);
+		expect(dirsOf(apiBlocks[0] as DependabotUpdate)).toEqual(["/services/api"]);
+		expect(pythonIgnore(apiBlocks[0])).toEqual([">=3.15"]);
+		expect(pythonIgnore(agentBlocks[0])).toEqual([">=3.14"]);
+
+		const read = (path: string) => readFile(new URL(path, ROOT), "utf8");
+		const [apiPin, agentPin, apiDockerfile, agentDockerfile] = await Promise.all([
+			read("services/api/.python-version"),
+			read("services/agent/.python-version"),
+			read("services/api/Dockerfile"),
+			read("services/agent/Dockerfile"),
+		]);
+		expect(apiPin.trim()).toBe("3.14");
+		expect(agentPin.trim()).toBe("3.13");
+
+		// Non-vacuous: both services/api stages (builder + runtime) must be found and follow
+		// the pin, so a renamed or reshaped FROM line cannot pass by matching nothing.
+		const apiFroms = apiDockerfile.match(/^FROM\s+\S+/gm) ?? [];
+		expect(apiFroms).toHaveLength(2);
+		for (const from of apiFroms) expect(from).toMatch(/python:3\.14-slim$/);
+		const agentFroms = agentDockerfile.match(/^FROM\s+\S+/gm) ?? [];
+		expect(agentFroms.length).toBeGreaterThan(0);
+		for (const from of agentFroms) expect(from).toMatch(/python3\.13-/);
+	});
+
 	test("every package-registry ecosystem mirrors the 24h publish window", async () => {
 		const doc = await loadDependabotConfig();
 		// docs/dependency-policy.md §7: a bot must not propose a version newer than
