@@ -6,7 +6,7 @@
 
 # ── builder stage ──────────────────────────────────────────────────────────────
 # Install dependencies in isolated builder stage
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Install uv package manager
 RUN pip install --no-cache-dir uv
@@ -29,7 +29,7 @@ RUN uv sync --frozen --no-dev
 
 # ── runtime stage ──────────────────────────────────────────────────────────────
 # Minimal runtime image with application code
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Requirement 9.3: Create non-root group and user for security (principle of least privilege)
 RUN addgroup --system app && adduser --system --no-create-home --ingroup app app

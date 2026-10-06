@@ -51,10 +51,10 @@ spec.md は要件を `<Requirement>.<n>` の番号で書く。`REQ-###` はそ�
 | REQ-031 | DES-1.9 | T-6.2 | `test_chat_output_description.py`, `test_tools_mock.py::TestMockToolDescriptionSentToModel` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
 | REQ-032 | DES-1.9 | T-6.3 | `test_model_request_inventory.py` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
 | REQ-033 | DES-1.9 | T-6.3 | `python-beta-intake-2026-10.md`, `test_model_request_inventory.py` | `feat(api): complete Python beta lane L1-L4 intake with inspection tests` |
-| REQ-034 | DES-1.10 | T-7.1, T-7.2 | | |
-| REQ-035 | DES-1.10, DES-1.11 | T-7.2, T-7.3 | | |
-| REQ-036 | DES-1.10 | T-7.4 | | |
-| REQ-037 | DES-1.10, DES-1.11 | T-7.2, T-7.3, T-7.4 | | |
+| REQ-034 | DES-1.10 | T-7.1, T-7.2 | `reviews/python314-constitution-r1.md` | `docs(constitution): amend to 2.3.0 for per-lane Python pins` |
+| REQ-035 | DES-1.10, DES-1.11 | T-7.2, T-7.3 | `test_python_version_pin.py`, `dependabot.spec.ts` | `docs(constitution): amend to 2.3.0 for per-lane Python pins`, `build(services/api): move services/api to Python 3.14` |
+| REQ-036 | DES-1.10 | T-7.4 | `mise run api:check` / `api:audit` on 3.14 | `build(services/api): move services/api to Python 3.14` |
+| REQ-037 | DES-1.10, DES-1.11 | T-7.2, T-7.3, T-7.4 | `dependabot.spec.ts` (services/api `python >=3.15` ignore) | `docs(constitution): amend to 2.3.0 for per-lane Python pins`, `build(services/api): move services/api to Python 3.14` |
 
 
 ## Gaps

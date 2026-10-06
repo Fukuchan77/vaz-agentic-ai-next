@@ -12,7 +12,7 @@
 | Data | PostgreSQL、pgvector、Drizzle ORM | 埋め込み DB の writer は TypeScript レーンだけ |
 | Workflow | Inngest、Redis | 長時間ジョブ、承認待ち、イベント配信を担当する |
 | Auth | Auth.js v5 beta、OIDC、JWT | ロールは IdP claim ではなくコミット済み allowlist から解決する |
-| Python services | FastAPI、Python 3.13、uv | `services/agent` と `services/api` は独立した gate を持つ |
+| Python services | FastAPI、Python 3.14（`services/api`）/ 3.13（`services/agent`）、uv | `services/agent` と `services/api` は独立した gate を持つ |
 | Testing | Vitest、Testing Library、Playwright、pytest、evals | 決定論層と実モデル層を分離する |
 | Tooling | mise、pnpm、uv、Biome、Ruff、ty / pyright | バージョンとコマンド入口を固定する |
 
@@ -62,7 +62,7 @@
 
 ## Constraints
 
-- Node 24 LTS、pnpm 12、TypeScript 7.x（root）/ 6.0.3（@vaz/schemas codegen 隔離、ADR-0009）、Python 3.13 の宣言済み major を勝手に変更しない。
+- Node 24 LTS、pnpm 12、TypeScript 7.x（root）/ 6.0.3（@vaz/schemas codegen 隔離、ADR-0009）、Python（`services/api` 3.14 / `services/agent` 3.13、各レーンの `.python-version` が正本）の宣言済み版を勝手に変更しない。
 - LLM model ID は allowlist と明示済み fallback 以外へ hardcode しない。
 - 埋め込み dimension は 768 固定。同一 corpus で provider/model を混在させない。
 - Supervisor plan は `MAX_PLAN_STEPS` を超えさせない。上限変更はレビュー対象のコード変更とする。

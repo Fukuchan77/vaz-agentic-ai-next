@@ -48,7 +48,7 @@ Tasks are managed via **mise** (`mise.toml` is the source of truth). Direct `pnp
 
 ### Python (`services/agent` & `services/api`)
 - **`services/agent`**: `from __future__ import annotations` required on every module; ruff (line length 100, py313); pyright in strict mode. Snake_case for Pydantic schema fields.
-- **`services/api`**: Type checker is `ty` in strict mode (not mypy); Ruff with `S`, `ANN`, `D` (Google-style docstrings), `B`, `SIM`. `force-single-line = true` imports. Python pinned strictly to 3.13. All env access must go through `Settings` / `get_settings()`.
+- **`services/api`**: Type checker is `ty` in strict mode (not mypy); Ruff with `S`, `ANN`, `D` (Google-style docstrings), `B`, `SIM`. `force-single-line = true` imports. Python pinned strictly to 3.14 by `services/api/.python-version` (the lane's source of truth, read by uv; the Docker images and Ruff target follow it, and root `mise.toml` carries no Python pin). `services/agent` stays on 3.13 by its own `.python-version`; 3.15 is not adopted until `onnxruntime`/`torch` ship cp315 wheels. All env access must go through `Settings` / `get_settings()`.
 - **`services/api` is the single source of truth for the FastAPI + Pydantic AI lane** ([ADR-0007](docs/adr/0007-fastapi-single-source-of-truth.md)). The former standalone `fastapi-pydantic-ai-agent` repository is archived (read-only); fix and evolve the lane here only. Its git-hook checks run as legs of the root `.githooks/` via `services/api/scripts/hooks/{pre-commit,pre-push}.sh`.
 
 ## Non-Obvious Architecture & Critical Constraints

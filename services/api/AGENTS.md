@@ -35,7 +35,7 @@ Run a single test: `uv run pytest tests/unit/stores/test_session_store.py::test_
 ## Code Style
 
 - **Type checker**: `ty` (NOT mypy) — strict mode, no implicit `Any`
-- **Linter**: Ruff with `S` (bandit), `ANN` (annotations), `D` (google-style docstrings), `B`, `SIM` — line length 100, Python 3.13+
+- **Linter**: Ruff with `S` (bandit), `ANN` (annotations), `D` (google-style docstrings), `B`, `SIM` — line length 100, Python 3.14 (`target-version = "py314"`)
 - **Imports**: one per line (`force-single-line = true`), two blank lines after imports block
 - **Docstrings**: Google style required on all public symbols; tests relax `S101`/`ANN`
 - **No hardcoded model IDs**: Never assign `"openai:gpt-4o"` etc. as a literal — always use `Settings.llm_model`. Pre-commit hook and unit test enforce this.
@@ -43,7 +43,7 @@ Run a single test: `uv run pytest tests/unit/stores/test_session_store.py::test_
 - **No direct `os.environ` reads**: All env access goes through `Settings` / `get_settings()`. Constitution Principle 4.
 - **`evals/`** is production-linted code (not a scratch directory) — Ruff + `ty` cover it.
 - **`filterwarnings = ["error::DeprecationWarning"]`** in `pyproject.toml` — any deprecation warning from any module is a hard test error. Re-census on every pydantic-ai constraint bump, **and on every Python version change**. Since the slowapi removal (2026-10-03, starlette 0.52.1 → 1.7.0): one `DeprecationWarning` ignore, `ignore::DeprecationWarning:chromadb.types` (added 2026-09-21), covers chromadb 0.6.3 reading `model_fields` off an instance, deprecated in pydantic 2.11 — it only bites the `chroma`-marked lane (default lanes patch the embedding function and never create a real collection), where it failed all 6 cases until the entry landed, and is not closable while chromadb 1.x stays the shelved major. starlette 1.x raises `StarletteDeprecationWarning`, a `UserWarning` subclass the bare filter misses, so `error::starlette.exceptions.StarletteDeprecationWarning` promotes it, with one message-scoped ignore for the import-time "install `httpx2`" notice from `starlette.testclient`. The former `ignore::DeprecationWarning:starlette.testclient` entry (anyio's `BlockingPortal` alias, read by starlette 0.52.1) is gone.
-- **Python is pinned to 3.13** (`.python-version` + `mise.toml`), not merely floored by `requires-python`. 3.14 deprecates `asyncio.iscoroutinefunction`, which `starlette` 0.52.x and `slowapi` 0.1.10 called (63 test failures under warnings-as-errors). Both are gone now, so 3.14 is the next step, as its own change that re-runs the census; 3.15 still lacks onnxruntime/torch wheels. Guarded by `tests/unit/test_python_version_pin.py`.
+- **Python is pinned to 3.14** by `.python-version`, the source of truth uv reads (both Dockerfile stages, the Ruff target and `requires-python` follow it; the hub's root `mise.toml` carries no Python pin), not merely floored by `requires-python = ">=3.14"`. An interpreter change is a warnings re-census: 3.14 deprecates `asyncio.iscoroutinefunction`, which `starlette` 0.52.x and `slowapi` 0.1.10 called (63 test failures under warnings-as-errors) until both were removed and the bump landed as its own reviewed change (spec 009 Task 7). 3.15 still lacks onnxruntime/torch cp315 wheels. Guarded by `tests/unit/test_python_version_pin.py`.
 
 ## Architecture
 

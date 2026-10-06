@@ -450,22 +450,22 @@ _Depends:_ 6.3（§6 の敵対的レビューと CRITICAL 解消を含む）、�
 _Requirements:_ 7.1, 7.2, 7.3, 7.4
 _Traces:_ REQ-034, REQ-035, REQ-036, REQ-037, DES-1.10, DES-1.11
 
-- [ ] 7.1 `pydantic-ai-sandbox` spec 014 Requirement 1 に Python 3.14 の `uv sync` と test suite 成功 evidence があることを entry condition として確認する。証跡が無ければ pending のまま停止し、hub のファイルは変更しない。
+- [x] 7.1 `pydantic-ai-sandbox` spec 014 Requirement 1 に Python 3.14 の `uv sync` と test suite 成功 evidence があることを entry condition として確認する。証跡が無ければ pending のまま停止し、hub のファイルは変更しない。
   _Boundary:_ none（外部証跡の確認だけ）
   _Depends:_ 6.3（§6 の完了レビュー後）
   _Requirements:_ 7.1
   _Traces:_ REQ-034, DES-1.10
-- [ ] 7.2 憲章改訂案を作り、新規コンテキストのレビューと人間承認を `reviews/python314-constitution-r1.md` に記録してから MINOR 改正を適用する。slowapi を理由とする文を削り、`services/api` は 3.14、`services/agent` は 3.13 と書き分ける。「バージョンは `mise.toml` で固定する」という包括表現も改め、`services/api/.python-version` をこの lane の唯一の interpreter pin とする。SYNC IMPACT REPORT、改訂履歴、services/api と root の paired agent instructions、steering、dependency policy を同期する。承認済み改正まで、runtime pin を変更しない。
+- [x] 7.2 憲章改訂案を作り、新規コンテキストのレビューと人間承認を `reviews/python314-constitution-r1.md` に記録してから MINOR 改正を適用する。slowapi を理由とする文を削り、`services/api` は 3.14、`services/agent` は 3.13 と書き分ける。「バージョンは `mise.toml` で固定する」という包括表現も改め、`services/api/.python-version` をこの lane の唯一の interpreter pin とする。SYNC IMPACT REPORT、改訂履歴、services/api と root の paired agent instructions、steering、dependency policy を同期する。承認済み改正まで、runtime pin を変更しない。
   _Boundary:_ `.sdd/memory/constitution.md`, `services/api/AGENTS.md`, `services/api/CLAUDE.md`, `AGENTS.md`, `CLAUDE.md`, `.sdd/steering/tech.md`, `docs/dependency-policy.md`, `specs/009-agent-ui-and-beta-intake/reviews/python314-constitution-r1.md`
   _Depends:_ 7.1
   _Requirements:_ 7.1, 7.2, 7.4
   _Traces:_ REQ-034, REQ-035, REQ-037, DES-1.10, DES-1.11
-- [ ] 7.3 先に `test_python_version_pin.py` の `_EXPECTED_SERIES` と Dependabot repo guard を新方針へ変えて RED を確認し、それから `.python-version`、builder/runtime Docker image、Ruff target、Docker Dependabot block を 3.14 へ同期する。services/api block を分離し、services/agent の 3.13 hold と Python 3.15 非採用条件を非空虚な repo test で固定する。
+- [x] 7.3 先に `test_python_version_pin.py` の `_EXPECTED_SERIES` と Dependabot repo guard を新方針へ変えて RED を確認し、それから `.python-version`、builder/runtime Docker image、Ruff target、Docker Dependabot block を 3.14 へ同期する。services/api block を分離し、services/agent の 3.13 hold と Python 3.15 非採用条件を非空虚な repo test で固定する。
   _Boundary:_ `services/api/.python-version`, `services/api/tests/unit/test_python_version_pin.py`, `services/api/Dockerfile`, `services/api/pyproject.toml`, `.github/dependabot.yml`, `tests/repo/dependabot.spec.ts`
   _Depends:_ 7.2
   _Requirements:_ 7.2, 7.4
   _Traces:_ REQ-035, REQ-037, DES-1.10, DES-1.11
-- [ ] 7.4 Python 3.14 で clean `uv sync`、warning census、`mise run api:check`、`mise run api:audit`、container/toolchain repo tests を完走する。missing wheel、warning-as-error、audit、container failure があれば policy を弱めたり 3.15 へ進めたりせず、blocker を記録して upgrade を停止する。
+- [x] 7.4 Python 3.14 で clean `uv sync`、warning census、`mise run api:check`、`mise run api:audit`、container/toolchain repo tests を完走する。missing wheel、warning-as-error、audit、container failure があれば policy を弱めたり 3.15 へ進めたりせず、blocker を記録して upgrade を停止する。
   _Boundary:_ `services/api/.python-version`, `services/api/tests/unit/test_python_version_pin.py`, `services/api/Dockerfile`, `services/api/pyproject.toml`
   _Run (unchanged):_ `tests/repo/container-toolchain-pins.spec.ts`
   _Depends:_ 7.3
@@ -473,6 +473,30 @@ _Traces:_ REQ-034, REQ-035, REQ-036, REQ-037, DES-1.10, DES-1.11
   _Traces:_ REQ-036, REQ-037, DES-1.10
 
 ### Implementation Notes
+
+#### §7 完了記録 (2026-10-06)
+
+**7.1 (REQ-034): entry condition 成立**
+- `pydantic-ai-sandbox` PR #46（2026-10-06 merge）が hub `main`@`e26f6fe` に同じ runner を再実行し、Python 3.14 で `uv sync` と test suite が green。同リポジトリの `docs/hub-intake-2026-10.md` §1 で H3 は `verified`
+
+**7.2 (REQ-034, REQ-035, REQ-037): 憲章 2.2.0 → 2.3.0（MINOR）**
+- 新規コンテキストのレビューは APPROVE WITH CHANGES（MAJOR 1・MINOR 6）。採否と人間承認は `reviews/python314-constitution-r1.md` に記録
+- slowapi を理由とする文を削除し、`services/api` 3.14 / `services/agent` 3.13 をレーン別に記述。版の正本をツールごとに明記（Python はレーンの `.python-version`、root `mise.toml` は Python を持たない）。Python 3.15 の非採用条件を追加
+- 原則 11 の例から撤去済みの `fastapi<0.137` / `starlette<1.0` を外し、`chromadb<1.0` へ置換
+- root `AGENTS.md` / `CLAUDE.md`、`services/api/AGENTS.md` / `CLAUDE.md`、`.sdd/steering/tech.md`、`docs/dependency-policy.md` §8.1、`services/api/README.md` を同期
+- レビュー指摘 3（Turborepo 2.10.11 の正本が repo に無い）は R7 の範囲外として未対応のまま記録
+
+**7.3 (REQ-035, REQ-037): RED → GREEN**
+- RED: `_EXPECTED_SERIES = "3.14"` にした `test_python_version_pin.py` が 3.13 で 2 件失敗。`dependabot.spec.ts` に追加した Python image テストが共有 docker block で失敗
+- GREEN: `.python-version` 3.14、`requires-python = ">=3.14"`、Ruff `py314`、Dockerfile の builder / runtime を `python:3.14-slim`。docker block を分離し、`/services/api` は `python >=3.15`、`/apps/worker`・`/services/agent` は `python >=3.14` を ignore
+- 追加テストは services/api の `FROM` が 2 行あることと services/agent の `FROM` が 1 行以上あることを先に検査する（非空虚）
+- `uv.lock` は uv 0.12.23 で再生成。`requires-python` と cp313 wheel の行だけが変わり、解決版の変更はない（204 packages）
+
+**7.4 (REQ-036, REQ-037): Python 3.14.6 で gate 完走**
+- clean `uv sync`（`.venv` 削除後）→ ruff `All checks passed!` → ty `All checks passed!` → pytest 1605 passed / 25 skipped、coverage 96.68%（`fail_under = 80`）→ pip-audit `No known vulnerabilities found, 4 ignored`
+- warning census（`-W default` で error 化を外して実行）: `DeprecationWarning` は既存の 3 件（`asyncio.iscoroutinefunction`。`workflows.runtime.types.step_function` 2 箇所、`chromadb.telemetry.opentelemetry` 1 箇所）だけで、すべて `pyproject.toml` の既存 filter の範囲内。新しい emitter は無い
+- `tests/repo/` 全件（`container-toolchain-pins.spec.ts` を含む）green
+- `docker build` はこの環境では実行していない（CI の `api.yml` に委ねる）
 
 
 

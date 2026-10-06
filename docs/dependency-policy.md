@@ -231,7 +231,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 |---|---|---|
 | `typescript` 6.x（@vaz/schemas 隔離） | `openapi-typescript` 7.13.0 が TS 6 compiler API に依存（[ADR-0009](../docs/adr/0009-typescript-7-adoption.md)） | `openapi-typescript` が TS 7 に対応した新版をリリースし、`mise run openapi:gen` が root TS 7 で byte-identical に完走すること |
 | `@types/node` `^24` | ランタイムの Node 24 LTS に合わせている | Node のランタイム側を上げる判断が先。型だけを先行させない |
-| `services/api` の Python 3.13 固定 | 元の原因だった slowapi と starlette 0.52 は 2026-10-03 に解消（`fastapi` / `starlette` の cap も同時に撤去済み）。3.15 は `chromadb<1.0` → `onnxruntime` と `sentence-transformers` → `torch` に cp315 の wheel が無く解決しない（`services/api/CLAUDE.md`「Dependency pins that are load-bearing」） | 3.14 で `uv sync` と `api:check` が green であること（`pydantic-ai-sandbox` の `docs/hub-intake-2026-10.md` §2.5） |
+| `services/api` の Python 3.14 固定（3.15 は不採用） | 3.14 は 2026-10-06 に取り込み済み（spec 009 Task 7、憲章 2.3.0）。3.15 は `chromadb<1.0` → `onnxruntime` と `sentence-transformers` → `torch` に cp315 の wheel が無く解決しない（`services/api/CLAUDE.md`「Dependency pins that are load-bearing」） | 3.15 で `uv sync` と `api:check` が green であること（`pydantic-ai-sandbox` spec 014 Requirement 3） |
 
 ### 8.2 取り込みの手順
 

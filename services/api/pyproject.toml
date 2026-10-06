@@ -3,7 +3,7 @@ name = "fastapi-pydantic-ai-agent"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "chromadb>=0.6.3,<1.0",
     # Floor at 0.137: that release wraps included routers in `_IncludedRouter`
@@ -105,7 +105,7 @@ dev = [
 # ============================================================================
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -249,7 +249,8 @@ filterwarnings = [
     # favour of `inspect.iscoroutinefunction`, and both packages still call the
     # asyncio one. Under 3.14 the `error::DeprecationWarning` above turned it
     # into 58 test failures (pydantic-ai-sandbox `docs/hub-intake-2026-10.md` §6).
-    # Inert on 3.13, which never emits it. Scoped to this one message from these
+    # Load-bearing since the lane moved to 3.14 (spec 009 Task 7); it was added
+    # while still on 3.13, where it was inert. Scoped to this one message from these
     # two modules, so any other deprecation they raise still hard-fails. Remove
     # each entry once its package ships a release on `inspect.iscoroutinefunction`
     # (chromadb's only ever lands in the shelved 1.x line, so that one goes with

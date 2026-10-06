@@ -163,17 +163,17 @@ updates:
     directories:
       - "/apps/worker"
       - "/services/agent"
-      - "/services/api"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 1
     ignore:
-      # Both Python images are held at 3.13 on purpose, not by neglect: each lane's
-      # pyproject.toml declares `requires-python = ">=3.13"` and services/api's
-      # AGENTS.md records Python as "pinned strictly to 3.13". A runtime image moving
-      # to 3.14 ahead of that decision would diverge from the interpreter the lockfiles
-      # and `ty`/`pyright` configs target.
+      # services/agent's Python image is held at 3.13 on purpose, not by neglect: its
+      # `.python-version` is the lane's source of truth (constitution 2.3.0) and a runtime
+      # image moving to 3.14 ahead of a reviewed bump would diverge from the interpreter
+      # its lockfile and `pyright` config target. services/api moved to 3.14 on its own
+      # (spec 009 Task 7) and so has its own block below — one block can only express one
+      # Python ceiling. Guarded by tests/repo/dependabot.spec.ts.
       #
       # An explicit `versions:` bound rather than `update-types:` classification, for
       # the same reason the services/api block above gives: Dependabot reads a Docker
@@ -187,6 +187,20 @@ updates:
     # tag. That image's major is governed by `mise.toml`'s `[tools] node` instead, and
     # `tests/repo/container-toolchain-pins.spec.ts` pins the ARG to it — so the pair moves
     # in one reviewed change rather than by bot PR.
+
+  - package-ecosystem: "docker"
+    directory: "/services/api"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 1
+    ignore:
+      # services/api runs Python 3.14 (`.python-version`, spec 009 Task 7). 3.15 is held
+      # until `chromadb<1.0` -> onnxruntime and `sentence-transformers` -> torch publish
+      # cp315 wheels (spec 009 R7.4). Same `versions:` bound reasoning as the block above:
+      # `3.14-slim -> 3.15-slim` classifies as a minor, so update-types cannot express it.
+      - dependency-name: "python"
+        versions: [">=3.15"]
 
   - package-ecosystem: "docker-compose"
     directory: "/"
