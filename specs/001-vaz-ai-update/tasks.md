@@ -1245,17 +1245,17 @@ _Requirements:_ 2.2, 2.3, 2.4, 1.7
   _Boundary:_ `packages/rag/src/db/schema.ts`, `packages/rag/src/ingest/index.ts`, `packages/rag/src/retrieve/index.ts`, `packages/rag/src/tools.ts`
   _Depends:_ 9.2, 9.3
   _Requirements:_ 2.2, 2.3
-- [ ] 10R.3 (#5) `document.source` に UNIQUE 制約を付与し、冪等再取り込みを DB 制約 + ON CONFLICT で
+- [x] 10R.3 (#5) `document.source` に UNIQUE 制約を付与し、冪等再取り込みを DB 制約 + ON CONFLICT で
   裏付ける（並行 ingest / 重複 source loader での document 重複防止）。**[8.1 FLAG]** drizzle-kit 導入 + 実 DB 必須。
   _Boundary:_ `packages/rag/src/db/schema.ts`, `packages/rag/src/ingest/index.ts`
   _Depends:_ 8.1, 10R.2
   _Requirements:_ 2.2
-- [ ] 10R.4 (#4) `getEmbeddingProfile` を `LIMIT 1` → `SELECT DISTINCT provider,model,dim`（>1 で throw）に
+- [x] 10R.4 (#4) `getEmbeddingProfile` を `LIMIT 1` → `SELECT DISTINCT provider,model,dim`（>1 で throw）に
   変更し、混在ガードの baseline を「標本」から「不変条件」にする。**[8.1 FLAG]** 実 DB 必須。
   _Boundary:_ `packages/rag/src/ingest/index.ts`, `packages/rag/src/retrieve/index.ts`
   _Depends:_ 8.1, 10R.2
   _Requirements:_ 2.2, 2.3
-- [ ] 10R.5 (#3) `apps/web` chat route に `DATABASE_URL` 有無で Drizzle クライアントを配線し、本番経路で
+- [x] 10R.5 (#3) `apps/web` chat route に `DATABASE_URL` 有無で Drizzle クライアントを配線し、本番経路で
   `searchDocuments` を活性化する（R2.4 end-to-end）。**[8.1 FLAG]** 実 DB + Ollama 埋め込み（E2E は Playwright）必須。
   _Boundary:_ `apps/web/src/app/api/chat/route.ts`
   _Depends:_ 8.1, 9.6
@@ -1281,6 +1281,22 @@ _Requirements:_ 2.2, 2.3, 2.4, 1.7
   `unique(source)` の DDL 適用手段が無い）。10R.3（UNIQUE）/10R.4（DISTINCT）/10R.5（route→DB）は実 DB + drizzle-kit
   導入（esbuild postinstall の allowBuilds 監査を伴う）前提のため 8.1 後に着手。10R.2 の `embedding.model` 列 DDL 適用も
   8.1 後（現状 Drizzle スキーマ定義 + guard ロジックのみ＝8.3/9.2 と同一の source-only 検証規律）。
+- **10R.3 / 10R.4 / 10R.5 完了 (2026-10-06)**: deferral の前提 (c) は ADR-0002（drizzle-kit 不採用、
+  手書き SQL + DDL drift test）で消えたため、`packages/db/drizzle/0003_rag_provenance_invariants.sql` で着手した。
+  境界は当時の `packages/rag/src/db/schema.ts` から現在の `packages/db/src/schema.ts`（`@vaz/db`）へ移っている。
+  - 10R.3: `document_source_uq`（UNIQUE）を追加。migration は既存の重複 source を「最新の取り込みだけ残す」
+    （再取り込みが残すはずだった行）形で掃除してから制約を張る。`createDrizzleIngestStore#upsertDocument` は
+    delete→insert から `INSERT … ON CONFLICT (source) DO UPDATE` → 旧 chunk 削除 → 新 chunk 挿入へ変更し、
+    同一 source の並行 ingest は document 行ロックで直列化される（document id は再取り込みで不変になった）。
+  - 10R.4: ingest/retrieve 双方の store が `@vaz/rag/provenance#readCorpusEmbeddingProfile`
+    （`SELECT DISTINCT provider, model, dim … LIMIT 2`、2 件以上で throw）を共有する。毎回の読み取りが vector を
+    持つ heap を走査しないよう `embedding_provenance_idx (provider, model, dim)` を追加（Index Only Scan を確認）。
+  - 10R.5: 実装は `f3fa2bf`（2026-07-24）で既に着地済み（`apps/web/src/app/api/chat/route.ts` が
+    `DATABASE_URL` 設定時に `getWebDb()` を配線し、失敗時は `db: null` へ fail-soft）。チェックの付け忘れを訂正。
+  - 検証: `packages/db/tests/schema-ddl.spec.ts` に UNIQUE 一致の比較を追加（0003 の `UNIQUE` を外すと FAIL する
+    ことを確認）、`packages/rag/tests/provenance.spec.ts` を追加。実 DB（PostgreSQL 16 + pgvector）で
+    `mise run db:migrate` 相当の 0000–0003 適用、重複 source の掃除、同一 source 6 並行 upsert → document 1 行、
+    混在 corpus で ingest/retrieve 双方が throw することを確認した。
 
 ---
 

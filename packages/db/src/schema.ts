@@ -42,12 +42,22 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 export const EMBEDDING_DIM = 768;
 
 /** A single ingested source document (R2.1 ingest unit). */
-export const document = pgTable("document", {
-	id: uuid("id").primaryKey().defaultRandom(),
-	source: text("source").notNull(),
-	metadata: jsonb("metadata"),
-	ingestedAt: timestamp("ingested_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const document = pgTable(
+	"document",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		source: text("source").notNull(),
+		metadata: jsonb("metadata"),
+		ingestedAt: timestamp("ingested_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		// One row per source: idempotent re-ingest is backed by this constraint
+		// (the ingest store upserts `ON CONFLICT (source)`), so two concurrent
+		// ingests of the same source serialize on the row instead of each
+		// inserting its own copy (spec 001 10R.3).
+		uniqueIndex("document_source_uq").on(table.source),
+	],
+);
 
 /** A contiguous slice of a document produced by the chunking strategy (R2.1). */
 export const chunk = pgTable(
@@ -101,6 +111,10 @@ export const embedding = pgTable(
 		// distance computation on every query. The op class must match the
 		// distance operator the retrieval query actually uses.
 		index("embedding_vector_hnsw").using("hnsw", table.vector.op("vector_cosine_ops")),
+		// Backs the corpus-wide `SELECT DISTINCT provider, model, dim` that the
+		// ingest and retrieve mixing guards run on every call (spec 001 10R.4),
+		// so it stays an index-only scan instead of a heap scan over the vectors.
+		index("embedding_provenance_idx").on(table.provider, table.model, table.dim),
 	],
 );
 

@@ -2,6 +2,7 @@ import { resolveEmbeddingModel } from "@vaz/config/embedding";
 // Self-referencing package specifier (see ingest/index.ts): resolves under
 // Node's native ESM via the exports map, keeping `@vaz/rag` uniformly runnable.
 import { chunk, document, EMBEDDING_DIM, embedding } from "@vaz/db/schema";
+import { readCorpusEmbeddingProfile } from "@vaz/rag/provenance";
 import type { Logger } from "@vaz/schemas/deps";
 import type { RetrievedChunk } from "@vaz/schemas/rag";
 import { embed } from "ai";
@@ -54,8 +55,9 @@ export interface RetrievalStore {
 	/** Return up to `k` nearest chunks to `queryVector` (the DB does the ORDER BY / LIMIT). */
 	searchByVector(queryVector: number[], k: number): Promise<RetrievalMatch[]>;
 	/**
-	 * The corpus's current embedding provenance, or `null` when empty. Optional so
-	 * fakes/legacy stores that cannot report it simply leave retrieval unguarded.
+	 * The corpus's current embedding provenance, or `null` when empty; throws when
+	 * the corpus already mixes profiles (10R.4). Optional so fakes/legacy stores
+	 * that cannot report it simply leave retrieval unguarded.
 	 */
 	getEmbeddingProfile?(): Promise<StoredEmbeddingProfile | null>;
 }
@@ -158,15 +160,7 @@ export function createDefaultQueryEmbedder(
 export function createDrizzleRetrievalStore(db: PgDatabase<PgQueryResultHKT>): RetrievalStore {
 	return {
 		async getEmbeddingProfile() {
-			const rows = await db
-				.select({
-					provider: embedding.provider,
-					model: embedding.model,
-					dim: embedding.dim,
-				})
-				.from(embedding)
-				.limit(1);
-			return rows[0] ?? null;
+			return readCorpusEmbeddingProfile(db);
 		},
 		async searchByVector(queryVector, k) {
 			const distance = cosineDistance(embedding.vector, queryVector).mapWith(Number);

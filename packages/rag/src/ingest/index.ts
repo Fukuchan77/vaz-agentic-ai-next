@@ -6,10 +6,11 @@ import { DEFAULT_EMBEDDING_PROVIDER, resolveEmbeddingModel } from "@vaz/config/e
 // ingest CLI (bin/ingest.ts) runs this chain directly via `node`,
 // which cannot resolve extensionless relative imports.
 import { chunk, document, EMBEDDING_DIM, embedding } from "@vaz/db/schema";
+import { readCorpusEmbeddingProfile } from "@vaz/rag/provenance";
 import { parsedChunksSchema } from "@vaz/schemas/agent-service";
 import type { Logger } from "@vaz/schemas/deps";
 import { type EmbeddingModel, embedMany } from "ai";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 /**
@@ -167,7 +168,10 @@ export interface DocumentUpsert {
 
 /** Persistence port for ingest. Implemented by {@link createDrizzleIngestStore}. */
 export interface IngestStore {
-	/** The corpus's current embedding provenance, or `null` when empty (for the mixing guard). */
+	/**
+	 * The corpus's embedding provenance, or `null` when empty (for the mixing guard).
+	 * Throws when the corpus already holds more than one profile (10R.4).
+	 */
 	getEmbeddingProfile(): Promise<EmbeddingProfile | null>;
 	/** Persist a document with its chunks + embeddings, replacing any prior copy of the same source. */
 	upsertDocument(doc: DocumentUpsert): Promise<{ documentId: string; chunkCount: number }>;
@@ -452,25 +456,25 @@ export const defaultFileCorpusLoader: CorpusLoader = async (corpusPath) => {
 export function createDrizzleIngestStore(db: PgDatabase<PgQueryResultHKT>): IngestStore {
 	return {
 		async getEmbeddingProfile() {
-			const rows = await db
-				.select({
-					provider: embedding.provider,
-					model: embedding.model,
-					dim: embedding.dim,
-				})
-				.from(embedding)
-				.limit(1);
-			return rows[0] ?? null;
+			return readCorpusEmbeddingProfile(db);
 		},
 		async upsertDocument(doc) {
 			return db.transaction(async (tx) => {
-				// Idempotent re-ingest: drop the prior copy (cascades chunks + embeddings), then insert fresh.
-				await tx.delete(document).where(eq(document.source, doc.source));
-				const [inserted] = await tx
+				// Idempotent re-ingest, backed by `document_source_uq` (10R.3): claim the
+				// source's single row (insert, or update in place under its row lock), then
+				// replace its chunks (cascading their embeddings). A concurrent ingest of the
+				// same source blocks on that row lock until this transaction commits, then
+				// replaces these chunks in turn — never a second `document` row.
+				const [claimed] = await tx
 					.insert(document)
 					.values({ source: doc.source, metadata: doc.metadata })
+					.onConflictDoUpdate({
+						target: document.source,
+						set: { metadata: doc.metadata, ingestedAt: sql`now()` },
+					})
 					.returning({ id: document.id });
-				const documentId = inserted.id;
+				const documentId = claimed.id;
+				await tx.delete(chunk).where(eq(chunk.documentId, documentId));
 
 				const chunkRows = await tx
 					.insert(chunk)
