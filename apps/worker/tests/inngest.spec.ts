@@ -1,5 +1,14 @@
+import {
+	requiresApprovalForSpecialist,
+	SPECIALIST_APPROVAL_POLICY,
+} from "@vaz/agents/approval-policy";
 import type { AgentDeps } from "@vaz/schemas/deps";
-import type { SpecialistInput, SupervisorPlan, WorkflowStepResult } from "@vaz/schemas/workflows";
+import type {
+	SpecialistInput,
+	SpecialistKind,
+	SupervisorPlan,
+	WorkflowStepResult,
+} from "@vaz/schemas/workflows";
 import {
 	createInngestHandler,
 	type InngestJobContextLike,
@@ -13,6 +22,7 @@ import {
 	JOB_REQUESTED_EVENT,
 	type JobRequest,
 } from "../src/main";
+import type { JobStepStore } from "../src/stores";
 
 /**
  * Inngest binding adapters (R3.2 / R3.5).
@@ -152,5 +162,61 @@ describe("registerJobFunction — Inngest function registration (R3.1/3.2)", () 
 		const { step } = fakeStep();
 		const results = await captured?.handler({ event: { data: req() }, step });
 		expect(results?.[0]?.result).toEqual({ kind: "data-processing", result: "ok" });
+	});
+});
+
+/**
+ * spec 010 R2.3 — the per-kind approval policy, driven through the same
+ * `registerJobFunction` options `start.ts` passes. The committed table must not
+ * be flipped to prove the suspend path, so the second test injects an
+ * alternative table built from it.
+ */
+describe("spec 010 — specialist approval policy through registerJobFunction", () => {
+	function register(requiresApprovalForKind: (kind: SpecialistKind) => boolean) {
+		let handler: ((ctx: InngestJobContextLike) => Promise<WorkflowStepResult[]>) | undefined;
+		const engine = {
+			createFunction: (
+				_config: unknown,
+				h: (ctx: InngestJobContextLike) => Promise<WorkflowStepResult[]>,
+			) => {
+				handler = h;
+				return {};
+			},
+			// biome-ignore lint/suspicious/noExplicitAny: fake engine for the structural createFunction call
+		} as any;
+		const registerPending = vi.fn(async () => {});
+		const jobStepStore: JobStepStore = {
+			registerPending,
+			recordStepUsage: vi.fn(async () => {}),
+			claimPending: vi.fn(async () => ({ rowCount: 0, totalTokens: 0 })),
+		};
+		registerJobFunction(engine, testDeps(), {
+			specialists,
+			jobStepStore,
+			requiresApprovalForKind,
+		});
+		if (!handler) throw new Error("registerJobFunction did not register a handler");
+		return { handler, registerPending };
+	}
+
+	test("the committed policy runs a data-processing step without suspending", async () => {
+		const { handler, registerPending } = register(requiresApprovalForSpecialist);
+		const { step, waits } = fakeStep();
+		const results = await handler({ event: { data: req() }, step });
+
+		expect(waits).toHaveLength(0);
+		expect(registerPending).not.toHaveBeenCalled();
+		expect(results).toHaveLength(1);
+	});
+
+	test("a table entry set to true suspends that kind's step through the engine", async () => {
+		const table = { ...SPECIALIST_APPROVAL_POLICY, "data-processing": true };
+		const { handler, registerPending } = register((kind) => table[kind]);
+		const { step, waits } = fakeStep({ data: { approved: true } });
+		const results = await handler({ event: { data: req() }, step });
+
+		expect(registerPending).toHaveBeenCalledWith(JOB_ID, SID, expect.any(Date));
+		expect(waits).toHaveLength(1);
+		expect(results).toHaveLength(1);
 	});
 });

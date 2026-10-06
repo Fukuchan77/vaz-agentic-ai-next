@@ -1,3 +1,4 @@
+import { requiresApprovalForSpecialist } from "@vaz/agents/approval-policy";
 import { createConsoleLogger } from "@vaz/config/logger";
 import { parseInfraEnv } from "@vaz/schemas/infra-env";
 import { createAuditSink } from "./audit";
@@ -97,28 +98,16 @@ export async function main(env: Record<string, string | undefined> = process.env
 		// R5.1: persists job ownership so apps/web's approve/stream
 		// routes can authorize a caller against the job they're acting on.
 		//
-		// R3.4/3.5 approval-gate wiring (adversarial-review fix, reconfirmed at
-		// X-9): intentionally inert today — `() => false` — since no built-in
-		// supervisor specialist declares a destructive action yet (`rag-research`
-		// only reads; `document-generation` calls `generateText` with no tools;
-		// `data-processing` has no built-in implementation at all). `sendEmail`,
-		// the only `needsApproval: true` tool, is now wired into the *chat* agent
-		// (`packages/agents/src/chat-agent.ts#buildChatTools`, X-9), not into any
-		// worker specialist — chat's HITL suspend/resume runs through the AI
-		// SDK's own `toolApproval`/`addToolApprovalResponse` mechanism
-		// (single-request, client-driven), which is a different mechanism from
-		// this durable, cross-restart suspend (`step.waitForEvent`). Giving a
-		// worker specialist a destructive tool for real needs a schema-level
-		// "requires approval" flag threaded through `workflowStepSchema` (see
-		// `apps/web/tests/e2e/approval-resume.spec.ts`'s SCOPE/FIDELITY note) —
-		// a cross-cutting change deliberately left out of this pass, not an
-		// oversight. Wiring `requiresApprovalForKind` here (rather than omitting
-		// the option) keeps the suspend/resume path registered against the REAL
-		// Inngest engine — `approvalGate` already defaults to the real
-		// `waitForApproval` (`createJobHandler`) whenever a step is flagged — so
-		// it activates the moment a destructive worker specialist is added,
-		// instead of only being exercisable against a fake `DurableEngine` in
-		// tests.
+		// R3.4/3.5 approval-gate wiring (X-9, closed by spec 010): which steps
+		// suspend for human approval is decided by the committed per-kind table
+		// `SPECIALIST_APPROVAL_POLICY` in `@vaz/agents`, never by the client-supplied
+		// plan (constitution §7 forbids an approval flag on `workflowStepSchema`).
+		// Every entry is `false` today because no specialist performs an
+		// irreversible action; chat's `sendEmail` gate is a separate, single-request
+		// mechanism (AI SDK `toolApproval`). Passing the predicate keeps the durable
+		// suspend/resume path (`step.waitForEvent` via `createJobHandler`) registered
+		// against the real Inngest engine, so flipping an entry is all a future
+		// destructive specialist needs here.
 		const fn = registerJobFunction(engine, deps, {
 			emit,
 			jobStore: createJobStore(db),
@@ -127,7 +116,7 @@ export async function main(env: Record<string, string | undefined> = process.env
 			// usage (recordStepUsage) in the job_step table so the approve route can
 			// gate on consume-once and budget checks without reading engine internals.
 			jobStepStore: createJobStepStore(db),
-			requiresApprovalForKind: () => false,
+			requiresApprovalForKind: requiresApprovalForSpecialist,
 		});
 
 		const connection = await connect({ apps: [{ client: engine, functions: [fn] }], instanceId });
