@@ -285,5 +285,8 @@
 # source repo baselined in its own e606e07; re-fingerprinted against the port commit.
 # Generated with `gitleaks git --report-path` + `jq -r .[].Fingerprint`. This depends on
 # the port commit keeping its SHA, so merge the branch with a merge commit, not squash/rebase.
-7a5a75a5b5a7c647c4e0340ca3a0455d001c8728:services/api/tests/e2e/test_agent_budget_recovery.py:generic-api-key:131
-7a5a75a5b5a7c647c4e0340ca3a0455d001c8728:services/api/tests/e2e/test_agent_budget_recovery.py:generic-api-key:88
+# Re-fingerprinted 2026-10-06: the original port commit 7a5a75a was rewritten before it
+# reached main (it landed as a3ca95e), so the old entries matched nothing and
+# `mise run secret-scan` reported both placeholders as new leaks.
+a3ca95ee522feb83e51a3a73aa594916d6778550:services/api/tests/e2e/test_agent_budget_recovery.py:generic-api-key:131
+a3ca95ee522feb83e51a3a73aa594916d6778550:services/api/tests/e2e/test_agent_budget_recovery.py:generic-api-key:88
