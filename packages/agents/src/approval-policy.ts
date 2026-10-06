@@ -1,3 +1,4 @@
+import type { SpecialistKind } from "@vaz/schemas/workflows";
 import type { ModelMessage, ToolApprovalStatus, ToolSet } from "ai";
 import { RETRIEVED_CONTEXT_BEGIN } from "./prompt";
 
@@ -201,4 +202,36 @@ export function createToolApprovalPolicy(
 
 		return "not-applicable";
 	};
+}
+
+/**
+ * Worker approval policy (spec 010, X-9): whether a supervisor-plan step of each
+ * specialist kind must be approved by a human before it runs. `apps/worker`
+ * passes {@link requiresApprovalForSpecialist} as `requiresApprovalForKind`.
+ *
+ * Constitution §7 fixes the shape. The plan arrives from the client on
+ * `POST /api/jobs`, so approval must never be read from it: no
+ * `requiresApproval` field on `workflowStepSchema`. The decision lives here, in
+ * committed server-side code, keyed by kind. The `satisfies` clause makes adding
+ * a kind to `specialistKindSchema` a type error until someone decides its entry.
+ *
+ * Every entry is `false` because no specialist performs an irreversible or
+ * high-risk action today (`rag-research` only reads, `document-generation`
+ * calls `generateText` with no tools, `data-processing` has no built-in
+ * implementation), and §7 reserves approval gates for exactly those actions.
+ * Flipping an entry is a reviewed change that ships with the destructive
+ * specialist that needs it.
+ */
+export const SPECIALIST_APPROVAL_POLICY = Object.freeze({
+	"rag-research": false,
+	"document-generation": false,
+	"data-processing": false,
+} as const satisfies Record<SpecialistKind, boolean>);
+
+/**
+ * Reads {@link SPECIALIST_APPROVAL_POLICY} and nothing else: no env, no plan, no
+ * request state (§7 forbids deciding approval by runtime heuristics).
+ */
+export function requiresApprovalForSpecialist(kind: SpecialistKind): boolean {
+	return SPECIALIST_APPROVAL_POLICY[kind];
 }
