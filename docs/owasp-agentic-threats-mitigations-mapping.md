@@ -121,13 +121,14 @@ Supervisor はプランを自分で生成せず固定の typed step 列をディ
 401 を返さない（auth は Phase 5。`apps/worker/src/main.ts` の `JobRequest.userId` が
 `string | null`）。1 リクエストあたりの step 数は縛られたが、リクエスト数自体は縛られていない。
 さらに `JOB_TOKEN_BUDGET`（ジョブ横断のトークン上限）は承認再開経路でしか参照されず、
-現状 `apps/worker/src/start.ts` は `requiresApprovalForKind: () => false` なので、
+現状 `apps/worker/src/start.ts` の `requiresApprovalForKind` が読む
+`SPECIALIST_APPROVAL_POLICY`（`packages/agents/src/approval-policy.ts`）は全 kind が `false` なので、
 本番のジョブはこの予算ゲートを一度も通らない。
 
 - 状態: Partial · accepted
 - 実装: [`packages/agents/src/chat-agent.ts`](../packages/agents/src/chat-agent.ts)（`buildBudgetStopCondition`）、[`packages/schemas/src/workflows.ts`](../packages/schemas/src/workflows.ts)（`MAX_PLAN_STEPS`）
 - テスト: `packages/agents/tests/chat-agent.spec.ts`、`packages/schemas/tests/workflows.spec.ts`（`MAX_PLAN_STEPS`）
-- 再評価トリガ: `POST /api/jobs` に認証を入れたとき（Phase 5）、または worker specialist に承認ゲートを配線して（`requiresApprovalForKind` が true を返すようになって）`JOB_TOKEN_BUDGET` が実効するようになったとき
+- 再評価トリガ: `POST /api/jobs` に認証を入れたとき（Phase 5）、または worker specialist に承認ゲートを配線して（`SPECIALIST_APPROVAL_POLICY` のいずれかの値が `true` になって）`JOB_TOKEN_BUDGET` が実効するようになったとき
 
 ## オーケストレーション/データレイヤ — Cascading Hallucination
 

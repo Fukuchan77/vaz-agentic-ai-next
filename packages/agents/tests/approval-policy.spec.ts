@@ -1,6 +1,12 @@
+import { specialistKindSchema } from "@vaz/schemas/workflows";
 import { type ToolSet, tool } from "ai";
 import { z } from "zod";
-import { createToolApprovalPolicy, isExternallyDrivenTurn } from "../src/approval-policy";
+import {
+	createToolApprovalPolicy,
+	isExternallyDrivenTurn,
+	requiresApprovalForSpecialist,
+	SPECIALIST_APPROVAL_POLICY,
+} from "../src/approval-policy";
 import { toRetrievedContextMessage } from "../src/prompt";
 
 /**
@@ -195,5 +201,35 @@ describe("isExternallyDrivenTurn", () => {
 
 	test("is false for an empty turn", () => {
 		expect(isExternallyDrivenTurn([])).toBe(false);
+	});
+});
+
+// spec 010 R1 — the worker's committed per-kind approval policy (constitution §7).
+describe("SPECIALIST_APPROVAL_POLICY", () => {
+	test("has exactly one entry per SpecialistKind", () => {
+		expect(Object.keys(SPECIALIST_APPROVAL_POLICY).sort()).toEqual(
+			[...specialistKindSchema.options].sort(),
+		);
+	});
+
+	// Pinned per kind on purpose: flipping an entry to `true` must be a reviewed
+	// change that edits this test too (R1.3). None of today's specialists performs
+	// an irreversible action, and §7 reserves approval for exactly those.
+	test("requires approval for no kind while no specialist is destructive", () => {
+		expect(SPECIALIST_APPROVAL_POLICY).toEqual({
+			"rag-research": false,
+			"document-generation": false,
+			"data-processing": false,
+		});
+	});
+
+	test("is frozen so nothing can flip an entry at runtime", () => {
+		expect(Object.isFrozen(SPECIALIST_APPROVAL_POLICY)).toBe(true);
+	});
+});
+
+describe("requiresApprovalForSpecialist", () => {
+	test.each(specialistKindSchema.options)("returns the table entry for %s", (kind) => {
+		expect(requiresApprovalForSpecialist(kind)).toBe(SPECIALIST_APPROVAL_POLICY[kind]);
 	});
 });

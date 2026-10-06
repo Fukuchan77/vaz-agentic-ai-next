@@ -59,7 +59,7 @@ Agentic AI 系 5 リポジトリを横断で突き合わせた検証の、本 re
 | **X-15** | `.github/dependabot.yml` の新設（`security-daily.yml` はあるが更新提案が来ない） | `fastapi-pydantic-ai-agent/.github/dependabot.yml` ＋ `fastapi-pydantic-ai-agent/tests/unit/test_dependabot_config.py` | S | 意図的に据え置いている 3 メジャー（`vitest` 4.x / `typescript` 6.x / `@types/node` 24）を `ignore:` に載せ、理由をコメントで残す（`AGENTS.md` の記述と一致させる） |
 | X-3 | 空振り検知（anti-false-green）の導入 | `agentic-ai-sandbox/reference/patterns/contracts/src/patterns_contracts/pytest_live_guard.py` の TS 相当 | S | Playwright レーン・`py:check` レーンで「収集テスト数 > 0」を強制 |
 | X-5 | 停止理由語彙の写像表を参照可能にする。本 repo の `runStopReasonSchema` は `natural`/`step-cap`/`budget-exceeded`/`error` の **4 値**で、Python 側 2 repo の 5 値（`denied` / `disallowed_tool` を含む）と非対称 | 正本 §2 X-5 の写像表 → 裁定は [`ADR-0004`](adr/0004-stop-reason-vocabulary.md) | S | **統一しない**（`JobEvent` SSE 契約と `audit_log` の後方互換に影響）。`docs/guide/context-engineering.md` の停止理由節から ADR-0004 へリンクし、拒否が別経路であることを明記 |
-| X-9 | HITL の**配線**。契約はあるが動いていない: `createEmailCapability` がどのエージェントにも未登録／`Chat.tsx` に `addToolApprovalResponse` が無い／`apps/worker` の述語が `requiresApprovalForKind: () => false` | 参照実装は `agentic-ai-sandbox/reference/patterns/autonomous-agent/`（`approval_hook` で危険ツールを承認ゲートし、否認は `stop_reason="denied"` で契約に記録。3 フレームワークレーン全てに実装あり）。**2026-09-06 時点で記載していた `patterns/hitl/` レーンは統合後の同 repo に存在しない** —— ただし **2026-09-22 訂正**: 同レーンは**本家 `pydantic-ai-sandbox` に現存し拡張が続いている**（`patterns/hitl/src/patterns_hitl/`）。HITL の取り込み元はそちらが唯一 | M | 3 箇所の配線 ＋ approve/deny/malformed の E2E。**承認は不可逆・高リスク操作のみ**（増やす方向へ行かない） |
+| X-9 | HITL の**配線**。契約はあるが動いていない: `createEmailCapability` がどのエージェントにも未登録／`Chat.tsx` に `addToolApprovalResponse` が無い／`apps/worker` の述語が `requiresApprovalForKind: () => false`（**2026-10-06 に 3 箇所とも着地**。§3 参照） | 参照実装は `agentic-ai-sandbox/reference/patterns/autonomous-agent/`（`approval_hook` で危険ツールを承認ゲートし、否認は `stop_reason="denied"` で契約に記録。3 フレームワークレーン全てに実装あり）。**2026-09-06 時点で記載していた `patterns/hitl/` レーンは統合後の同 repo に存在しない** —— ただし **2026-09-22 訂正**: 同レーンは**本家 `pydantic-ai-sandbox` に現存し拡張が続いている**（`patterns/hitl/src/patterns_hitl/`）。HITL の取り込み元はそちらが唯一 | M | 3 箇所の配線 ＋ approve/deny/malformed の E2E。**承認は不可逆・高リスク操作のみ**（増やす方向へ行かない） |
 | X-11 | ドリフト検知エラーに**直し方を書く** | `beeai-agentic-ai-sandbox/.github/workflows/ci.yml` の `schema-drift` ジョブ（`::error::` に実行コマンドを書く） | S | `codegen-check` 相当の失敗時に再生成コマンドを出力 |
 | X-16 | 6 パターン教材への参照 | `beeai-agentic-ai-sandbox/effective_agents/`（`_print_usage()` による ~15× コストの可視化）／`agentic-ai-sandbox/reference/patterns/deep-research/COMPARISON.md` | S | **実装は不要**。多エージェント検討時のゲート判断材料へのリンクのみ |
 
@@ -75,23 +75,27 @@ Agentic AI 系 5 リポジトリを横断で突き合わせた検証の、本 re
 非対称は 1 repo の癖ではなく **TS 側の「ループ全体の集約」と Python 側の「ゲート実装の拒否理由」という
 レイヤ差**に由来する、という ADR-0004 の根拠 2 を裏づける観測。
 
-## 3. 実装状況(2026-09-08)
+## 3. 実装状況(2026-09-08、X-9 は 2026-10-06 に追記)
 
-X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み。詳細は各行の
+X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み。X-9 も
+2026-10-06 に着地した(下記)。詳細は各行の
 受け入れ条件を参照(実装コードとテストへのリンクはこの節では重複させない)。
 
-- X-9(HITL の配線)は 3 箇所のうち 2 箇所を着地: `createEmailCapability` を
+- X-9(HITL の配線)は 3 箇所すべて着地。chat 側の 2 箇所: `createEmailCapability` を
   `packages/agents/src/chat-agent.ts#buildChatTools` に登録(chat のツールセットへ)、
   `Chat.tsx` に `addToolApprovalResponse` ベースの承認/却下 UI を実装。
   approve/deny/malformed の E2E は `apps/web/tests/e2e/hitl-approval.spec.ts`
   (malformed の 2 本はモデル呼び出し不要・CI で常時実行、approve/deny の 2 本は
   `chat-anthropic.spec.ts` と同じ資格情報ゲートで自己スキップ)。
-  **`apps/worker` の `requiresApprovalForKind: () => false` は意図的に未着手のまま** —
-  今日どの supervisor specialist も破壊的ツールを呼ばないため(`sendEmail` は chat 専用に
-  なった)、`true` を返す変更はどの kind に対しても意味を持たない。正しく閉じるには
-  `workflowStepSchema` にステップ単位の承認要否フラグを足す横断的変更が要る
-  (`apps/web/tests/e2e/approval-resume.spec.ts` の SCOPE/FIDELITY 節に詳細)。
-  `apps/worker/src/start.ts` のコメントをこの現状に合わせて更新済み。
+  worker 側の 1 箇所は spec [`010-worker-approval-policy`](../specs/010-worker-approval-policy/spec.md)
+  で閉じた: `apps/worker/src/start.ts` の `requiresApprovalForKind` は、`@vaz/agents` の
+  コミット済み kind 別ポリシー表 `SPECIALIST_APPROVAL_POLICY`
+  (`satisfies Record<SpecialistKind, boolean>`)を読む。今日どの specialist も取り消し不能な
+  操作をしないので、値はすべて `false`。以前ここに書いていた「`workflowStepSchema` に
+  ステップ単位の承認要否フラグを足す」閉じ方は、憲章 原則 7(v1.2.0)が MUST NOT として
+  禁じている(プランはクライアントが送るため)ので採らない。
+  **再評価トリガ**: 取り消し不能な操作をする worker specialist を足すとき、その kind の
+  表の値を `true` にする(コミットレビューを経た変更として)。
 
 ## 4. この repo 固有の注意
 

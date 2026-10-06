@@ -29,14 +29,15 @@ import {
  * The "real" path is `POST /api/jobs` / `GET /api/jobs/:id/stream` /
  * `POST /api/jobs/:id/approve` over a live Postgres + Redis + Inngest +
  * `apps/worker` stack (`docker-compose.yml`), which needs a Docker daemon.
- * Independently of Docker, production wiring never actually activates
- * `requiresApproval` today: `apps/worker/src/start.ts` calls
- * `registerJobFunction(engine, deps, { emit })` with no `requiresApproval`/
- * `approvalGate`. A step-identity–keyed predicate (`(stepId: string) =>
- * boolean`) is also inherently static per-process, not derivable per-job from
- * the wire contract as it stands (`workflowStepSchema` carries no "requires
- * approval" flag) — closing that for real is a cross-cutting change to
- * `@vaz/schemas/workflows` + `apps/worker/src/main.ts`.
+ * Independently of Docker, production jobs never suspend today:
+ * `apps/worker/src/start.ts` passes `requiresApprovalForKind:
+ * requiresApprovalForSpecialist`, which reads the committed
+ * `SPECIALIST_APPROVAL_POLICY` table in `@vaz/agents`, and every entry there
+ * is `false` because no specialist performs an irreversible action (spec
+ * 010). Approval is deliberately never read from the client-supplied plan:
+ * constitution §7 forbids an approval flag on `workflowStepSchema`. A future
+ * destructive specialist flips its table entry; this spec does not need to
+ * change for that.
  *
  * So this spec proves the mechanism at the layer directly below the HTTP
  * routes: it calls the exact same, unmodified engine-binding functions the

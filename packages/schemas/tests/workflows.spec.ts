@@ -196,6 +196,18 @@ describe("supervisorPlanSchema / workflowStepSchema (R3.3)", () => {
 		expect(supervisorPlanSchema.safeParse({ goal: "", steps: [validStep] }).success).toBe(false);
 	});
 
+	// spec 010 R2.2 / constitution §7: approval is decided by the committed
+	// server-side table, never by the client-supplied plan. A key a client injects
+	// must not survive parsing, so nothing downstream can read it.
+	test("strips a client-injected approval flag from every step", () => {
+		const parsed = supervisorPlanSchema.parse({
+			goal: "g",
+			steps: [{ ...validStep, requiresApproval: false }],
+		});
+		expect(parsed.steps[0]).not.toHaveProperty("requiresApproval");
+		expect(Object.keys(parsed.steps[0] ?? {}).sort()).toEqual(["stepId", "task"]);
+	});
+
 	// OWASP Agentic T6 (Resource Overload) / LLM10 (Unbounded Consumption).
 	// The plan is client-supplied on POST /api/jobs and every step is dispatched
 	// as an LLM call, so the array length is the request's cost multiplier.

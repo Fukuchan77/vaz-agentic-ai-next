@@ -1,0 +1,37 @@
+{
+	"feature_name": "010-worker-approval-policy",
+	"language": "ja",
+	"phase": "implementation-complete",
+	"created_at": "2026-10-06T17:00:00+0900",
+	"updated_at": "2026-10-06T22:00:00+0900",
+	"project_description": "X-9（HITL の配線）の残り 1 箇所、apps/worker の requiresApprovalForKind: () => false を閉じる。憲章 §7 v1.2.0 がクライアント提出構造体（workflowStepSchema）への承認フラグを禁じているため、閉じ方はコミット済みのサーバ側 kind 別ポリシー表とし、それと食い違う『workflowStepSchema にフラグを足す』という古い記述を正す。",
+	"source_documents": {
+		"backlog": {
+			"path": "docs/cross-repo-adoption-backlog.md",
+			"note": "§3 の X-9 行と着地メモ。3 箇所のうち worker 側 1 箇所が未着手。"
+		},
+		"constitution": {
+			"path": ".sdd/memory/constitution.md",
+			"note": "原則 7（v1.2.0）: クライアント提出構造体への承認要否フラグの追加を禁ずる。述語はコミット済みのサーバ側コードに置く（requiresApprovalForKind の形）。"
+		},
+		"predecessor": {
+			"path": "specs/007-cross-repo-adoption-closeout/",
+			"note": "Out of scope に『workflowStepSchema へのステップ単位フラグ追加という横断的変更』として本件を残した。その閉じ方は憲章 §7 と矛盾するため本 spec で訂正する。"
+		}
+	},
+	"approvals": {
+		"requirements": {
+			"generated": true,
+			"approved": true
+		},
+		"design": {
+			"generated": false,
+			"approved": false
+		},
+		"tasks": {
+			"generated": true,
+			"approved": false
+		}
+	},
+	"approval_notes": "2026-10-06: 人間（Kaz）が requirements を明示的に承認した（プロジェクトスレッドで「要件を承認」）。tasks.md は要件と 1 対 1 で対応する実装手順であり、別途の承認は受けていない。"
+}
