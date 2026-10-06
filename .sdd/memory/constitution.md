@@ -1,19 +1,21 @@
 <!--
 SYNC IMPACT REPORT
-Version Change: 2.1.1 → 2.2.0
+Version Change: 2.2.0 → 2.3.0
 Modified Principles:
-  - none
+  - 11. 依存とバージョンは宣言に従う → 「新しすぎる版を選ばせない」ピンの例を、撤去済みの `fastapi<0.137` / `starlette<1.0` / Python 3.13 から `chromadb<1.0` と `services/api` の Python 3.14 固定へ更新
 Modified Sections:
-  - Additional Constraints / ツールチェーン → ルート TS 7 採用と @vaz/schemas TS 6 隔離構成（ADR-0009）を反映
-  - 改訂履歴 → 2.2.0 の MINOR 改正を追加
+  - Additional Constraints / ツールチェーン → 版の正本をツールごとに明記し、他の箇所は正本に追随させてガードテストで検証する（Python はレーンごとの `.python-version`）。`services/api` を 3.14、`services/agent` を 3.13 と書き分け、slowapi を理由とする文を削除。Python 3.15 の非採用条件を追加（spec 009 R7）
+  - 改訂履歴 → 2.3.0 の MINOR 改正を追加
 Added Sections:
   - none
 Removed Sections:
   - none
 Templates Status:
-  ✅ docs/adr/0009-typescript-7-adoption.md - TS 7 採用と TS 6 隔離の ADR 起票
-  ✅ specs/009-agent-ui-and-beta-intake/reviews/ts7-constitution-r1.md - MINOR 改正レビューと承認根拠を記録
-  ✅ AGENTS.md / CLAUDE.md - TS 7 採用に伴い 5.3 で更新予定
+  ✅ specs/009-agent-ui-and-beta-intake/reviews/python314-constitution-r1.md - 新規コンテキストのレビューと人間承認を記録
+  ✅ AGENTS.md / CLAUDE.md - root の services/api の Python 記述を 3.14 へ更新
+  ✅ services/api/AGENTS.md / services/api/CLAUDE.md - 唯一の pin を `.python-version` と明記し 3.14 へ更新
+  ✅ .sdd/steering/tech.md - Python の版をレーン別に更新
+  ✅ docs/dependency-policy.md - §8.1 の据え置き行を 3.15 の非採用条件へ更新
 Deferred Items:
   - TODO(BRANCH_COVERAGE_THRESHOLD): 実測ベースライン取得後に確定（継続）
 -->
@@ -242,7 +244,7 @@ P8 に到達しないことは失敗ではない。§5.1 のゲートを通過�
 
 バージョン制約には 2 種類あり、**区別して記録する** ことが MUST である。
 
-- 「新しすぎる版を選ばせない」ピン（例: `fastapi<0.137`, `starlette<1.0`, Python 3.13）
+- 「新しすぎる版を選ばせない」ピン（例: `chromadb<1.0`, `services/api` の Python 3.14 固定）
 - 「古い脆弱版へ後退させない」対処（例: `openai` extra の省略）— 上流が制約を解消した時点で外す
 
 撤去条件と監視対象が異なるため、両者を同じ「ピン」として扱ってはならない。
@@ -264,9 +266,15 @@ allowlist を 1 か所に集約する。
 
 ## Additional Constraints
 
-**ツールチェーン**: バージョンは `mise.toml` で固定する。Python 3.13（3.14 では slowapi 0.1.10 が
-`DeprecationWarning→error` で壊れる）、Node 24 LTS、pnpm 12 系（厳密なビルドは root `package.json` の `packageManager` で完全固定し、これを正本とする）、uv 0.12 系、Turborepo 2.10.11（完全一致ピン。
-`futureFlags.experimentalPythonWorkspaces` に必要）。TypeScript はルートワークスペースで 7.x 安定版を採用し、`openapi-typescript` によるコード生成のみ `@vaz/schemas` 内の TypeScript 6.0.3 に隔離する（ADR-0009。上流の TS 7 対応後に一本化）。
+**ツールチェーン**: 版の正本はツールごとに 1 か所とする。他の箇所（`mise.toml` の pnpm major、Dockerfile の
+`ARG` / `FROM`、`requires-python`、Ruff / pyright の target 等）は正本に追随させ、ガードテストがある箇所はそれで一致を検証する。
+Node 24 LTS と uv 0.12 系は `mise.toml`、pnpm 12 系は root `package.json` の `packageManager`（完全固定）が正本である。
+Python はレーンごとの `.python-version`（uv が interpreter を選ぶときに読むファイル）が正本であり、root の `mise.toml` は
+Python の版を持たない。
+`services/api` は Python 3.14、`services/agent` は Python 3.13 とし、片方の版上げはもう片方を動かさない。
+Python 3.15 は、`services/api` の依存（`chromadb<1.0` → `onnxruntime`、`sentence-transformers` → `torch`）に
+cp315 の wheel が揃うまで採用しない（spec 009 R7.4。再評価の条件は `pydantic-ai-sandbox` spec 014 Requirement 3）。
+Turborepo 2.10.11（完全一致ピン。`futureFlags.experimentalPythonWorkspaces` に必要）。TypeScript はルートワークスペースで 7.x 安定版を採用し、`openapi-typescript` によるコード生成のみ `@vaz/schemas` 内の TypeScript 6.0.3 に隔離する（ADR-0009。上流の TS 7 対応後に一本化）。
 コマンドは推測せず `mise.toml` を読む。素の `ruff` / `pytest` / `biome` を直接叩かず、
 `mise run <task>` → `uv run` → `pnpm exec` の優先順で実行する。
 
@@ -352,6 +360,7 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 | 2.1.0 | 2026-10-03 | MINOR | `.sdd/steering/` を persistent project knowledge として追跡対象に追加し、product / technology / structure の判断パターンを bootstrap。原則 10 と Governance に steering の永続性と粒度を追加。 |
 | 2.1.1 | 2026-10-03 | PATCH | CI / GH Actions の「現状」を実装済みの SHA pin・`permissions:`・`tests/repo/ci-workflows.spec.ts` に合わせて事実訂正。規範自体は変更なし。 |
 | 2.2.0 | 2026-10-05 | MINOR | ルートワークスペースで TypeScript 7.x を採用し、OpenAPI codegen 向けに @vaz/schemas に TypeScript 6.0.3 を隔離（ADR-0009、TODO(TYPESCRIPT_MAJOR) を解消） |
+| 2.3.0 | 2026-10-06 | MINOR | `services/api` を Python 3.14 へ上げ、`services/agent` は 3.13 に据え置くとレーン別に明記。slowapi を理由とする文を削除し、版の正本をツールごとに明記（Python はレーンの `.python-version`）。Python 3.15 の非採用条件を追加（spec 009 R7） |
 
 ### 未決事項（Deferred）
 
@@ -361,6 +370,6 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 
 ---
 
-**Version**: 2.2.0 |
+**Version**: 2.3.0 |
 **Ratified**: 2026-08-29 |
-**Last amended**: 2026-10-05
+**Last amended**: 2026-10-06

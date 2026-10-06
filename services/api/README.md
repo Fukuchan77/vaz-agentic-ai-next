@@ -2,7 +2,7 @@
 
 Agentic AI framework built with FastAPI, Pydantic AI, and LlamaIndex Workflows. Type-safe agents, event-driven RAG, SSE streaming.
 
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
 [![Pydantic AI](https://img.shields.io/badge/Pydantic_AI-1.70+-purple.svg)](https://ai.pydantic.dev/)
 
@@ -18,7 +18,7 @@ Built as a starter kit for engineers to rapidly prototype AI agent APIs with zer
 
 ## ✨ Features
 
-- 🔒 **Type-Safe**: Full Python 3.13+ type annotations with Pydantic models
+- 🔒 **Type-Safe**: Full Python 3.14 type annotations with Pydantic models
 - 🔌 **Pluggable**: Protocol-based interfaces for vector stores, session stores, and stream adapters
 - 🌐 **Provider-Agnostic**: Switch between OpenAI, Anthropic, Ollama, or custom LLM providers via configuration
 - 📊 **Observable**: Pydantic Logfire integration for automatic AI agent tracing and token usage tracking
@@ -29,7 +29,7 @@ Built as a starter kit for engineers to rapidly prototype AI agent APIs with zer
 
 ### Prerequisites
 
-- **Python 3.13+**
+- **Python 3.14** (pinned by `.python-version`)
 - **[mise](https://mise.jdx.dev/)** (recommended) or **uv** directly
 - **LLM Provider API Key** (OpenAI, Anthropic, etc.) or local Ollama installation
 
@@ -498,7 +498,7 @@ is decoupled from the codec and does not need to change.
 
 **Type Safety First**
 
-- All public interfaces use Python 3.13+ type annotations
+- All public interfaces use Python 3.14 type annotations
 - Pydantic models for configuration, requests, responses, and workflow state
 - No use of `Any` — strict typing throughout
 
