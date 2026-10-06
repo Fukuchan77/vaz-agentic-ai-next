@@ -77,21 +77,25 @@ Agentic AI 系 5 リポジトリを横断で突き合わせた検証の、本 re
 
 ## 3. 実装状況(2026-09-08)
 
-X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み。詳細は各行の
+X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み。X-9 も
+2026-10-06 に着地した(下記)。詳細は各行の
 受け入れ条件を参照(実装コードとテストへのリンクはこの節では重複させない)。
 
-- X-9(HITL の配線)は 3 箇所のうち 2 箇所を着地: `createEmailCapability` を
+- X-9(HITL の配線)は 3 箇所すべて着地。chat 側の 2 箇所: `createEmailCapability` を
   `packages/agents/src/chat-agent.ts#buildChatTools` に登録(chat のツールセットへ)、
   `Chat.tsx` に `addToolApprovalResponse` ベースの承認/却下 UI を実装。
   approve/deny/malformed の E2E は `apps/web/tests/e2e/hitl-approval.spec.ts`
   (malformed の 2 本はモデル呼び出し不要・CI で常時実行、approve/deny の 2 本は
   `chat-anthropic.spec.ts` と同じ資格情報ゲートで自己スキップ)。
-  **`apps/worker` の `requiresApprovalForKind: () => false` は意図的に未着手のまま** —
-  今日どの supervisor specialist も破壊的ツールを呼ばないため(`sendEmail` は chat 専用に
-  なった)、`true` を返す変更はどの kind に対しても意味を持たない。正しく閉じるには
-  `workflowStepSchema` にステップ単位の承認要否フラグを足す横断的変更が要る
-  (`apps/web/tests/e2e/approval-resume.spec.ts` の SCOPE/FIDELITY 節に詳細)。
-  `apps/worker/src/start.ts` のコメントをこの現状に合わせて更新済み。
+  worker 側の 1 箇所は spec [`010-worker-approval-policy`](../specs/010-worker-approval-policy/spec.md)
+  で閉じた: `apps/worker/src/start.ts` の `requiresApprovalForKind` は、`@vaz/agents` の
+  コミット済み kind 別ポリシー表 `SPECIALIST_APPROVAL_POLICY`
+  (`satisfies Record<SpecialistKind, boolean>`)を読む。今日どの specialist も取り消し不能な
+  操作をしないので、値はすべて `false`。以前ここに書いていた「`workflowStepSchema` に
+  ステップ単位の承認要否フラグを足す」閉じ方は、憲章 原則 7(v1.2.0)が MUST NOT として
+  禁じている(プランはクライアントが送るため)ので採らない。
+  **再評価トリガ**: 取り消し不能な操作をする worker specialist を足すとき、その kind の
+  表の値を `true` にする(コミットレビューを経た変更として)。
 
 ## 4. この repo 固有の注意
 
