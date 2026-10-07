@@ -179,6 +179,13 @@ describe("chunk table (Req 4.3 locator, byte-compatible)", () => {
  * an audit record must survive its job's deletion, R5.5).
  */
 describe("DDL drift guard (indexes / FKs / CHECK)", () => {
+	test("document: source is unique (idempotent re-ingest is a DB constraint, 10R.3)", () => {
+		const config = getTableConfig(document);
+		expect(
+			config.indexes.map((idx) => ({ name: idx.config.name, unique: idx.config.unique })),
+		).toEqual([{ name: "document_source_uq", unique: true }]);
+	});
+
 	test("chunk: FK to document cascades, ordinal is unique per document", () => {
 		const config = getTableConfig(chunk);
 		expect(config.foreignKeys).toHaveLength(1);
@@ -210,6 +217,11 @@ describe("DDL drift guard (indexes / FKs / CHECK)", () => {
 		expect((vectorColumn as { indexConfig?: { opClass?: string } }).indexConfig?.opClass).toBe(
 			"vector_cosine_ops",
 		);
+		// The mixing guards' corpus-wide DISTINCT read (10R.4) is index-backed.
+		expect(config.indexes.map((idx) => idx.config.name)).toEqual([
+			"embedding_vector_hnsw",
+			"embedding_provenance_idx",
+		]);
 	});
 
 	test("job_event: FK cascade + (jobId, ts) replay-order index", () => {

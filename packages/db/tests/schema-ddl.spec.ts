@@ -27,7 +27,7 @@ import { getTableConfig } from "drizzle-orm/pg-core";
  * In scope (byte-for-byte assertion): table set, enum names + ordered value
  * lists, each column's name / SQL type / NOT NULL / DEFAULT-presence, and
  * each foreign key's local column / referenced table+column / ON DELETE
- * action.
+ * action, and which indexes are UNIQUE.
  *
  * Out of scope (asserted by *name* only, human review covers the rest):
  * index existence and CHECK constraint existence. Neither an index's method
@@ -58,6 +58,8 @@ interface ParsedTable {
 	foreignKeys: ParsedForeignKey[];
 	checkNames: string[];
 	indexNames: string[];
+	/** Subset of {@link indexNames} declared `UNIQUE` — the uniqueness is the invariant, not just the name. */
+	uniqueIndexNames: string[];
 }
 
 interface ParsedSchema {
@@ -117,6 +119,7 @@ function applyCreateTable(schema: ParsedSchema, statement: string): boolean {
 		foreignKeys: [],
 		checkNames: [],
 		indexNames: [],
+		uniqueIndexNames: [],
 	};
 	for (const rawClause of body.split(/,\n/)) {
 		const clause = rawClause.trim().replace(/,\s*$/, "");
@@ -153,14 +156,15 @@ function applyCreateTable(schema: ParsedSchema, statement: string): boolean {
 }
 
 function applyCreateIndex(schema: ParsedSchema, statement: string): boolean {
-	const match = statement.match(/^CREATE (?:UNIQUE )?INDEX "([^"]+)" ON "([^"]+)"/i);
+	const match = statement.match(/^CREATE (UNIQUE )?INDEX "([^"]+)" ON "([^"]+)"/i);
 	if (!match) return false;
-	const [, indexName, tableName] = match;
+	const [, unique, indexName, tableName] = match;
 	const table = schema.tables.get(tableName);
 	if (!table) {
 		throw new Error(`schema-ddl.spec.ts: index ${indexName} references unknown table ${tableName}`);
 	}
 	table.indexNames.push(indexName);
+	if (unique) table.uniqueIndexNames.push(indexName);
 	return true;
 }
 
@@ -193,6 +197,9 @@ function parseAppliedSchema(): ParsedSchema {
 		const content = readFileSync(join(drizzleDir, file), "utf8");
 		for (const statement of splitStatements(content)) {
 			if (/^CREATE EXTENSION\b/i.test(statement)) continue;
+			// A data-only step a migration runs before adding a constraint (e.g. 0003's
+			// duplicate-source cleanup before `document_source_uq`); it changes no schema.
+			if (/^DELETE FROM\b/i.test(statement)) continue;
 			if (applyCreateType(schema, statement)) continue;
 			if (applyCreateTable(schema, statement)) continue;
 			if (applyCreateIndex(schema, statement)) continue;
@@ -227,6 +234,9 @@ function tableModelFromDrizzle(table: AnyPgTable): ParsedTable {
 		foreignKeys,
 		checkNames: config.checks.map((c) => c.name),
 		indexNames: config.indexes.map((idx) => idx.config.name ?? ""),
+		uniqueIndexNames: config.indexes
+			.filter((idx) => idx.config.unique)
+			.map((idx) => idx.config.name ?? ""),
 	};
 }
 
@@ -248,6 +258,7 @@ describe("DDL↔schema.ts drift (R2.2, no DB connection)", () => {
 			"0000_baseline.sql",
 			"0001_add_locator.sql",
 			"0002_add_job_step.sql",
+			"0003_rag_provenance_invariants.sql",
 		]);
 	});
 
@@ -294,6 +305,13 @@ describe("DDL↔schema.ts drift (R2.2, no DB connection)", () => {
 			const drizzleModel = tableModelFromDrizzle(drizzleTable);
 			expect(sqlTable.indexNames.sort()).toEqual(drizzleModel.indexNames.sort());
 			expect(sqlTable.checkNames.sort()).toEqual(drizzleModel.checkNames.sort());
+		});
+
+		test(`${dbTableName}: the same indexes are UNIQUE in the SQL and in schema.ts`, () => {
+			const sqlTable = applied.tables.get(dbTableName);
+			if (!sqlTable) throw new Error(`no SQL table found for ${dbTableName}`);
+			const drizzleModel = tableModelFromDrizzle(drizzleTable);
+			expect(sqlTable.uniqueIndexNames.sort()).toEqual(drizzleModel.uniqueIndexNames.sort());
 		});
 	}
 
