@@ -133,6 +133,17 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "redis"
         update-types: ["version-update:semver-major"]
+      # opentelemetry-instrumentation-fastapi is held below 0.66b0 by logfire, not by us.
+      # The OTel contrib packages move in lockstep: instrumentation 0.66b* requires
+      # opentelemetry-semantic-conventions 0.66b*, which requires opentelemetry-api
+      # ==1.45.*, but logfire 5.1.1 (the latest release, pulled in by
+      # `pydantic-ai-slim[logfire]`) caps opentelemetry-sdk and the OTLP exporter at
+      # <1.45.0, so the 2026-10-06 uv update for this lane failed with "No solution
+      # found" when it tried 0.66b0. Lift this entry once a logfire release admits
+      # opentelemetry-sdk 1.45; tests/repo/dependabot.spec.ts fails when the locked
+      # logfire moves, so the hold gets re-checked instead of outliving its cause.
+      - dependency-name: "opentelemetry-instrumentation-fastapi"
+        versions: [">=0.66b0"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

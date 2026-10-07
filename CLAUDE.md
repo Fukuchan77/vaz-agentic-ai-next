@@ -21,7 +21,7 @@ Tasks run through **mise** (`mise.toml` is the source of truth — check it befo
 - `mise run typecheck` — `tsc --noEmit`
 - `mise run test:run` — Vitest once; single package file: `pnpm exec vitest run --project packages packages/agents/tests/chat-agent.spec.ts`
 - `mise run test:e2e` — Playwright; `mise run test:e2e:ollama` for the real chat round-trip against local Ollama
-- `mise run size` — client bundle budget (`.size-limit.json`, brotli JS 420 kB / CSS 22 kB); needs `mise run build` first, so it is a separate CI job (`tests.yml` `bundle-size`), not part of `check`
+- `mise run size` — client bundle budget (`.size-limit.json`, brotli JS 420 kB / CSS 4.0 kB); needs `mise run build` first, so it is a separate CI job (`tests.yml` `bundle-size`), not part of `check`
 - `mise run check` — the aggregate TS gate (lint + typecheck + test:run + audit + `lint:model-ids`). The two Python lanes gate separately and on purpose: `mise run py:check` (`services/agent`) and `mise run api:check` (`services/api`) are **not** dependencies of `check`, so the TS gate stays green with no Python toolchain installed.
 - `docker compose up -d` — local `db`/`redis`/`engine`/`worker` stack, needed for RAG ingest or job/approval work
 
