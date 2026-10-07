@@ -301,4 +301,33 @@ describe(".github/dependabot.yml (X-15)", () => {
 		const shared = [...uiPatterns].filter((p) => twPatterns.has(p));
 		expect(shared, "shadcn-ui and tailwind groups must have no shared patterns").toEqual([]);
 	});
+
+	test("services/api holds opentelemetry-instrumentation-fastapi only while logfire caps OTel", async () => {
+		// logfire 5.1.1 caps opentelemetry-sdk at <1.45.0, and instrumentation 0.66b* needs
+		// opentelemetry-api 1.45 (via semantic-conventions 0.66b*), so Dependabot cannot
+		// resolve the bump. The hold is upstream's, not ours: when the locked logfire moves,
+		// re-check whether it now admits opentelemetry-sdk 1.45 and lift (or re-date) the
+		// ignore entry together with HELD_FOR_LOGFIRE.
+		const HELD_FOR_LOGFIRE = "5.1.1";
+		const doc = await loadDependabotConfig();
+		const apiUv = (doc.updates ?? []).filter(
+			(u) => u["package-ecosystem"] === "uv" && u.directory === "/services/api",
+		);
+		expect(apiUv).toHaveLength(1);
+		const hold = (apiUv[0]?.ignore ?? []).find(
+			(entry) => entry["dependency-name"] === "opentelemetry-instrumentation-fastapi",
+		);
+		expect(hold?.versions).toEqual([">=0.66b0"]);
+
+		const lock = await readFile(new URL("services/api/uv.lock", ROOT), "utf8");
+		const locked = (name: string) =>
+			lock.match(new RegExp(`^name = "${name}"\\nversion = "([^"]+)"`, "m"))?.[1];
+		// Non-vacuous: both packages must be found in the lock, or the comparison below
+		// would pass against undefined.
+		expect(locked("opentelemetry-instrumentation-fastapi")).toMatch(/^0\.65b/);
+		expect(
+			locked("logfire"),
+			"logfire moved: check whether it now admits opentelemetry-sdk 1.45, then lift or re-date the opentelemetry-instrumentation-fastapi hold",
+		).toBe(HELD_FOR_LOGFIRE);
+	});
 });

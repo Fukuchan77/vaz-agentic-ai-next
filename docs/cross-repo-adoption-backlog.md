@@ -109,9 +109,11 @@ X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み
   取り込むコードに model 文字列が含まれていないか確認する。
 - **`mise run check` は Python ツールチェーン無しで緑を維持する**（`py:check` は依存に入れない）。
   X-2 の TS 側遮断は `check` に載せてよいが、Python 側と混ぜない。
-- **意図的に据え置いている 3 メジャー**（`vitest` 4.x / `typescript` 6.x / `@types/node` 24）は
+- **意図的な据え置き**（2026-10-07 時点: `@types/node` 24、および root TypeScript 7 と
+  `@vaz/schemas` の TypeScript 6.0.3 隔離 — [ADR-0009](adr/0009-typescript-7-adoption.md)）は
   それぞれ判断であり陳腐化した範囲指定ではない。X-15 の `ignore:` はこれを反映すること
-  （`AGENTS.md` の該当項が正本）。
+  （`AGENTS.md` の該当項が正本）。X-15 起票時の `vitest` 4.x / `typescript` 6.x の据え置きは、
+  Vitest 5 と root TypeScript 7 の採用で解消済み。
 - **`packages/*` はビルド無しの source-only**。取り込みで per-package `tsc` を足さない。
 - **本 repo 内の文書はリンク、兄弟 repo のパスはコードスパン**で書く。`tests/repo/doc-links.spec.ts`
   が相対リンクの解決を強制するので、リンクにすれば「存在しない正本」は CI で落ちる（X-5 / 正本
