@@ -61,14 +61,24 @@ pnpm ワークスペースは `minimumReleaseAge: 1440`（公開 24 時間未満
 `pnpm install` が失敗する）の 2 段ゲートを持つ。advisory 対応手順は
 `docs/dependency-policy.md` に runbook 化されている。
 
-GitHub Actions は全 7 ワークフローの `uses:` を 40 桁コミット SHA に固定し、各ワークフローが
+GitHub Actions は全 9 ワークフローの `uses:` を 40 桁コミット SHA に固定し、各ワークフローが
 最小権限の `permissions:` を宣言する（X-1、本表とは別の CI サプライチェーン統制）。
 `tests/repo/ci-workflows.spec.ts` が SHA 固定と `permissions:` 宣言の両方を機械検証する。
+
+依存とコードの検知網は 3 層ある。(1) `security-daily` が `pnpm audit` / `pip-audit` で全依存レーンの
+新規 advisory を日次で検知する。(2) `dependency-review`（PR のみ）が base と head の依存差分を
+`moderate` 以上で fail させ、脆弱な依存が main に入る前に止める。(3) `codeql` が
+JavaScript/TypeScript と Python のソースを静的解析（SAST）する。`push`・`pull_request` で新規コードを、
+週次の `schedule` で変更のないコードに対する新規ルールの検出を拾う。CodeQL の検出は GitHub の
+Code scanning に集まる。誤検知は Security タブで "False positive" として理由付きで閉じる運用で、
+コード側にはフィルタ注釈を置かない。
 
 - 状態: Mitigated
 - 実装: [`pnpm-workspace.yaml`](../pnpm-workspace.yaml)、[`.github/workflows/`](../.github/workflows/)
 - テスト: `packages/config/tests/model-allowlist.spec.ts`、`tests/repo/ci-workflows.spec.ts`
 - CI: `.github/workflows/security-daily.yml`、`Security Audit`
+- CI: `.github/workflows/dependency-review.yml`、`Dependency Review`
+- CI: `.github/workflows/codeql.yml`、`Initialize CodeQL`、`Perform CodeQL Analysis`
 
 ## LLM04: Data and Model Poisoning
 
