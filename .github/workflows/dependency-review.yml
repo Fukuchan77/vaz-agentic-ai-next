@@ -1,0 +1,32 @@
+name: dependency-review
+
+# PR-only by design: the action diffs the base ref's manifests against the head
+# ref's, which only exists in a pull_request event's payload — there is no base
+# to diff against on a plain push to main.
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege default (X-1): this job only checks out and reads the repo
+# (and the GitHub-hosted advisory database via the action itself).
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Mirrors the existing `pnpm audit --audit-level=moderate` /
+          # `pip-audit` convention (mise.toml) so a PR fails on the same
+          # severity floor the audit jobs already enforce.
+          fail-on-severity: moderate
