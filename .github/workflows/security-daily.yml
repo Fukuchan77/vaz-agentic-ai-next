@@ -1,9 +1,10 @@
 name: security-daily
 
-# The repo's only scheduled workflow: supply-chain checks that are time-sensitive in
-# a way the push/PR gates are not. A dependency audit across all three dependency
-# lanes (pnpm workspace, services/agent, services/api), plus a full-history secret
-# scan — and nothing else. Both belong on a clock because both can go from green to
+# The repo's daily scheduled workflow (codeql.yml adds a weekly SAST run):
+# supply-chain checks that are time-sensitive in a way the push/PR gates are not.
+# A dependency audit across all three dependency lanes (pnpm workspace,
+# services/agent, services/api), plus a full-history secret scan — and nothing
+# else. Both belong on a clock because both can go from green to
 # red with no commit at all: a new advisory lands against an unchanged lockfile, and
 # a new gitleaks detection rule matches history that was already there. Everything
 # else (lint, typecheck, unit tests, E2E, evals) is triggered by an actual change or

@@ -178,10 +178,15 @@ anything that calls a real model is manual or opt-in.
   run when `services/agent/**` changes
 - **api** (`main` + PR) — `services/api`'s `mise run api:check` plus its live Redis lane;
   path-filtered to `services/api/**` and its workflow inputs
-- **security-daily** (`cron "0 17 * * *"` + manual) — the only scheduled workflow:
+- **security-daily** (`cron "0 17 * * *"` + manual) — daily scheduled workflow:
   audits the pnpm workspace, `services/agent`, and `services/api` dependency locks in separate
   jobs, and runs a full-history gitleaks scan, catching newly published advisories or new
   detection rules even on days with no commits
+- **codeql** (`main` + PR + weekly `cron "24 18 * * 0"` + manual) — CodeQL SAST for
+  `javascript-typescript` and `python` (`build-mode: none`); findings land in GitHub Code
+  scanning, and the weekly run catches new query rules against unchanged code
+- **dependency-review** (PR only) — diffs base vs. head dependency manifests and fails on
+  `moderate`+ advisories, matching the `pnpm audit` / `pip-audit` severity floor
 - **eval-pr** (PR, opt-in) — tier3 LLM-judge eval gate; runs only on PRs carrying the
   **`run-eval`** label (it calls a real model per golden-set case). Skips gracefully
   without a provider API key
@@ -290,10 +295,12 @@ Ollama は `granite4.2:latest` を汎用の既定値とし、リソース制約�
 ランナー使用量を抑えるため、GitHub Actions は **`main` への push と pull request** でのみ発火します(作業ブランチへの中間 push では走りません。ローカルの git フックが一次防衛線です)。実モデルを叩くワークフローは手動 / opt-in です。
 
 - `lint`(`main`+PR)— モデル ID ゲート→biome→tsc
-- `tests`(`main`+PR)— `unit`・`audit`・`e2e`・`bundle-size` を独立実行し、4 ジョブのいずれかが失敗すると唯一の必須ステータス `gate` が失敗します。`bundle-size` は JS 420 kB / CSS 22 kB(brotli)を検査し、`e2e` はインフラなしの Chromium のみです。ローカル Ollama との実往復は pre-push フックが担当します
+- `tests`(`main`+PR)— `unit`・`audit`・`e2e`・`bundle-size` を独立実行し、4 ジョブのいずれかが失敗すると唯一の必須ステータス `gate` が失敗します。`bundle-size` は JS 420 kB / CSS 4.0 kB(brotli)を検査し、`e2e` はインフラなしの Chromium のみです。ローカル Ollama との実往復は pre-push フックが担当します
 - `python`(`main`+PR)— `services/agent/**` の変更時のみ path-filter 発火
 - `api`(`main`+PR)— `services/api/**` の変更時に `mise run api:check` と Redis live lane を path-filter 実行
-- `security-daily`(`cron "0 17 * * *"` + 手動)— 唯一のスケジュール実行。pnpm・`services/agent`・`services/api` の 3 依存レーンを別ジョブで監査し、full-history gitleaks も実行します。コミットが無い日でも新規アドバイザリや検出ルール追加を検知します
+- `security-daily`(`cron "0 17 * * *"` + 手動)— 日次のスケジュール実行。pnpm・`services/agent`・`services/api` の 3 依存レーンを別ジョブで監査し、full-history gitleaks も実行します。コミットが無い日でも新規アドバイザリや検出ルール追加を検知します
+- `codeql`(`main`+PR+週次 `cron "24 18 * * 0"` + 手動)— `javascript-typescript` と `python` の CodeQL による静的解析(SAST、`build-mode: none`)。検出は GitHub の Code scanning に集まり、週次実行が変更のないコードに対する新規クエリルールの検出を拾います
+- `dependency-review`(PR のみ)— base と head の依存マニフェストの差分を見て、`moderate` 以上の advisory で失敗します(`pnpm audit` / `pip-audit` と同じ深刻度の下限)
 - `eval-pr`(PR、opt-in)— **`run-eval` ラベル**が付いた PR でのみ実行する LLM judge ゲート(golden set の case ごとに実モデルを呼ぶため)
 - `eval-nightly`(`workflow_dispatch` のみ)— golden set の回帰比較。名前に反してスケジュール実行は廃止済みで、リリース前やプロンプト/モデル/ツール変更後に手動で起動します
 
