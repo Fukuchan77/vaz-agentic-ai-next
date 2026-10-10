@@ -40,7 +40,7 @@ _STARTUP_TIMEOUT = 30  # seconds to wait for container health
 def _find_free_port() -> int:
     """Find a free local port dynamically to avoid port conflicts."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
+        s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
