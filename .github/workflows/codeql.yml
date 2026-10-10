@@ -1,0 +1,60 @@
+name: codeql
+
+# SAST coverage for both source languages in this monorepo. `push`/`pull_request`
+# catch new code; the weekly `schedule` catches new findings against *unchanged*
+# code as CodeQL's own query packs evolve (same rationale as security-daily.yml's
+# standing net for dependency advisories). `workflow_dispatch` allows an ad-hoc
+# re-run without waiting for the next trigger.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "24 18 * * 0" # Sunday ~03:24 JST, offset from security-daily.yml's daily 02:00 JST run
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege default (X-1); the analyze job bumps to security-events: write,
+# the one permission CodeQL's SARIF upload actually needs.
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Both languages here are interpreted — `build-mode: none` lets CodeQL
+          # scan source directly with no compile/install step, so this workflow
+          # stays independent of pnpm/uv being set up. If analysis depth ever
+          # needs resolved imports (installed node_modules / a synced venv),
+          # add the matching install step ahead of the init step below.
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: "/language:${{ matrix.language }}"
