@@ -9,7 +9,7 @@ themselves - this module only owns startup/shutdown *ordering*.
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
@@ -268,7 +268,7 @@ def build_lifespan(
     """
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         """Application lifespan manager.
 
         Handles startup and shutdown of application resources including:
