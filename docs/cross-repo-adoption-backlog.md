@@ -179,12 +179,13 @@ X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み
   `apps/**` / `packages/**` の TS と `services/**` の Python のみで、同 repo は対象外のため
   このゲートは掛からない。同 repo の `config.py` に model 文字列が残るのは「既定値のみ」の運用で、
   ハブ側の「model ID は許可リストと env 既定値にのみ」とは別のルールで管理されている。
-  なお OpenAI 側の既定(`gpt-4o-mini`)はハブの許可リスト(`gpt-6-sol`)と揃っていない。
+  なお OpenAI 側の既定(`gpt-4o-mini`)はハブの許可リスト(`gpt-6-sol`)と揃っていなかったため、同 repo で `gpt-6-sol` に合わせる変更を進めている(2026-10-18、Kaz の指示)。
 - **同 repo が今後ハブへ移る場合の条件**: `services/**` に取り込んだ時点で `lint:model-ids` の対象になる。
   その場合は model 文字列を許可リストへ寄せるか、`services/agent/app/config.py` と同様の
   carve-out を ADR で決める(ADR-0003 の追記事項)。
-- **未了(同 repo 側)**: `docs/hub-intake.md` §2 は Anthropic / OpenAI を中国製モデル禁止の方針テスト
-  (`tests/unit/test_model_policy.py`)の対象に含める計画だが、PR #6 の変更ファイルにそのテストは無い。
-  既定値は問題ない(中国製ではない)が、計画との差分として残る。
+- **方針テストは Anthropic も実質カバーしている**。同 repo の `tests/unit/test_model_policy.py` は
+  `Settings` の全フィールド既定値と `.env.example` / `mise.toml` / CI の非コメント行を走査するため、
+  `anthropic_llm_model` の既定値は追加の変更なしで対象に入る(`docs/hub-intake.md` §2 の計画は充足)。
+  禁止対象は中国製モデルで、`claude-opus-5-5` は該当しない。
 - **R2〜R5 は `proposed`**(ライブ検証、BBox 付き出典と `/parse` locator の突き合わせ、OCR エンジン固定、
   Ollama `num_ctx`)。いずれも本 repo(ハブ)の変更は不要で、R2 のライブ検証後に差分を判断する。
