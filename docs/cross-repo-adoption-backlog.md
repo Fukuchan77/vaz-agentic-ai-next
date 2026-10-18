@@ -161,3 +161,30 @@ X-1 / X-2 / X-3 / X-5 / X-11 / X-13 / X-14 / X-14b / X-15 / X-16 は着地済み
 - **X-20 — 引用パスの腐敗検知**（優先度: 低）。2 文書の全引用を守る仕組みがなかった。
   → **spec 007 により解決**（[`tests/repo/owasp-mapping-citations.spec.ts`](../tests/repo/owasp-mapping-citations.spec.ts) 追加済み。
   引用パス実在・シンボル実在・CI ステップ名・3 値語彙・バージョン日付を機械検証）。
+
+## 6. 2026-10-18 `docling-llamaindex-pipeline` の取り込み状況
+
+`docling-llamaindex-pipeline` は RAG に特化した検証 repo で、ハブへは統合しない(独立維持)。
+文書解析(PDF の OCR・表・レイアウト、出典のページ番号と BBox)が要る RAG はこちらで先に検証し、
+ハブへはファイルのコピーではなく**再実装**で取り込む。台帳は同 repo の `docs/hub-intake.md` が正本で、
+本節は重複させず ID(R1〜R5)で参照する。
+
+- **R1(Anthropic LLM プロバイダ)は着地済み**(同 repo PR #6、2026-10-17)。`LLM_PROVIDER=anthropic`
+  で LlamaIndex の `Anthropic` を組み立て、既定モデルは `claude-opus-5-5`、`ANTHROPIC_API_KEY` は起動時に検証する。
+  extra `anthropic` は遅延 import。Anthropic に埋め込み API は無いため、埋め込みは Ollama / OpenAI / IBM のまま。
+  実 API での疎通は未確認(同 repo の台帳 R1 も同じ注記)。
+- **model ID は矛盾しない**。同 repo の既定値 `claude-opus-5-5` は
+  `packages/config/src/model-allowlist.ts` の `anthropic` 項および `@vaz/schemas/src/env.ts` の
+  `ANTHROPIC_MODEL` 既定値と一致する。`lint:model-ids`(`scripts/forbid-model-ids.sh`)の走査対象は
+  `apps/**` / `packages/**` の TS と `services/**` の Python のみで、同 repo は対象外のため
+  このゲートは掛からない。同 repo の `config.py` に model 文字列が残るのは「既定値のみ」の運用で、
+  ハブ側の「model ID は許可リストと env 既定値にのみ」とは別のルールで管理されている。
+  なお OpenAI 側の既定(`gpt-4o-mini`)はハブの許可リスト(`gpt-6-sol`)と揃っていない。
+- **同 repo が今後ハブへ移る場合の条件**: `services/**` に取り込んだ時点で `lint:model-ids` の対象になる。
+  その場合は model 文字列を許可リストへ寄せるか、`services/agent/app/config.py` と同様の
+  carve-out を ADR で決める(ADR-0003 の追記事項)。
+- **未了(同 repo 側)**: `docs/hub-intake.md` §2 は Anthropic / OpenAI を中国製モデル禁止の方針テスト
+  (`tests/unit/test_model_policy.py`)の対象に含める計画だが、PR #6 の変更ファイルにそのテストは無い。
+  既定値は問題ない(中国製ではない)が、計画との差分として残る。
+- **R2〜R5 は `proposed`**(ライブ検証、BBox 付き出典と `/parse` locator の突き合わせ、OCR エンジン固定、
+  Ollama `num_ctx`)。いずれも本 repo(ハブ)の変更は不要で、R2 のライブ検証後に差分を判断する。
