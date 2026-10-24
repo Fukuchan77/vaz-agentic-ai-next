@@ -20,7 +20,7 @@
 		"clsx": "^2.1.1",
 		"drizzle-orm": "^0.45.4",
 		"lucide-react": "^1.59.0",
-		"next": "^16.4.0",
+		"next": "^16.4.2",
 		"next-auth": "5.0.0-beta.32",
 		"pg": "^8.23.1",
 		"radix-ui": "^1.8.1",
@@ -28,7 +28,7 @@
 		"react-dom": "^19.3.0",
 		"redis": "^6.3.0",
 		"tailwind-merge": "^3.7.0",
-		"zod": "^4.6.5"
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4.3.3",
