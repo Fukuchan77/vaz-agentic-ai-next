@@ -14,8 +14,8 @@
 		"@ai-sdk/anthropic": "^4.0.87",
 		"@ai-sdk/openai": "^4.0.101",
 		"@ai-sdk/openai-compatible": "^3.0.77",
-		"@ai-sdk/otel": "^1.0.150",
+		"@ai-sdk/otel": "^1.0.152",
 		"@vaz/schemas": "workspace:*",
-		"ai": "^7.0.150"
+		"ai": "^7.0.152"
 	}
 }
