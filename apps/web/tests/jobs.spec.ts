@@ -14,7 +14,7 @@
 
 const { PoolMock, drizzleMock, createJobStoreMock, findOwnerUserIdMock, authMock } = vi.hoisted(
 	() => ({
-		PoolMock: vi.fn(function PoolMock(opts: unknown) {
+		PoolMock: vi.fn(function poolMock(opts: unknown) {
 			return { __opts: opts };
 		}),
 		drizzleMock: vi.fn((pool: unknown) => ({ __pool: pool })),
