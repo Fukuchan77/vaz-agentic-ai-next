@@ -16,7 +16,7 @@
 		"@vaz/db": "workspace:*",
 		"@vaz/schemas": "workspace:*",
 		"drizzle-orm": "^0.45.4",
-		"inngest": "^4.21.1",
+		"inngest": "^4.26.2",
 		"pg": "^8.23.1",
 		"redis": "^6.3.0"
 	},
