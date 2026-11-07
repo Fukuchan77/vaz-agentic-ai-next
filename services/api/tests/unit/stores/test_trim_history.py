@@ -12,11 +12,11 @@ order preservation, and the degenerate cap case.
 
 import pytest
 from pydantic_ai.messages import ModelMessage
+from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.messages import ModelRequest
 from pydantic_ai.messages import ModelRequestPart
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.messages import ModelResponsePart
-from pydantic_ai.messages import RetryPromptPart
 from pydantic_ai.messages import SystemPromptPart
 from pydantic_ai.messages import TextPart
 from pydantic_ai.messages import ToolCallPart
@@ -121,10 +121,12 @@ class TestPairingPreservation:
         assert closer_ids <= opener_ids
 
     def test_retry_prompt_naming_a_tool_closes_the_pair(self) -> None:
-        """A RetryPromptPart naming a tool closes the pair like a ToolReturnPart."""
+        """A retried ToolReturnPart closes the pair like any other tool return."""
         head = _req(SystemPromptPart(content="sys"))
         call = ToolCallPart(tool_name="lookup", args={}, tool_call_id="c1")
-        retry = RetryPromptPart(content="try again", tool_name="lookup", tool_call_id="c1")
+        retry = ToolReturnPart(
+            tool_name="lookup", content="try again", tool_call_id="c1", outcome="retried"
+        )
         messages: list[ModelMessage] = [
             head,
             _req(UserPromptPart(content="q1")),
@@ -137,6 +139,38 @@ class TestPairingPreservation:
         result = trim_history(messages, max_messages=5)
         assert len(result) == 4
         assert result[0] is head
+        assert result[1:] == messages[4:]
+
+    def test_legacy_persisted_retry_prompt_still_closes_the_pair(self) -> None:
+        """A history saved with the old `retry-prompt` part loads as a closing return."""
+        legacy = ModelMessagesTypeAdapter.validate_python(
+            [
+                {
+                    "kind": "request",
+                    "parts": [
+                        {
+                            "part_kind": "retry-prompt",
+                            "content": "try again",
+                            "tool_name": "lookup",
+                            "tool_call_id": "c1",
+                            "timestamp": "2026-01-01T00:00:00Z",
+                        }
+                    ],
+                }
+            ]
+        )
+        head = _req(SystemPromptPart(content="sys"))
+        call = ToolCallPart(tool_name="lookup", args={}, tool_call_id="c1")
+        messages: list[ModelMessage] = [
+            head,
+            _req(UserPromptPart(content="q1")),
+            _resp(call),
+            legacy[0],
+            _resp(TextPart(content="a1")),
+            _req(UserPromptPart(content="q2")),
+            _resp(TextPart(content="a2")),
+        ]
+        result = trim_history(messages, max_messages=5)
         assert result[1:] == messages[4:]
 
 

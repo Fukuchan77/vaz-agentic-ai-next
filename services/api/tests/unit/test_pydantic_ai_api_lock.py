@@ -95,7 +95,6 @@ _EXPECTED_SYMBOLS: dict[str, frozenset[str]] = {
             "ToolReturnPart",
             "UserPromptPart",
             "SystemPromptPart",
-            "RetryPromptPart",
             "BaseToolCallPart",
             "BaseToolReturnPart",
             "FunctionToolCallEvent",
