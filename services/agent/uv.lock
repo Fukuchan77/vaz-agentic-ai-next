@@ -1361,7 +1361,7 @@ wheels = [
 
 [[package]]
 name = "llama-cloud"
-version = "2.18.0"
+version = "2.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1371,9 +1371,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fa/22/2da1a4c4888e7151b46d07af7b4540dfbfd2c08049050b9d03f579372b08/llama_cloud-2.18.0.tar.gz", hash = "sha256:0925984a3ddc672422b173a6b8a14c557b1abb8fa51d5279eb623de24388000d", size = 3617209, upload-time = "2026-10-09T20:45:30.205Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/33/7ec75a2dc5886fd01fc9e6c3f874eaa2d9764a07691a1058e3a46be31db3/llama_cloud-2.19.0.tar.gz", hash = "sha256:17cd945511c3f6bc2f64d73ec5ea24b31ed7d2401b49026a94d7d02b92c5fbf5", size = 3617684, upload-time = "2026-10-21T17:38:50.642Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/c0/bb4be366a01828e451fa3989a377e4628474a94b52b16d8d50e531cad31e/llama_cloud-2.18.0-py3-none-any.whl", hash = "sha256:f221a5eff2e48762c692b5a596e20f6a96574abee80ecd74d46fe22fc9d5b76d", size = 552135, upload-time = "2026-10-09T20:45:28.621Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/3e/faf83bc58f796f3fe3d72be9cd4caa614358b1c3af5185726f4f8c007f25/llama_cloud-2.19.0-py3-none-any.whl", hash = "sha256:28cebb305879fb84a67f1a43f28540cee988fed46867dfc7d3c6518e2d3b8257", size = 552449, upload-time = "2026-10-21T17:38:49.007Z" },
 ]
 
 [[package]]
