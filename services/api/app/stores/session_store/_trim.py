@@ -14,7 +14,6 @@ from pydantic_ai.messages import BaseToolReturnPart
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.messages import ModelRequest
 from pydantic_ai.messages import ModelResponse
-from pydantic_ai.messages import RetryPromptPart
 
 
 HistoryCompactor = Callable[[Sequence[ModelMessage]], Sequence[ModelMessage]]
@@ -112,9 +111,11 @@ def _closer_ids(messages: Sequence[ModelMessage]) -> set[str]:
         if not isinstance(message, ModelRequest):
             continue
         for part in message.parts:
-            is_closer = isinstance(part, BaseToolReturnPart) or (
-                isinstance(part, RetryPromptPart) and part.tool_name is not None
-            )
-            if is_closer:
+            # A retry that answers a tool call is a `ToolReturnPart` with
+            # `outcome="retried"` (a `BaseToolReturnPart`), so it closes the pair
+            # like any other return. A `RetryFeedbackPart` answers no tool call and
+            # never closes one. Histories persisted with the legacy
+            # `RetryPromptPart` are converted to one of these two on load.
+            if isinstance(part, BaseToolReturnPart):
                 ids.add(part.tool_call_id)
     return ids
