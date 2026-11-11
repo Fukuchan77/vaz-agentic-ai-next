@@ -15,7 +15,7 @@ from app.agents.deps import AgentDeps
 logger = logging.getLogger(__name__)
 
 
-def register_mock_tools(agent: Agent[AgentDeps, str]) -> None:
+def register_mock_tools[OutputT](agent: Agent[AgentDeps, OutputT]) -> None:
     """Register mock tools to the agent for development/testing.
 
     ⚠️ WARNING: This function should only be called in non-production environments.
