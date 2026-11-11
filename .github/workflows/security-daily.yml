@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
 
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
 
@@ -66,7 +66,7 @@ jobs:
 
       # Provisions uv from mise.toml [tools]; no pnpm/action-setup here, the
       # Python leg needs nothing from the npm side.
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
 
       # `py:audit` (mise.toml) is the single home for the pip-audit invocation
       # and its --ignore-vuln list, shared with `py:check`. It runs
@@ -92,7 +92,7 @@ jobs:
 
       # Provisions uv from mise.toml [tools]; no pnpm/action-setup here, the
       # Python leg needs nothing from the npm side.
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
 
       # `api:audit` (mise.toml) is the single home for this lane's pip-audit
       # invocation and its --ignore-vuln list, shared with `api:check`. Like
@@ -127,7 +127,7 @@ jobs:
           fetch-depth: 0
 
       # Provisions gitleaks from mise.toml [tools]; no pnpm/action-setup here.
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
 
       # `secret-scan` (mise.toml) is the single home for the gitleaks invocation and
       # its flags, shared with .githooks/pre-commit. It passes --redact, so a true
