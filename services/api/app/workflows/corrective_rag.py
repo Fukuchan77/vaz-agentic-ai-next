@@ -71,7 +71,7 @@ _SYNTH_INSTRUCTIONS = (
 )
 
 
-class CorrectiveRAGWorkflow(ResultCacheMixin, LLMCallMixin, Workflow):  # ty: ignore[invalid-method-override]
+class CorrectiveRAGWorkflow(ResultCacheMixin, LLMCallMixin, Workflow):  # ty: ignore[incompatible-method-override]
     """Corrective RAG workflow with retry logic and result caching.
 
     `ResultCacheMixin.run`'s signature is deliberately incompatible with

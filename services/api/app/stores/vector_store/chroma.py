@@ -76,7 +76,7 @@ class ChromaVectorStore:
         # module-level `__getattr__` lazy-import machinery, which static analysis
         # can't see; confirmed present at runtime (`hasattr(embedding_functions,
         # "SentenceTransformerEmbeddingFunction")` is True on the pinned version).
-        self._embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(  # ty: ignore[unresolved-attribute]
+        self._embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(  # ty: ignore[missing-attribute]
             model_name=embedding_model
         )
 

@@ -122,7 +122,7 @@ class ResultCacheMixin:
             # sibling can't be declared without inheriting it directly, which
             # would break the mixin split. Tracked as design debt (Protocol-typed
             # mixin bases), not fixed here.
-            result = await super().run(query=query, max_retries=max_retries)  # ty: ignore[unresolved-attribute]
+            result = await super().run(query=query, max_retries=max_retries)  # ty: ignore[missing-attribute]
             return result
 
         # Generate cache key
@@ -192,7 +192,7 @@ class ResultCacheMixin:
             # sibling can't be declared without inheriting it directly, which
             # would break the mixin split. Tracked as design debt (Protocol-typed
             # mixin bases), not fixed here.
-            result = await super().run(query=query, max_retries=max_retries)  # ty: ignore[unresolved-attribute]
+            result = await super().run(query=query, max_retries=max_retries)  # ty: ignore[missing-attribute]
 
             # Verify result from workflow is a dict before caching
             if not isinstance(result, dict):
