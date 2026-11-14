@@ -268,7 +268,7 @@ allowlist を 1 か所に集約する。
 
 **ツールチェーン**: 版の正本はツールごとに 1 か所とする。他の箇所（`mise.toml` の pnpm major、Dockerfile の
 `ARG` / `FROM`、`requires-python`、Ruff / pyright の target 等）は正本に追随させ、ガードテストがある箇所はそれで一致を検証する。
-Node 24 LTS と uv 0.12 系は `mise.toml`、pnpm 12 系は root `package.json` の `packageManager`（完全固定）が正本である。
+Node 24 LTS と uv 0.13 系は `mise.toml`、pnpm 12 系は root `package.json` の `packageManager`（完全固定）が正本である。
 Python はレーンごとの `.python-version`（uv が interpreter を選ぶときに読むファイル）が正本であり、root の `mise.toml` は
 Python の版を持たない。
 `services/api` は Python 3.14、`services/agent` は Python 3.13 とし、片方の版上げはもう片方を動かさない。
@@ -361,6 +361,7 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 | 2.1.1 | 2026-10-03 | PATCH | CI / GH Actions の「現状」を実装済みの SHA pin・`permissions:`・`tests/repo/ci-workflows.spec.ts` に合わせて事実訂正。規範自体は変更なし。 |
 | 2.2.0 | 2026-10-05 | MINOR | ルートワークスペースで TypeScript 7.x を採用し、OpenAPI codegen 向けに @vaz/schemas に TypeScript 6.0.3 を隔離（ADR-0009、TODO(TYPESCRIPT_MAJOR) を解消） |
 | 2.3.0 | 2026-10-06 | MINOR | `services/api` を Python 3.14 へ上げ、`services/agent` は 3.13 に据え置くとレーン別に明記。slowapi を理由とする文を削除し、版の正本をツールごとに明記（Python はレーンの `.python-version`）。Python 3.15 の非採用条件を追加（spec 009 R7） |
+| 2.3.1 | 2026-11-14 | PATCH | Additional Constraints のツールチェーン記述を実態に合わせて訂正（uv 0.12 系 → 0.13 系。uv 0.13.4 未満が同梱する CA ストアの脆弱性 GHSA-hq85-5cpj-mr62 の修正が 0.12 系に無く、正本の `mise.toml` を 0.13 へ上げたため）。規範自体は変更なし。 |
 
 ### 未決事項（Deferred）
 
@@ -370,6 +371,6 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 
 ---
 
-**Version**: 2.3.0 |
+**Version**: 2.3.1 |
 **Ratified**: 2026-08-29 |
-**Last amended**: 2026-10-06
+**Last amended**: 2026-11-14

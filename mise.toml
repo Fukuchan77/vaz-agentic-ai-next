@@ -4,7 +4,12 @@ pnpm = "12"
 # Python package manager for services/agent (py:check / openapi:gen); pinned so
 # the local toolchain and CI (.github/workflows/python.yml via mise-action)
 # provision the same major/minor.
-uv = "0.12"
+# 0.13 since 2026-11-14: uv < 0.13.4 vendors a webpki root bundle that still trusts
+# `emSign ECC Root CA - G3`, whose intermediates have compromised keys
+# (GHSA-hq85-5cpj-mr62 / PYSEC-2026-4321, fixed in 0.13.4). The 0.12 line never got
+# the fix, so the minor had to move; both lane gates were re-run on 0.13.8 and the
+# committed uv.lock files resolve unchanged (`uv lock --check`).
+uv = "0.13"
 # Secret scanner (secret-scan tasks, .githooks/pre-commit, security-daily.yml).
 # Provisioned here rather than assumed on PATH for the same reason node/pnpm/uv are:
 # CI gets it from jdx/mise-action with no extra install step, and a developer's
