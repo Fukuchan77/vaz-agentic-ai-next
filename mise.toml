@@ -4,7 +4,12 @@ pnpm = "12"
 # Python package manager for services/agent (py:check / openapi:gen); pinned so
 # the local toolchain and CI (.github/workflows/python.yml via mise-action)
 # provision the same major/minor.
-uv = "0.12"
+# 0.13 since 2026-11-14: uv < 0.13.4 vendors a webpki root bundle that still trusts
+# `emSign ECC Root CA - G3`, whose intermediates have compromised keys
+# (GHSA-hq85-5cpj-mr62 / PYSEC-2026-4321, fixed in 0.13.4). The 0.12 line never got
+# the fix, so the minor had to move; both lane gates were re-run on 0.13.8 and the
+# committed uv.lock files resolve unchanged (`uv lock --check`).
+uv = "0.13"
 # Secret scanner (secret-scan tasks, .githooks/pre-commit, security-daily.yml).
 # Provisioned here rather than assumed on PATH for the same reason node/pnpm/uv are:
 # CI gets it from jdx/mise-action with no extra install step, and a developer's
@@ -122,23 +127,15 @@ description = "Python sidecar quality gate (uv sync + ruff + pyright + pytest + 
 #   - .github/workflows/security-daily.yml, which catches advisories that land
 #     against an unchanged lockfile — the case that broke the TS side on 2026-09-09.
 #
-# --ignore-vuln entries follow docs/dependency-policy.md §3 tier #4 (no fix
-# version exists) and §6's retirement-condition discipline. Each needs (a) what
+# No --ignore-vuln entries. A future one follows docs/dependency-policy.md §3 tier #4
+# (no fix version exists) and §6's retirement-condition discipline: it needs (a) what
 # the advisory is, (b) why it is excluded, (c) a re-evaluation deadline.
 #
-# PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp / CVE-2026-81726): nltk's model-artifact
-#   APIs (TransitionParser.train/parse, AveragedPerceptron.save/load,
-#   PerceptronTagger.save_to_json, save_maxent_params) call built-in open() on
-#   caller-supplied paths instead of the pathsec-aware helpers, so a caller that
-#   relies on `pathsec` for containment can read/write outside the allowed roots.
-# 除外理由: 修正版が存在しない — 上流は "Patched versions: Not yet patched" と明記し、
-#   PyPI 最新の 3.10.3 が該当版そのもの。経路は llama-index-core → nltk の推移的依存で、
-#   sidecar は nltk も pathsec も import しておらず (`grep -rn nltk app/ tests/` が空)、
-#   llama-index-core 側の nltk 利用も punkt tokenizer のみ。脆弱な 4 API はこの venv の
-#   どこからも参照されておらず、攻撃前提 (pathsec.ENFORCE=True かつ untrusted な
-#   model path) はサイドカーの stateless 設計では成立しない。
-# 再評価期限: 2026-12-11 — この日までに nltk の修正版公開を再確認し、出ていれば
-#   `uv lock --upgrade-package nltk` で取り込んでこのエントリを撤去する。
+# Retired 2026-11-14: PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp / CVE-2026-81726, nltk's
+#   pathsec bypass in its model-artifact APIs). The declared condition ("nltk publishes
+#   a fix release") is met: nltk 3.10.4 carries the fix and uv.lock resolves it, so raw
+#   `pip-audit` reports nothing and the entry suppressed nothing. Dropped so a future
+#   nltk advisory on a reused or aliased id cannot hide behind it.
 #
 # `uv run --frozen` is the counterpart of `pnpm install --frozen-lockfile`: audit
 # the committed uv.lock rather than whatever resolves fresh today. `py:check` has
@@ -146,7 +143,7 @@ description = "Python sidecar quality gate (uv sync + ruff + pyright + pytest + 
 # this task cold, and --frozen makes that path materialise the env from the lock
 # without silently re-resolving it.
 [tasks."py:audit"]
-run = "uv run --frozen pip-audit --ignore-vuln PYSEC-2026-3740"
+run = "uv run --frozen pip-audit"
 dir = "services/agent"
 description = "Python dependency vulnerability audit (pip-audit; NFR-5 counterpart of `audit`)"
 
@@ -238,7 +235,7 @@ run = "uv run pytest tests/unit/ tests/integration/ tests/e2e/ -v --cov=app --co
 [tasks."api:audit"]
 dir = "services/api"
 description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
-# Ignored IDs fall into two groups. (A former third group - five starlette
+# Ignored IDs form one live group. (A former third group - five starlette
 # advisories, PYSEC-2026-161 / -248 / -249 / -2280 / -2281, suppressed while
 # slowapi held starlette below 1.0 - was closed by upgrading: slowapi was
 # replaced by `app/middleware/rate_limit.py` and pyproject.toml now declares
@@ -264,9 +261,9 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # 2026-09-22 refresh raw `pip-audit` prints *those* as the primary IDs rather
 # than the CVEs listed in `--ignore-vuln` below. The entries still match,
 # because pip-audit resolves `--ignore-vuln` against a vulnerability's aliases
-# as well as its primary ID (verified: raw output reports 4 findings - these
-# three plus nltk's - and the ignore list suppresses all 4; re-checked
-# 2026-10-03 after the starlette group was closed). Do not "fix" the apparent mismatch by
+# as well as its primary ID (verified: raw output reports exactly these 3
+# findings and the ignore list suppresses all 3; re-checked 2026-11-14 after
+# the nltk entry was retired). Do not "fix" the apparent mismatch by
 # swapping the CVE ids out - keeping the CVE form is what makes this group
 # readable next to the GHSA links.
 # All three require ChromaDB's server (multi-tenant HTTP API, RBAC,
@@ -282,34 +279,18 @@ description = "Run pip-audit to fail on non-ignored dependency vulnerabilities"
 # pip-audit` (without --ignore-vuln) after any chromadb bump to check whether
 # upstream has since shipped a fix.
 #
-# Group 2 - `nltk` 3.10.3, a transitive of `llama-index-core` (nothing in
-# `app/`, `evals/`, or `tests/` imports nltk directly). First seen in the
-# 2026-09-05 dependency refresh.
-#   PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp / CVE-2026-81726) - model-artifact
-#     import/export helpers call built-in `open()` on caller-controlled paths
-#     instead of the pathsec-aware helpers, so they read and write outside the
-#     allowed roots when NLTK path-security enforcement is on.
-# Like Group 1 this has no fix release: `fixed_in: []`, and 3.10.3 is the
-# latest nltk on PyPI (re-checked 2026-09-30), so no bump closes it. Unreachable
-# here on two independent counts: (1) the advisory's own preconditions require
-# the application to enable `pathsec.ENFORCE` AND let untrusted input choose a
-# model import/export path - this codebase does neither; (2) none of the
-# affected components (`TransitionParser`, `AveragedPerceptron`,
-# `PerceptronTagger.save_to_json`, `save_maxent_params`) is reachable - the
-# only llama-index-core module that touches nltk is
-# `indices/keyword_table/utils.py` (stopword lookup), and this codebase never
-# builds a keyword-table index; the RAG path is `app/workflows/corrective_rag.py`
-# over the `VectorStore` protocol. Re-run `uv run pip-audit` (without
-# --ignore-vuln) after any llama-index-core bump to check for an nltk fix
-# release, and revisit this entry if any code starts calling nltk's model
-# serialization APIs.
+# Group 2 (retired 2026-11-14) - `nltk`, a transitive of `llama-index-core`.
+#   PYSEC-2026-3740 (GHSA-8mgp-746c-j5xp / CVE-2026-81726) was suppressed while
+#   3.10.3 was the latest nltk and no fix release existed. nltk 3.10.4 carries the
+#   fix and uv.lock resolves it: raw `uv run pip-audit` now reports only the three
+#   chromadb findings of Group 1, so the entry suppressed nothing and was removed.
 #
 # `uv run --frozen` for the same reason `py:audit` uses it: audit the committed
 # uv.lock rather than whatever resolves fresh today. `api:check` has already run
 # `uv sync` by the time it reaches here, so --frozen is a no-op on that path; the
 # security-daily job calls this task cold, and --frozen is what makes that path
 # materialise the env from the lock instead of silently re-resolving it.
-run = "uv run --frozen pip-audit --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833 --ignore-vuln PYSEC-2026-3740"
+run = "uv run --frozen pip-audit --ignore-vuln CVE-2026-45830 --ignore-vuln CVE-2026-45831 --ignore-vuln CVE-2026-45833"
 
 # No `api:hooks:install`: this lane's checks run as legs of the hub's own `.githooks/`
 # (activated by the root `prepare` script), via services/api/scripts/hooks/*.sh
