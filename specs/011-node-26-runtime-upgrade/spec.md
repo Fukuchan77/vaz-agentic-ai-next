@@ -4,7 +4,7 @@
 
 update node 26
 
-TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lithium、26.13.0 から LTS）へ上げる。
+TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lithium、26.13.0 から LTS）へ上げる。26.13.1 は 2026-11-10 のセキュリティリリース（ランタイムの CVE 18 件、うち High 9 件。`next-agentic-stack` PR #75 の記載）で、`next-agentic-stack` は 26.13.1 に更新済みである。
 
 ### 事前検証の結果（2026-11-15、`/dependency-security-refresh`）
 
@@ -25,12 +25,21 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 - Q: Node と直接関係しない項目（Python レーン、ローカル firefox E2E など）は対象外にしてよいですか? → A: 対象外にする。E2E は CI の結果で判定する。
 - Q: 問題が出たとき Node 24 へ戻せる状態をどこまで保証しますか? → A: revert で戻せる構成にする。Node 24/26 両対応のローダー修正を先のコミットに分け、版のピン変更を 1 コミットにまとめる。版コミットだけを revert すれば Node 24 に戻り、ローダーの回帰テストは Node 24 でも緑のまま。`engines.node` は `>=26`。
 
+### Session 2026-11-15 (spec レビューの反映)
+
+- Q: ベータレーンの記録(R4.6)はどこに置きますか? → A: `next-agentic-stack` に置く。Node 26 の記録は `Fukuchan77/next-agentic-stack` の PR #77(`docs/beta-lane/2026-11-15-node-26.md`、判定は部分解消)としてマージ済み。ハブ PR の本文からこの記録へリンクする。部分解消の残り(worker ローダーと Docker イメージ)は、ハブ自身のゲートで本 spec の R1・R6 が確かめる。ハブ側で代える案は採らない(§8.2 からの逸脱になるため)。
+- Q: イメージの検証(R6.4・R6.5)はどこで実施しますか? → A: ローカルの Docker(Rancher Desktop)で実施し、コマンドと結果を検証記録に残す。ハブの CI にはイメージをビルドするジョブがなく、本 spec では追加しない(Future Work)。
+- Q: ロールバック(R7.4)の単位は? → A: 版コミットと文書コミットを一緒に revert する。版コミットだけを revert すると `check` は緑だが、憲章・steering・README が Node 26 のまま残るため、その状態は正規のロールバックとして扱わない。
+- Q: 憲章の版の上げ幅の基準は? → A: 意図した版上げ(判断の変更)は MINOR、実態への追随(強制された訂正)は PATCH とする。2.3.0(Python 3.14)は前者、2.3.1(uv 0.13)は後者。Node 26 は前者なので MINOR。この基準を Sync Impact Report に一行で書く。
+
 ## Success Criteria
 
-- Node 26.13.1 で `mise run check` が緑（件数を記録）、`mise run build` / `mise run size` が予算内、`mise run openapi:gen` で生成物に差分なし
+- Node 26.13.1（`mise.toml` はメジャーのみの `"26"` なので、記録には実際に動かした版を書く）で `mise run check` が緑（件数を記録）、`mise run build` / `mise run size` が予算内、`mise run openapi:gen` で生成物に差分なし
 - `apps/worker` のイメージが `node:26-slim` ベースで `docker build` に成功し、コンテナ内で worker の全モジュールが `DeprecationWarning` なしに読み込める
 - Node 24 では worker ローダーの回帰テストが緑のまま（ロールバック可能性の確認）
-- ローダー修正と版のピン変更が別コミットになっており、版コミットだけを revert すると Node 24 で `mise run check` が緑に戻る
+- ローダー修正と版のピン変更が別コミットになっており、版コミットと文書コミットを一緒に revert すると Node 24 で `mise run check` が緑に戻る
+- ベータレーンの記録(`next-agentic-stack` PR #77)が PR 本文からリンクされている
+- `specs/011-node-26-runtime-upgrade/` に plan・tasks・`traceability.md` があり、ADR がコードと同期している
 
 ## Scope
 
@@ -38,13 +47,16 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
   - ランタイムのピン: `mise.toml` `[tools] node`、`apps/worker/Dockerfile` `ARG NODE_VERSION`、`apps/worker/package.json` `engines.node`
   - 型: root と `apps/worker` の `@types/node` を 26 系へ、`.github/dependabot.yml` の hold を `>=27` へ、`tests/repo/dependabot.spec.ts` の `heldMajor` を 26 へ
   - 互換修正: `apps/worker/typescript-loader.mjs`（`mode: "strip"`）、`apps/worker/register-typescript-loader.mjs`（`registerHooks()`）、DEP0205 回帰テスト
-  - ガバナンス: `.sdd/memory/constitution.md`（Node 24 LTS の記述）、`.sdd/steering/tech.md`、`docs/dependency-policy.md`
+  - ガバナンス: `.sdd/memory/constitution.md`（Node 24 LTS の記述）、`.sdd/steering/tech.md`、`docs/dependency-policy.md`（§7 の `@types/node 24` の記述、§8 のレーン表、§8.1 の据え置きの行を含む）
+  - SDD の成果物: plan、tasks、`traceability.md`、worker ローダーの設計判断の ADR、憲章改正のレビュー記録
   - 記述: `README.md`、`AGENTS.md`、`CLAUDE.md`、`docs/cross-repo-adoption-backlog.md`、`docker-compose.yml` と worker 内のコメント
 - Out of scope:
   - Python レーン（`services/agent`・`services/api`）の版上げ
   - ローカル firefox E2E の起動不具合（Node 24 でも再現する環境要因。E2E は CI の結果で判定）
   - pnpm・TypeScript など他ツールの版上げ、Node 27 以降
   - 実験的 API `stripTypeScriptTypes`（ExperimentalWarning）からの脱却や worker のビルド導入
+  - worker ローダーを使わず Node 自身の型除去で動くスクリプト（`packages/rag` の ingest、`packages/db` の migrate、`packages/evals`）の個別検証。`eval-pr.yml` が Node 26 で pr-gate を通すことだけを間接的な確認とする（ingest と migrate は DB が要る）
+  - CI への `docker build` ジョブの追加
 
 ## Glossary
 
@@ -69,14 +81,14 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 1.2 WHEN worker ローダーを Node 26 系で使う, THE worker ローダー SHALL stderr に `DeprecationWarning` を出さない。
 1.3 THE worker ローダー SHALL 型除去だけでモジュールを変換し、型除去で扱えない構文をコード変換で受け入れない。
 1.4 IF worker が読み込むソースに型除去で扱えない構文が含まれる, THEN THE リポジトリの typecheck SHALL それを型エラーとして検出する（`erasableSyntaxOnly`）。
-1.5 THE worker ローダーの回帰テスト SHALL 1.2 を検査し、修正前の登録方法では Node 26 系で失敗することを確認済みである。
-1.6 WHEN 例外のスタックトレースを出す, THE worker SHALL 元のソースと同じ行番号・列番号を示す。
+1.5 THE worker ローダーの回帰テスト SHALL 1.2 を `--throw-deprecation` を付けた起動の終了コードで検査し、`register()` と `mode: "strip"` を組み合わせた修正前の登録方法では Node 26 系で失敗する(Red)ことを、実装時に確認して検証記録に残す。`main` のローダーは DEP0205 より前に `transform` で落ちるので、Red の証拠にしない。
+1.6 WHEN 例外のスタックトレースを出す, THE worker SHALL 元のソースと同じ行番号・列番号を示す。回帰テストは、型注釈を含む行で throw する `.ts` を読み込み、行番号と列番号の両方を検査する。
 
 ### Requirement 2: 実行環境の Node を 26 LTS にする
 
 **Acceptance Criteria**
 
-2.1 THE 正本 SHALL Node のメジャーを 26 と宣言する。
+2.1 THE 正本 SHALL Node のメジャーを 26 と宣言する。完全な版は固定しない（`node = "26"`）。そのため R6.7 の記録は、実際に動かした Node の版を残す。
 2.2 THE `apps/worker/Dockerfile` SHALL 正本と同じメジャーの `node:<major>-slim` をビルド段と実行段の両方のベースイメージに使う。
 2.3 THE `apps/worker/package.json` SHALL `engines.node` を `>=26` と宣言する。
 2.4 WHEN CI のジョブが Node を用意する, THE CI SHALL 正本から版を読み、ワークフローの中に Node の版を別に書かない。
@@ -100,11 +112,11 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 **Acceptance Criteria**
 
 4.1 THE 憲章（`.sdd/memory/constitution.md`）SHALL Additional Constraints「ツールチェーン」で Node 26 LTS を正本の版として示す。
-4.2 THE 憲章 SHALL Amendment procedure に従い、版の昇格、改訂履歴の行、Sync Impact Report を同じ変更で記録する。
-4.3 THE 憲章の版の上げ幅 SHALL 宣言済み版の変更として MINOR とする（前例: 2.3.0 の Python 3.14 化）。
+4.2 THE 憲章 SHALL Amendment procedure に従い、版の昇格、改訂履歴の行、Sync Impact Report を同じ変更で記録する。前例（2.3.0）にならい、新規コンテキストのレビューと人間承認を `specs/011-node-26-runtime-upgrade/reviews/` に残す。
+4.3 THE 憲章の版の上げ幅 SHALL 宣言済み版の変更として MINOR とする（前例: 2.3.0 の Python 3.14 化）。THE Sync Impact Report SHALL 「意図した版上げは MINOR、実態への追随は PATCH」という基準を一行で書く（Clarifications 参照）。
 4.4 THE `.sdd/steering/tech.md` の Constraints SHALL Node 26 LTS を宣言済みの版として示す。
-4.5 THE `docs/dependency-policy.md` SHALL §8.1 の `@types/node` の行を 26 の据え置きに改め、§8 のベータレーン表から取り込み済みの Node 26 を外す。
-4.6 THE 版を上げる PR SHALL `docs/dependency-policy.md` §8.2 の手順 1 が求める検証記録へのリンクを本文に持つ。
+4.5 THE `docs/dependency-policy.md` SHALL §8.1 の `@types/node` の行を 26 の据え置きに改め、§8 のベータレーン表から取り込み済みの Node 26 を外し、§7 の `(@types/node 24、…)` の記述を 26 に改める。THE §8.2 手順 2 SHALL 「行を削除する」に加えて、「据え置きを次のメジャーへ移す場合は行を書き換える」場合を示す。
+4.6 THE 版を上げる PR SHALL `docs/dependency-policy.md` §8.2 の手順 1 が求める検証記録として、`next-agentic-stack` の `docs/beta-lane/2026-11-15-node-26.md`（PR #77、判定は部分解消）へのリンクを本文に持つ。ハブ文書からそのパスを書くときは、リンクではなくコードスパンにする（`doc-links.spec.ts`）。THE PR 本文 SHALL 残りの未解消事項（worker ローダーと Docker イメージ）を、本 spec の R1・R6 の結果で示す。
 
 ### Requirement 5: 利用者と agent 向けの記述を揃える
 
@@ -114,7 +126,7 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 5.2 THE `AGENTS.md` と `CLAUDE.md` SHALL `@types/node` の据え置きを 26（Node 26 LTS）として、同じ変更で揃えて示す。
 5.3 THE `docker-compose.yml`、`apps/worker/Dockerfile`、`apps/worker/tsconfig.json`、`apps/worker/src/main.ts` のコメント SHALL worker の実行環境を Node 26 と示す。
 5.4 THE `docs/cross-repo-adoption-backlog.md` SHALL 据え置きの記述を Node 26 に合わせる。
-5.5 WHEN 変更が終わる, THE リポジトリ SHALL `specs/` 配下の過去の記録を除き、現行の版としての「Node 24」「`@types/node` 24」の記述を含まない（grep で確認する）。
+5.5 WHEN 変更が終わる, THE リポジトリ SHALL `specs/` 配下の過去の記録を除き、現行の版としての「Node 24」「`@types/node` 24」の記述を含まない（grep で確認する）。grep のコマンドと除外のパスは plan で固定する。除外してよいのは、日付付きの過去の記録の行（`docs/cross-repo-adoption-backlog.md` の X-15 の起票時の表の行）だけとし、現状を述べる行（同ファイルの「2026-10-07 時点」の記述）は更新する。
 5.6 THE `specs/` 配下の過去 spec の記録 SHALL 書き換えない。
 
 ### Requirement 6: 品質ゲートとイメージで検証する
@@ -124,8 +136,8 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 6.1 WHEN Node 26.13.1 で `mise run check` を実行する, THE リポジトリ SHALL 全段で成功し、テストの件数がベースライン（80 ファイル / 949 passed, 1 skipped）から減らない。
 6.2 WHEN Node 26.13.1 で `mise run build` と `mise run size` を実行する, THE `apps/web` SHALL ビルドに成功し、`.size-limit.json` の上限（JS 420 kB / CSS 4.0 kB、brotli）を超えない。
 6.3 WHEN Node 26.13.1 で `mise run openapi:gen` を実行する, THE 生成物 SHALL コミット済みのものとバイト単位で一致する。
-6.4 WHEN `apps/worker/Dockerfile` をビルドする, THE ビルド SHALL 成功する。
-6.5 WHEN ビルドしたイメージのコンテナ内で worker の全モジュールを読み込む, THE コンテナ SHALL 終了コード 0 で終わり、stderr に `DeprecationWarning` を出さない。
+6.4 WHEN ローカルの Docker（Rancher Desktop）で `apps/worker/Dockerfile` をビルドする, THE ビルド SHALL 成功する。
+6.5 WHEN ビルドしたイメージのコンテナ内で、`CMD` の `src/start.ts`（DB と Inngest に接続しに行く）の代わりに、`node --import ./register-typescript-loader.mjs --input-type=module --eval` で `src/*.ts` の全モジュールを import する, THE コンテナ SHALL 終了コード 0 で終わり、stderr に `DeprecationWarning` を出さない。検査のコマンドは plan で固定する。
 6.6 WHEN PR の CI が走る, THE CI SHALL 全ジョブ成功で終わる。E2E の合否はこの CI の結果で判定する。
 6.7 THE 検証の記録 SHALL 各コマンド、実行した Node の版、結果の件数を残す。終了コードだけの記録は検証として扱わない。
 
@@ -134,21 +146,31 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 **Acceptance Criteria**
 
 7.1 THE 変更 SHALL Requirement 1 のローダー修正を、版コミットより前の独立したコミットにする。
-7.2 THE 版コミット SHALL 正本と追随箇所（Requirement 2・3）の変更とロックファイルの更新だけを含む。
+7.2 THE 版コミット SHALL 正本と追随箇所（Requirement 2・3）の変更、ロックファイルの更新、Dockerfile の版に関するコメント（5.3 のうち `ARG NODE_VERSION` に隣接するもの）だけを含む。文書（Requirement 4・5）は、版コミットの後の別コミットにする。
 7.3 WHEN ローダー修正のコミットだけを適用した状態（版は 24）で `mise run check` を実行する, THE リポジトリ SHALL 全段で成功する。
-7.4 WHEN 版コミットだけを revert する, THE リポジトリ SHALL Node 24 で `mise run check` が成功する状態に戻る。
+7.4 WHEN 版コミットと文書コミット（R4・R5）を一緒に revert する, THE リポジトリ SHALL Node 24 で `mise run check` が成功する状態に戻る。版コミットだけの revert は、憲章・steering・README が Node 26 のまま残るため、ロールバックの手順として扱わない。
 7.5 THE 変更 SHALL 1 つの PR にまとめる（`docs/dependency-policy.md` §8.2「1 メジャーにつき 1 PR」）。
+
+### Requirement 8: SDD の成果物をコードと同期させる
+
+**Acceptance Criteria**
+
+8.1 THE `specs/011-node-26-runtime-upgrade/` SHALL plan、tasks、`traceability.md` を持ち、各 Requirement を実装・テスト・記録へ対応づける。
+8.2 THE リポジトリ SHALL worker ローダーの設計判断（実験的な `stripTypeScriptTypes` の `mode: "strip"`、`registerHooks()` の採用、`erasableSyntaxOnly` による保護、Node 24 と 26 の両対応）を ADR に記録する。
+8.3 THE plan SHALL gap-analysis §6 の要調査事項（`registerHooks()` の安定度、DEP0205 の単独再現、`erasableSyntaxOnly` の適用範囲、Node 26 の semver-major の影響、検証コマンド）の結果を記録する。
+8.4 THE 変更 SHALL 関係のない差分（`apps/web/AGENTS.md` の見出しの変更）を含めない。THE 実装ブランチ SHALL 変更内容を表す名前にし（例: `chore/node-26-runtime`）、マージ済みの `chore/dependency-security-refresh` を再利用しない。
 
 ## Non-Functional Requirements
 
 - 互換性: worker ローダーは Node 24 系・26 系の両方で動く（Requirement 1、7）。
 - サイズ: client バンドルは brotli で JS 420 kB / CSS 4.0 kB 以内。上限は引き上げない。
 - セキュリティ: `pnpm audit --audit-level=moderate` で新しい指摘を増やさない。全履歴の secret scan で検出 0 件を保つ。
-- 再現性: Node の版はワークフロー・Dockerfile・ドキュメントで正本以外に独立して決めない。
+- 再現性: Node の版はワークフロー・Dockerfile・ドキュメントで正本以外に独立して決めない。正本は major のみなので、検証の記録には実際に動かした版を残す。
 
 ## Out of Scope / Future Work
 
 - 実験的 API `stripTypeScriptTypes` からの脱却（Node が型除去を安定 API にしたとき、または worker にビルドを導入するときに再検討する）
+- CI に `docker build` と全モジュール読み込みのジョブを足す（ガードとして恒久的だが、`tests/repo/ci-workflows.spec.ts` の SHA pin と `permissions:` の検査も満たす必要がある）
 - docker compose で Inngest Connect に接続した worker の実走
 - Python レーン、pnpm、TypeScript の版上げ。Node 27 以降
 
