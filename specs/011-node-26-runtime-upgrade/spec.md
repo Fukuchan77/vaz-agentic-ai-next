@@ -14,7 +14,7 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 - `module.register()` が Node 26 で非推奨（DEP0205）。
 - 修正（`mode: "strip"`、`registerHooks()` への移行、各ピンの更新）後は Node 26 で `mise run check` が緑（80 ファイル / 949 passed, 1 skipped）、`build` / `size` / `openapi:gen` も差分なし。
 - 未検証: worker の Docker イメージビルドと起動、firefox の E2E（Node 24 でも起動しない環境要因）、`test:e2e:ollama`、Inngest/DB/Redis に接続した worker の実走。
-- 変更は worktree `/Users/Shared/codes/vaz-agentic-ai-next-node26` に未コミットで残っている。
+- 変更は、当初 worktree `/Users/Shared/codes/vaz-agentic-ai-next-node26` に未コミットで残っていた。この worktree はもう存在しない。同じ 11 ファイルの差分は、主の作業ツリーのブランチ `chore/011-node-26-runtime-upgrade` に未コミットで残っている（`research.md`「着手時点の状態」、`spec.json` の `source_documents.verification.worktree`）。
 
 ## Clarifications
 
@@ -32,6 +32,22 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 - Q: ロールバック(R7.4)の単位は? → A: 版コミットと文書コミットを一緒に revert する。版コミットだけを revert すると `check` は緑だが、憲章・steering・README が Node 26 のまま残るため、その状態は正規のロールバックとして扱わない。
 - Q: 憲章の版の上げ幅の基準は? → A: 意図した版上げ(判断の変更)は MINOR、実態への追随(強制された訂正)は PATCH とする。2.3.0(Python 3.14)は前者、2.3.1(uv 0.13)は後者。Node 26 は前者なので MINOR。この基準を Sync Impact Report に一行で書く。
 
+### Session 2026-11-15 (`/sdd-analyze` の指摘 M-1「spec にない Dockerfile の変更」・M-5「merge commit の要件化」・M-6「NFR の追跡」の反映)
+
+- Q: worker イメージの pnpm の入手経路の変更（`research.md` I-6: `node:26-slim` に corepack がない）は Scope に入りますか? → A: 入る。R6.4 を満たすのに必要な、Node 24 と 26 の両方で動く修正なので、R2.6 として要件にし、版コミットより前の独立したコミットにする（R7.1）。
+- Q: merge commit でのマージは要件にしますか? → A: する（R7.6）。squash と rebase は C4 と C5 の境界を消し、R7.4 のロールバックを不能にする。
+- Q: 非機能要件の追跡はどうしますか? → A: NFR-1〜NFR-4 に ID を付け、`traceability.md` の行とタスクの `_Traces:_` から参照する。
+
+### Session 2026-11-15 (`/sdd-analyze` の指摘 H-1「spec.md を C0 に入れる」・H-2「憲章のサプライチェーン規定の要件化」の反映)
+
+- Q: `spec.md` と SDD の成果物はどのコミットに入れますか? → A: C0 に入れる。`spec.md`、`spec.json`（design と tasks の承認後）、`plan.md`、`research.md`、`tasks.md`、`traceability.md` を C0 に含める。C1〜C5 が、コミット済みの要件（R2.6、R7.1、R7.6 を含む）を引いて実装できるようにするためである。C6 は検証の記録と完了印の更新だけを持つ。
+- Q: 憲章 Additional Constraints「サプライチェーン」（ロック更新のダウングレード確認と、`pnpm audit` の出力そのものを PR 本文へ貼ること）は要件にしますか? → A: する（R6.8）。lockfile は `@types/node` の更新で変わる（依存の `undici-types` が 7.24.6 から 8.9.0 へ上がる。作業ツリーの差分で実測）ので、要約ではなく出力そのものを残す。
+
+### Session 2026-11-15 (`/sdd-analyze` の指摘 M-1「後続コミットとロールバック」・M-2「spec の古い記述」の反映)
+
+- Q: 事前検証の変更の所在の記述（上の「事前検証の結果」）は、worktree のままでよいですか? → A: 直す。worktree は存在せず、差分は主の作業ツリーにある。事実に合わせて 1 行を訂正した（要件の文面は変えていない）。
+- Q: C4・C5 の対象ファイルを後から直すとき、R7.4 のロールバックはどう守りますか? → A: 修正を C6 以降の別コミットにしない。push 前なら C4 または C5 へ畳み、畳めないときは修正コミットも revert 対象に加える（`plan.md` Error Handling）。要件 R7.4 の文面は変えない。
+
 ## Success Criteria
 
 - Node 26.13.1（`mise.toml` はメジャーのみの `"26"` なので、記録には実際に動かした版を書く）で `mise run check` が緑（件数を記録）、`mise run build` / `mise run size` が予算内、`mise run openapi:gen` で生成物に差分なし
@@ -39,17 +55,19 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 - Node 24 では worker ローダーの回帰テストが緑のまま（ロールバック可能性の確認）
 - ローダー修正と版のピン変更が別コミットになっており、版コミットと文書コミットを一緒に revert すると Node 24 で `mise run check` が緑に戻る
 - ベータレーンの記録(`next-agentic-stack` PR #77)が PR 本文からリンクされている
+- PR 本文に `mise run audit` の出力そのものが貼られ、lockfile のダウングレード行が 0 件であることが検証の記録にある
 - `specs/011-node-26-runtime-upgrade/` に plan・tasks・`traceability.md` があり、ADR がコードと同期している
 
 ## Scope
 
 - In scope:
   - ランタイムのピン: `mise.toml` `[tools] node`、`apps/worker/Dockerfile` `ARG NODE_VERSION`、`apps/worker/package.json` `engines.node`
+  - イメージの pnpm の入手経路: `apps/worker/Dockerfile` build 段の `corepack enable && corepack prepare` を `npm install --global pnpm@${PNPM_VERSION}` へ（`node:26-slim` が corepack を同梱しないため。`ARG PNPM_VERSION` の値は変えない）
   - 型: root と `apps/worker` の `@types/node` を 26 系へ、`.github/dependabot.yml` の hold を `>=27` へ、`tests/repo/dependabot.spec.ts` の `heldMajor` を 26 へ
   - 互換修正: `apps/worker/typescript-loader.mjs`（`mode: "strip"`）、`apps/worker/register-typescript-loader.mjs`（`registerHooks()`）、DEP0205 回帰テスト
   - ガバナンス: `.sdd/memory/constitution.md`（Node 24 LTS の記述）、`.sdd/steering/tech.md`、`docs/dependency-policy.md`（§7 の `@types/node 24` の記述、§8 のレーン表、§8.1 の据え置きの行を含む）
   - SDD の成果物: plan、tasks、`traceability.md`、worker ローダーの設計判断の ADR、憲章改正のレビュー記録
-  - 記述: `README.md`、`AGENTS.md`、`CLAUDE.md`、`docs/cross-repo-adoption-backlog.md`、`docker-compose.yml` と worker 内のコメント
+  - 記述: `README.md`、`AGENTS.md`、`CLAUDE.md`、`docs/cross-repo-adoption-backlog.md`、`docker-compose.yml` と worker 内のコメント。`apps/worker/Dockerfile` の冒頭の「`docker build` は sandbox で塞がれている」という NOTE は、R6.4・R6.5 で実測するので事実と合わなくなる。実測済みの趣旨へ書き換える
 - Out of scope:
   - Python レーン（`services/agent`・`services/api`）の版上げ
   - ローカル firefox E2E の起動不具合（Node 24 でも再現する環境要因。E2E は CI の結果で判定）
@@ -71,6 +89,8 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 
 ## Requirements
 
+要件の安定 ID: 受け入れ基準 `R.N`（例 1.1、6.7）は、`tasks.md`・`traceability.md` で `REQ-<R><NN>`（N を 2 桁にゼロ埋め。1.1 → `REQ-101`、6.7 → `REQ-607`）と書く。非機能要件は `NFR-1`〜`NFR-4`。
+
 ### Requirement 1: worker ローダーを Node 24 と 26 の両方で動かす
 
 Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、`module.register()` が非推奨（DEP0205）になった。worker コンテナの起動経路はこの 2 つを通るため、版を上げる前にローダーを両方の版で動く形にする。
@@ -91,8 +111,9 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 2.1 THE 正本 SHALL Node のメジャーを 26 と宣言する。完全な版は固定しない（`node = "26"`）。そのため R6.7 の記録は、実際に動かした Node の版を残す。
 2.2 THE `apps/worker/Dockerfile` SHALL 正本と同じメジャーの `node:<major>-slim` をビルド段と実行段の両方のベースイメージに使う。
 2.3 THE `apps/worker/package.json` SHALL `engines.node` を `>=26` と宣言する。
-2.4 WHEN CI のジョブが Node を用意する, THE CI SHALL 正本から版を読み、ワークフローの中に Node の版を別に書かない。
+2.4 WHEN CI のジョブが Node を用意する, THE CI SHALL 正本から版を読み、ワークフローの中に Node の版を別に書かない。repo ガードは「別の版指定がないこと」（`setup-node`・`node-version`・`NODE_VERSION`・`MISE_*` の環境変数・`jdx/mise-action` の `install_args` / `mise_toml` の不在）を検査する。「mise-action が `mise.toml` を読む」ことそのものは、アクションの仕様に依拠し、ガードは保証しない。
 2.5 IF Dockerfile の `NODE_VERSION` が正本のメジャーと一致しない, THEN THE repo ガード（`tests/repo/container-toolchain-pins.spec.ts`）SHALL 失敗する。
+2.6 THE `apps/worker/Dockerfile` SHALL build 段で pnpm を corepack に頼らずに用意する（`npm install --global pnpm@${PNPM_VERSION}`）。`ARG PNPM_VERSION` は root `package.json` の `packageManager` に追随したままとし、この修正は Node 24 と Node 26 のどちらのベースイメージでもビルドできる。
 
 ### Requirement 3: 型定義と更新提案を実行環境に揃える
 
@@ -140,16 +161,18 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 6.5 WHEN ビルドしたイメージのコンテナ内で、`CMD` の `src/start.ts`（DB と Inngest に接続しに行く）の代わりに、`node --import ./register-typescript-loader.mjs --input-type=module --eval` で `src/*.ts` の全モジュールを import する, THE コンテナ SHALL 終了コード 0 で終わり、stderr に `DeprecationWarning` を出さない。検査のコマンドは plan で固定する。
 6.6 WHEN PR の CI が走る, THE CI SHALL 全ジョブ成功で終わる。E2E の合否はこの CI の結果で判定する。
 6.7 THE 検証の記録 SHALL 各コマンド、実行した Node の版、結果の件数を残す。終了コードだけの記録は検証として扱わない。
+6.8 WHEN `pnpm-lock.yaml` が変わる, THE 変更 SHALL コミット前に、削除行と追加行を対にして、同じパッケージの版が下がる行（ダウングレード行）が 0 件であることを確かめ、結果を検証の記録に残す。THE PR 本文 SHALL `mise run audit`（`pnpm audit --audit-level=moderate`）の出力そのものを貼る。「監査は通った」という要約は不可とする（憲章 Additional Constraints「サプライチェーン」）。
 
 ### Requirement 7: Node 24 へ戻せる形でコミットする
 
 **Acceptance Criteria**
 
-7.1 THE 変更 SHALL Requirement 1 のローダー修正を、版コミットより前の独立したコミットにする。
-7.2 THE 版コミット SHALL 正本と追随箇所（Requirement 2・3）の変更、ロックファイルの更新、Dockerfile の版に関するコメント（5.3 のうち `ARG NODE_VERSION` に隣接するもの）だけを含む。文書（Requirement 4・5）は、版コミットの後の別コミットにする。
+7.1 THE 変更 SHALL Requirement 1 のローダー修正と R2.6 の Dockerfile の pnpm 修正を、版コミットより前の、それぞれ独立したコミットにする。
+7.2 THE 版コミット SHALL 正本と追随箇所（Requirement 2・3）の変更とロックファイルの更新だけを含む。Dockerfile では `ARG NODE_VERSION` の 1 行だけを変える。Dockerfile の Node の版に触れるコメント（5.3）は `ARG` に隣接しないので、文書コミットに含める。文書（Requirement 4・5）は、版コミットの後の別コミットにする。
 7.3 WHEN ローダー修正のコミットだけを適用した状態（版は 24）で `mise run check` を実行する, THE リポジトリ SHALL 全段で成功する。
 7.4 WHEN 版コミットと文書コミット（R4・R5）を一緒に revert する, THE リポジトリ SHALL Node 24 で `mise run check` が成功する状態に戻る。版コミットだけの revert は、憲章・steering・README が Node 26 のまま残るため、ロールバックの手順として扱わない。
 7.5 THE 変更 SHALL 1 つの PR にまとめる（`docs/dependency-policy.md` §8.2「1 メジャーにつき 1 PR」）。
+7.6 THE PR SHALL merge commit でマージし、squash と rebase を使わない。squash と rebase は版コミットと文書コミットの境界を消し、7.4 のロールバックを不能にする。THE PR 本文 SHALL この制約を示す。
 
 ### Requirement 8: SDD の成果物をコードと同期させる
 
@@ -162,10 +185,12 @@ Node 26 では `stripTypeScriptTypes` の `mode: "transform"` が廃止され、
 
 ## Non-Functional Requirements
 
-- 互換性: worker ローダーは Node 24 系・26 系の両方で動く（Requirement 1、7）。
-- サイズ: client バンドルは brotli で JS 420 kB / CSS 4.0 kB 以内。上限は引き上げない。
-- セキュリティ: `pnpm audit --audit-level=moderate` で新しい指摘を増やさない。全履歴の secret scan で検出 0 件を保つ。
-- 再現性: Node の版はワークフロー・Dockerfile・ドキュメントで正本以外に独立して決めない。正本は major のみなので、検証の記録には実際に動かした版を残す。
+- NFR-1 互換性: worker ローダーは Node 24 系・26 系の両方で動く（Requirement 1、7）。
+- NFR-2 サイズ: client バンドルは brotli で JS 420 kB / CSS 4.0 kB 以内。上限は引き上げない。
+- NFR-3 セキュリティ: `pnpm audit --audit-level=moderate` で新しい指摘を増やさない。全履歴の secret scan で検出 0 件を保つ。
+- NFR-4 再現性: Node の版はワークフロー・Dockerfile・ドキュメントで正本以外に独立して決めない。正本は major のみなので、検証の記録には実際に動かした版を残す。
+
+`traceability.md` は NFR を `NFR-1`〜`NFR-4` の ID で追跡する（`REQ-` の ID 体系の外）。
 
 ## Out of Scope / Future Work
 
