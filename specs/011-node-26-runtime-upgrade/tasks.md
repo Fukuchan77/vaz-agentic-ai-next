@@ -301,7 +301,7 @@ _Traces:_ REQ-406, REQ-606, REQ-607, REQ-608, REQ-705, REQ-706, REQ-801, REQ-804
   _Requirements:_ 8.4
   _Traces:_ REQ-804, DES-1.11
   件名は `docs(spec 011): record verification and traceability`。`spec.json` の `phase` を `implementation-complete` にする（V-1〜V-8 と敵対的レビューが済んだ時点。既存 spec の語彙に合わせる。V-9 の CI 結果は PR 側に残すので、CI のあとにコミットは足さない）。`apps/web/AGENTS.md` を含めない。`spec.md`・`tasks.md`・`traceability.md`・`spec.json` は C0 でコミット済みなので、ここでは完了印・Test と Commit の列・`phase` の更新だけを含める（`spec.md` は C0 以降に要件を直したときだけ含める）。
-- [ ] 9.4 push して PR を 1 つ開き、CI の全ジョブの結果を記録する（V-9）
+- [x] 9.4 push して PR を 1 つ開き、CI の全ジョブの結果を記録する（V-9）
   _Boundary:_ PR（リポジトリのファイルは変えない）
   _Depends:_ 9.3
   _Requirements:_ 4.6, 6.6, 6.8, 7.5, 7.6

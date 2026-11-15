@@ -157,3 +157,8 @@ Pre-rewrite head `9b59074` kept as `backup/011-pre-fixup` (local only, not pushe
 
 - The V-3 record (5.1) and the C1–C5 entries above cite the pre-rewrite hashes `c301c3e` (C3), `bc456ac` (C4), `eeb545a` (C5) and `afa619f` / `9b59074` (fixes). After the rewrite the same contents are `af0c868`, `bb2199d`, `8512aa6`, with the two fixes folded in (see the history table). `traceability.md` uses the rewritten hashes.
 - V-3's `check` (958 passed) ran on the pre-rewrite C3. The rewritten C3 (`af0c868`) pre-commit hook ran on Node 26 (not Node 24) with 960 passed | 1 skipped; the rewritten C1/C2 hooks and the C2 image builds ran on Node 24 (`f9265c4`: `docker build` exit 0 for Node 24 and 26). A strict Node 24 `check` at the rewritten C3 was not re-run; the rollback rehearsal on the final history (Node 24, 960 passed) covers the same code.
+
+## 9.4 — PR and CI
+
+- Pushed `5d3e922` (`--force-with-lease`, `--no-verify` as the owner decided). PR #215, base `main`, body records the beta-lane link (code span), V-2/V-5 results, the verbatim `mise run audit` output, the lockfile downgrade check, rollback (`git revert --no-edit 8512aa6 bb2199d`) and the merge-commit requirement.
+- CI on `5d3e922`: api-check, audit, bundle-size, CodeQL (javascript-typescript, python), dependency-review, e2e, gate, lint, py-check, unit, `.github/dependabot.yml`: all SUCCESS. `eval-pr-gate`: SKIPPED by design (runs only with the `run-eval` label). Per-job record posted as PR comment (https://github.com/Fukuchan77/vaz-agentic-ai-next/pull/215#issuecomment-6893490112).
