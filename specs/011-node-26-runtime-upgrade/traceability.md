@@ -9,56 +9,56 @@ ID conventions (see `~/.claude/sdd/rules/analysis.md`):
 
 | Requirement | Design | Task | Test | Commit |
 |-------------|--------|------|------|--------|
-| REQ-101 | DES-1.1 | T-2.1, T-2.3, T-2.4 |  |  |
-| REQ-102 | DES-1.1 | T-2.1, T-2.3, T-2.4, T-8.2 |  |  |
-| REQ-103 | DES-1.1 | T-2.1, T-2.2, T-2.4 |  |  |
-| REQ-104 | DES-1.2 | T-4.1 |  |  |
-| REQ-105 | DES-1.1, DES-1.10 | T-2.1, T-2.2, T-2.4 |  |  |
-| REQ-106 | DES-1.1 | T-2.1, T-2.2, T-2.4 |  |  |
-| REQ-201 | DES-1.4 | T-6.2 |  |  |
-| REQ-202 | DES-1.3, DES-1.4 | T-6.2 |  |  |
-| REQ-203 | DES-1.4, DES-1.5 | T-4.2, T-4.4, T-6.2 |  |  |
-| REQ-204 | DES-1.5 | T-4.3, T-4.4 |  |  |
-| REQ-205 | DES-1.5 | T-4.2, T-4.4 |  |  |
-| REQ-206 | DES-1.3 | T-3.1, T-3.2 |  |  |
-| REQ-301 | DES-1.6 | T-6.2 |  |  |
-| REQ-302 | DES-1.6 | T-6.2 |  |  |
-| REQ-303 | DES-1.6 | T-6.1, T-6.2 |  |  |
-| REQ-304 | DES-1.6 | T-6.2 |  |  |
-| REQ-401 | DES-1.7 | T-7.1 |  |  |
-| REQ-402 | DES-1.7 | T-7.1, T-7.5 |  |  |
-| REQ-403 | DES-1.7 | T-7.1 |  |  |
-| REQ-404 | DES-1.7 | T-7.2 |  |  |
-| REQ-405 | DES-1.7 | T-7.2 |  |  |
-| REQ-406 | DES-1.10 | T-9.4 |  |  |
-| REQ-501 | DES-1.8 | T-7.3 |  |  |
-| REQ-502 | DES-1.8 | T-7.3 |  |  |
-| REQ-503 | DES-1.3, DES-1.8 | T-7.3 |  |  |
-| REQ-504 | DES-1.8 | T-7.3 |  |  |
-| REQ-505 | DES-1.8, DES-1.10 | T-7.3, T-7.4 |  |  |
-| REQ-506 | DES-1.8 | T-8.4 |  |  |
-| REQ-601 | DES-1.10 | T-6.2, T-8.1 |  |  |
-| REQ-602 | DES-1.10 | T-8.1 |  |  |
-| REQ-603 | DES-1.10 | T-8.1 |  |  |
-| REQ-604 | DES-1.3, DES-1.10 | T-3.1, T-5.1, T-8.2 |  |  |
-| REQ-605 | DES-1.3, DES-1.10 | T-8.2 |  |  |
-| REQ-606 | DES-1.10 | T-9.4 |  |  |
-| REQ-607 | DES-1.10 | T-8.1, T-8.2, T-8.3, T-8.4, T-9.1 |  |  |
-| REQ-608 | DES-1.6, DES-1.10 | T-6.2, T-8.4, T-9.4 |  |  |
-| REQ-701 | DES-1.11 | T-1.2, T-2.6, T-3.2 |  |  |
-| REQ-702 | DES-1.11 | T-6.1, T-6.2, T-7.5 |  |  |
-| REQ-703 | DES-1.11, DES-1.10 | T-1.2, T-5.1 |  |  |
-| REQ-704 | DES-1.11, DES-1.10 | T-8.3 |  |  |
-| REQ-705 | DES-1.11 | T-9.4 |  |  |
-| REQ-706 | DES-1.11 | T-9.4 |  |  |
-| REQ-801 | DES-1.12 | T-1.1, T-9.1, T-9.2 |  |  |
-| REQ-802 | DES-1.9 | T-2.5 |  |  |
-| REQ-803 | DES-1.12 | T-1.1 |  |  |
-| REQ-804 | DES-1.11 | T-1.1, T-1.2, T-9.3 |  |  |
-| NFR-1 | DES-1.1, DES-1.10 | T-2.4, T-8.3 |  |  |
-| NFR-2 | DES-1.10 | T-8.1 |  |  |
-| NFR-3 | DES-1.10 | T-8.4 |  |  |
-| NFR-4 | DES-1.4, DES-1.5 | T-4.2, T-4.3, T-6.2 |  |  |
+| REQ-101 | DES-1.1 | T-2.1, T-2.3, T-2.4 | L-1, L-5, V-2 (`apps/worker/tests/typescript-loader.spec.ts`) | 66eb43c |
+| REQ-102 | DES-1.1 | T-2.1, T-2.3, T-2.4, T-8.2 | L-1, L-2, V-2 (`typescript-loader.spec.ts`) | 66eb43c |
+| REQ-103 | DES-1.1 | T-2.1, T-2.2, T-2.4 | L-3, L-5, V-2 (`typescript-loader.spec.ts`) | 66eb43c |
+| REQ-104 | DES-1.2 | T-4.1 | `tests/repo/worker-erasable-syntax.spec.ts` | af0c868 |
+| REQ-105 | DES-1.1, DES-1.10 | T-2.1, T-2.2, T-2.4 | L-2, L-3, V-1 (b)/(0)/(a) (`typescript-loader.spec.ts`) | 66eb43c |
+| REQ-106 | DES-1.1 | T-2.1, T-2.2, T-2.4 | L-4 (`typescript-loader.spec.ts`) | 66eb43c |
+| REQ-201 | DES-1.4 | T-6.2 | `tests/repo/container-toolchain-pins.spec.ts`, V-4 `node -v` | bb2199d |
+| REQ-202 | DES-1.3, DES-1.4 | T-6.2 | `tests/repo/container-toolchain-pins.spec.ts`, V-4 | bb2199d |
+| REQ-203 | DES-1.4, DES-1.5 | T-4.2, T-4.4, T-6.2 | `tests/repo/container-toolchain-pins.spec.ts` (engines.node) | af0c868, bb2199d |
+| REQ-204 | DES-1.5 | T-4.3, T-4.4 | `tests/repo/ci-workflows.spec.ts` (Node-pin guard) | af0c868 |
+| REQ-205 | DES-1.5 | T-4.2, T-4.4 | `tests/repo/container-toolchain-pins.spec.ts` | af0c868 |
+| REQ-206 | DES-1.3 | T-3.1, T-3.2 | V-3 (node24 image), V-5 (node26 image) | f9265c4 |
+| REQ-301 | DES-1.6 | T-6.2 | `tests/repo/dependabot.spec.ts`, pnpm lockfile check | bb2199d |
+| REQ-302 | DES-1.6 | T-6.2 | `tests/repo/dependabot.spec.ts`, pnpm lockfile check | bb2199d |
+| REQ-303 | DES-1.6 | T-6.1, T-6.2 | `tests/repo/dependabot.spec.ts` (HELD_BACK, root and apps/worker) | bb2199d |
+| REQ-304 | DES-1.6 | T-6.2 | `tests/repo/dependabot.spec.ts` (HELD_BACK) | bb2199d |
+| REQ-401 | DES-1.7 | T-7.1 | V-7 grep, `reviews/node26-constitution-r1.md` | 8512aa6 |
+| REQ-402 | DES-1.7 | T-7.1, T-7.5 | `reviews/node26-constitution-r1.md` | 8512aa6 |
+| REQ-403 | DES-1.7 | T-7.1 | `reviews/node26-constitution-r1.md` | 8512aa6 |
+| REQ-404 | DES-1.7 | T-7.2 | V-7 grep, `doc-links.spec.ts` | 8512aa6 |
+| REQ-405 | DES-1.7 | T-7.2 | V-7 grep, `doc-links.spec.ts` | 8512aa6 |
+| REQ-406 | DES-1.10 | T-9.4 | PR 本文（9.4 で作成） | pending |
+| REQ-501 | DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
+| REQ-502 | DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
+| REQ-503 | DES-1.3, DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
+| REQ-504 | DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
+| REQ-505 | DES-1.8, DES-1.10 | T-7.3, T-7.4 | V-7 grep | 8512aa6 |
+| REQ-506 | DES-1.8 | T-8.4 | `git diff --stat main -- specs/` (8.4) | — |
+| REQ-601 | DES-1.10 | T-6.2, T-8.1 | V-4 `mise run check` (958→960 passed, 81 files) | bb2199d, 8512aa6 |
+| REQ-602 | DES-1.10 | T-8.1 | V-4 `mise run build` | 8512aa6 |
+| REQ-603 | DES-1.10 | T-8.1 | V-4 `mise run size` (242.79 kB / 2.96 kB) | 8512aa6 |
+| REQ-604 | DES-1.3, DES-1.10 | T-3.1, T-5.1, T-8.2 | V-5 image build (node26) + V-3 (node24) | f9265c4 |
+| REQ-605 | DES-1.3, DES-1.10 | T-8.2 | V-5 all-module load: `all-loaded 7`, exit 0, DeprecationWarning 0 | f9265c4 |
+| REQ-606 | DES-1.10 | T-9.4 | V-9 CI（9.4 で記録） | pending |
+| REQ-607 | DES-1.10 | T-8.1, T-8.2, T-8.3, T-8.4, T-9.1 | `pdca/do.md`（V-1〜V-8 の記録） | — |
+| REQ-608 | DES-1.6, DES-1.10 | T-6.2, T-8.4, T-9.4 | V-8 `mise run audit` 出力、lockfile ダウングレード 0 件 | — |
+| REQ-701 | DES-1.11 | T-1.2, T-2.6, T-3.2 | C1〜C5 の一本の履歴 | 66eb43c, f9265c4, af0c868, bb2199d, 8512aa6 |
+| REQ-702 | DES-1.11 | T-6.1, T-6.2, T-7.5 | C4・C5 の分離、`git revert` 予行 (V-6) | bb2199d, 8512aa6 |
+| REQ-703 | DES-1.11, DES-1.10 | T-1.2, T-5.1 | V-3 Node 24 check (958 passed at the pre-rewrite C3; 960 at the rewritten C3 hook) | af0c868 |
+| REQ-704 | DES-1.11, DES-1.10 | T-8.3 | V-6 rollback rehearsal (Node 24 check, 959 passed) | — |
+| REQ-705 | DES-1.11 | T-9.4 | PR 本文（9.4） | pending |
+| REQ-706 | DES-1.11 | T-9.4 | PR 本文（merge commit、9.4） | pending |
+| REQ-801 | DES-1.12 | T-1.1, T-9.1, T-9.2 | `reviews/adversarial-r1.md` | C6 |
+| REQ-802 | DES-1.9 | T-2.5 | `docs/adr/0010-worker-typescript-loader.md`, doc-links | 66eb43c |
+| REQ-803 | DES-1.12 | T-1.1 | C0 (`ef0f282`) spec/plan/research/tasks/traceability | ef0f282 |
+| REQ-804 | DES-1.11 | T-1.1, T-1.2, T-9.3 | `wip/011-preverify` 退避（ローカル）、commit 9.3 で記録 | ef0f282 |
+| NFR-1 | DES-1.1, DES-1.10 | T-2.4, T-8.3 | V-2 (node24 and node26 loader runs) | 66eb43c |
+| NFR-2 | DES-1.10 | T-8.1 | V-4 `size` | 8512aa6 |
+| NFR-3 | DES-1.10 | T-8.4 | V-8 audit / secret-scan | — |
+| NFR-4 | DES-1.4, DES-1.5 | T-4.2, T-4.3, T-6.2 | `ci-workflows.spec.ts`, `container-toolchain-pins.spec.ts`, V-4 | af0c868, bb2199d |
 
 ## Gaps
 

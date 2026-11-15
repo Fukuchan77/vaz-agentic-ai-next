@@ -27,13 +27,13 @@ _Depends:_ none
 _Requirements:_ 7.1, 7.3, 8.1, 8.3, 8.4
 _Traces:_ REQ-701, REQ-703, REQ-801, REQ-803, REQ-804, DES-1.11, DES-1.12
 
-- [ ] 1.1 plan と tasks の承認を得て（人間の明示操作で `spec.json` の `approvals.design.approved` と `approvals.tasks.approved` を true にする）、SDD の成果物を C0 としてコミットする
+- [x] 1.1 plan と tasks の承認を得て（人間の明示操作で `spec.json` の `approvals.design.approved` と `approvals.tasks.approved` を true にする）、SDD の成果物を C0 としてコミットする
   _Boundary:_ `specs/011-node-26-runtime-upgrade/spec.md`, `specs/011-node-26-runtime-upgrade/spec.json`, `specs/011-node-26-runtime-upgrade/plan.md`, `specs/011-node-26-runtime-upgrade/research.md`, `specs/011-node-26-runtime-upgrade/tasks.md`, `specs/011-node-26-runtime-upgrade/traceability.md`
   _Depends:_ none
   _Requirements:_ 8.1, 8.3, 8.4
   _Traces:_ REQ-801, REQ-803, REQ-804, DES-1.12
   C1〜C5 がコミット済みの要件（R2.6、R6.8、R7.1、R7.6 を含む）を引けるよう、`spec.md` も C0 に入れる（指摘 H-1「spec.md を C0 に入れる」）。ステージは `git add <path>` で上の 6 ファイルだけを明示し、`spec.json` は 2 つの承認のあとにステージする。承認は利用者の明示操作で行い、エージェントが `approved` を書き換えない（憲章 原則 10）。`apps/web/AGENTS.md` と版 24 から外れる事前検証の差分（`mise.toml` など）は含めない。完了条件: `spec.json` の `approvals.design.approved` と `approvals.tasks.approved` が true で、どちらの承認も利用者の明示操作によることを確認した。ブランチ `chore/011-node-26-runtime-upgrade` に `docs(spec 011): add spec revisions, plan, research and tasks` が 1 件でき、上の 6 ファイルだけを含む。`git show --stat HEAD` に `spec.md` がある。research.md に gap-analysis §6 の 5 項目の結果がある。
-- [ ] 1.2 未コミットの差分を退避し、版 24 の worktree `prep/011-loader` を作る（P1〜P3）
+- [x] 1.2 未コミットの差分を退避し、版 24 の worktree `prep/011-loader` を作る（P1〜P3）
   _Boundary:_ `apps/worker/register-typescript-loader.mjs`, `apps/worker/typescript-loader.mjs`, `apps/worker/tests/typescript-loader.spec.ts`
   _Depends:_ 1.1
   _Requirements:_ 7.1, 7.3, 8.4
@@ -54,37 +54,37 @@ _Depends:_ 1
 _Requirements:_ 1.1, 1.2, 1.3, 1.5, 1.6, 7.1, 8.2
 _Traces:_ REQ-101, REQ-102, REQ-103, REQ-105, REQ-106, REQ-701, REQ-802, NFR-1, DES-1.1, DES-1.9
 
-- [ ] 2.1 回帰テスト L-1〜L-5 を先に書き、ローダーが `main` のままの状態で Red (0) を確認する
+- [x] 2.1 回帰テスト L-1〜L-5 を先に書き、ローダーが `main` のままの状態で Red (0) を確認する
   _Boundary:_ `apps/worker/tests/typescript-loader.spec.ts`, `specs/011-node-26-runtime-upgrade/pdca/do.md`（主の作業ツリー）
   _Depends:_ 1.2
   _Requirements:_ 1.1, 1.2, 1.3, 1.5, 1.6
   _Traces:_ REQ-101, REQ-102, REQ-103, REQ-105, REQ-106, DES-1.1
   plan「ローダーの回帰テスト」の表のとおりに書く。L-1/L-2 は `--throw-deprecation` 付きで `src/*.ts` の全モジュールと `@vaz/config/logger` を import し、列挙が 0 件でないことを先に検査する。L-3〜L-5 は `mkdtempSync` の一時ディレクトリの `node_modules/@vaz/fixture/` に symlink ではなく実ファイルを置き、`afterAll` で消す。L-4 の期待する行・列は、フィクスチャの文字列から計算する（ハードコードしない）。テスト名とコメントで Node 24 に触れる行は、同じ行に「Node 26」を書く（冒頭の規則）。リポジトリに型除去で扱えない `.ts` を置かない。このとき worktree のローダーは `main` のまま（`transform` + `register()`）。完了条件: V-1 (0) として、Node 24 で L-3（`enum` を受け入れてしまう）と L-4（行がずれる）が失敗し L-1/L-2/L-5 が通ること、Node 26 で L-1〜L-5 が `ERR_INVALID_ARG_VALUE` により失敗することを、`node -v` つきで `do.md` に記録した。
-- [ ] 2.2 `typescript-loader.mjs` だけを strip・同期版にし、Red (a) を確認する
+- [x] 2.2 `typescript-loader.mjs` だけを strip・同期版にし、Red (a) を確認する
   _Boundary:_ `apps/worker/typescript-loader.mjs`, `specs/011-node-26-runtime-upgrade/pdca/do.md`（主の作業ツリー）
   _Depends:_ 2.1
   _Requirements:_ 1.3, 1.5, 1.6
   _Traces:_ REQ-103, REQ-105, REQ-106, DES-1.1, DES-1.10
   `git apply --include=apps/worker/typescript-loader.mjs <scratchpad>/c1-draft.patch` で、`resolve` / `load` を同期にし `mode: "strip"` にする。`register-typescript-loader.mjs` は `main` のまま（`register()`）。完了条件: V-1 (a) として、Node 24 で L-1〜L-5 が通り、Node 26 で L-2 だけが `DEP0205`（`--throw-deprecation` による終了コード）で失敗することを `do.md` に記録した。これが R1.5 の「`register()` と `mode: "strip"` の組み合わせで Node 26 が失敗する」Red の証拠になる。`main` のローダーは証拠にしない。
-- [ ] 2.3 登録を `registerHooks()` に移す
+- [x] 2.3 登録を `registerHooks()` に移す
   _Boundary:_ `apps/worker/register-typescript-loader.mjs`
   _Depends:_ 2.2
   _Requirements:_ 1.1, 1.2
   _Traces:_ REQ-101, REQ-102, DES-1.1
   `git apply --include=apps/worker/register-typescript-loader.mjs <scratchpad>/c1-draft.patch`。plan「ローダーのフック」に従い、`registerHooks({ resolve, load })` で登録する。登録コメントは「Node 24 と Node 26 の両方」と同じ行に書く。`resolve` は拡張子のない相対 specifier が `ERR_MODULE_NOT_FOUND` のときだけ `.ts` を補い、他は投げ直す。`load` は `file:` かつ `.ts` で終わる URL だけを `stripTypeScriptTypes(source, { mode: "strip", sourceUrl: url })` で変換し、`sourceMap` は渡さない。完了条件: L-1〜L-5 が通る。
-- [ ] 2.4 Node 24 と Node 26 の両方で回帰テストを通し（V-2）、`load` フックの Red (b) を確認する
+- [x] 2.4 Node 24 と Node 26 の両方で回帰テストを通し（V-2）、`load` フックの Red (b) を確認する
   _Boundary:_ `apps/worker/typescript-loader.mjs`, `specs/011-node-26-runtime-upgrade/pdca/do.md`（主の作業ツリー）
   _Depends:_ 2.3
   _Requirements:_ 1.1, 1.2, 1.3, 1.5, 1.6
   _Traces:_ REQ-101, REQ-102, REQ-103, REQ-105, REQ-106, NFR-1, DES-1.10
   `mise exec node@24 -- pnpm exec vitest run --project worker apps/worker/tests/typescript-loader.spec.ts` と `node@26` 版を実行する。続けて V-1 (b): `load` を一時的に `nextLoad(url, context)` だけを返す形にし、L-3 / L-4 / L-5(a) が `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` で失敗し L-1 は通ること（L-1 だけでは `load` を守れない証拠）を確かめ、`load` を元へ戻す。完了条件: 戻したあと両方の版で L-1〜L-5 が緑。各コマンド、Node の版、件数、(b) の出力を `do.md` に記録した。
-- [ ] 2.5 (P) ADR-0010 を書き、`AGENTS.md` と `CLAUDE.md` にリンクを持つ項を足す
+- [x] 2.5 (P) ADR-0010 を書き、`AGENTS.md` と `CLAUDE.md` にリンクを持つ項を足す
   _Boundary:_ `docs/adr/0010-worker-typescript-loader.md`, `AGENTS.md`, `CLAUDE.md`
   _Depends:_ 2.3
   _Requirements:_ 8.2
   _Traces:_ REQ-802, DES-1.9
   ADR に Status、Date、仕様根拠、関連レビュー、Context、Decision、Alternatives、Consequences、再検討条件を書く。Decision は `stripTypeScriptTypes` の `mode: "strip"`、`registerHooks()`、`erasableSyntaxOnly` による保護、Node 24/26 両対応、イメージの pnpm を npm で入れること（`research.md` I-6、D-2）を含む。Consequences には、ビルド時の `packageManager` `+sha512` 照合が失われ npm の `dist.integrity`（レジストリ自身の値）だけになったこと、2026-11-15 の実測で両者が一致したこと（D-2）を書く。再検討条件には、ビルド内で sha512 を照合する手段を足す条件を書く（N-3）。`AGENTS.md` と `CLAUDE.md` では、このタスクではローダーの項だけを足し、71 行目 / 60 行目の据え置きの記述には触れない。ADR の本文で Node 24 に触れる行は、同じ行に「Node 26」を書く（冒頭の規則）。完了条件: 3 ファイルが ADR への相対リンクで結ばれ、`doc-links.spec.ts` が通る。
-- [ ] 2.6 C1 をコミットする
+- [x] 2.6 C1 をコミットする
   _Boundary:_ `apps/worker/register-typescript-loader.mjs`, `apps/worker/typescript-loader.mjs`, `apps/worker/tests/typescript-loader.spec.ts`, `docs/adr/0010-worker-typescript-loader.md`, `AGENTS.md`, `CLAUDE.md`
   _Depends:_ 2.4, 2.5
   _Requirements:_ 7.1
@@ -102,13 +102,13 @@ _Depends:_ 2
 _Requirements:_ 2.6, 6.4, 7.1
 _Traces:_ REQ-206, REQ-604, REQ-701, DES-1.3
 
-- [ ] 3.1 変更前の Dockerfile で Node 26 のビルドが失敗することを確かめ（Red）、build 段の pnpm の用意を `npm install --global pnpm@${PNPM_VERSION}` に変えて Node 24 と 26 の両方でビルドする
+- [x] 3.1 変更前の Dockerfile で Node 26 のビルドが失敗することを確かめ（Red）、build 段の pnpm の用意を `npm install --global pnpm@${PNPM_VERSION}` に変えて Node 24 と 26 の両方でビルドする
   _Boundary:_ `apps/worker/Dockerfile`, `specs/011-node-26-runtime-upgrade/pdca/do.md`（主の作業ツリー）
   _Depends:_ 2.6
   _Requirements:_ 2.6, 6.4
   _Traces:_ REQ-206, REQ-604, DES-1.3
   **先に Red（V-1c）**: Dockerfile を変える前に `docker build --build-arg NODE_VERSION=26 -f apps/worker/Dockerfile -t vaz-worker:011-red .` を実行し、build 段の `corepack` の行が `not found` で失敗することを、`node -v` と出力つきで `do.md` に記録する。失敗しなければ停止し、spec の前提（I-6）が崩れた原因を特定する。**次に Green**: `ARG PNPM_VERSION` の値、`CMD`、冒頭の sandbox の NOTE（C5 で書き換える。N-8）、`ARG NODE_VERSION` は変えない。変えるのは pnpm の用意の行とそのコメントだけ。完了条件: `docker build -f apps/worker/Dockerfile -t vaz-worker:011-node24 .`（版 24）と `docker build --build-arg NODE_VERSION=26 -f apps/worker/Dockerfile -t vaz-worker:011-node26-prep .`（版 26）の両方が成功する。Docker デーモンが応答しない場合は Rancher Desktop を起動して続け、省略しない。
-- [ ] 3.2 C2 をコミットする
+- [x] 3.2 C2 をコミットする
   _Boundary:_ `apps/worker/Dockerfile`
   _Depends:_ 3.1
   _Requirements:_ 2.6, 7.1
@@ -126,25 +126,25 @@ _Depends:_ 3
 _Requirements:_ 1.4, 2.3, 2.4, 2.5
 _Traces:_ REQ-104, REQ-203, REQ-204, REQ-205, NFR-4, DES-1.2, DES-1.5
 
-- [ ] 4.1 (P) `erasableSyntaxOnly` を実効値で固定するガードを作る
+- [x] 4.1 (P) `erasableSyntaxOnly` を実効値で固定するガードを作る
   _Boundary:_ `tests/repo/worker-erasable-syntax.spec.ts`
   _Depends:_ 3.2
   _Requirements:_ 1.4
   _Traces:_ REQ-104, DES-1.2
   root の `node_modules/.bin/tsc` を子プロセスで起動し、`tsc --showConfig -p apps/worker/tsconfig.json` と `-p apps/web/tsconfig.json` の出力を JSON として読んで `compilerOptions.erasableSyntaxOnly === true` を検査する。出力が JSON として読め `compilerOptions` を持つことを先に検査する（anti-false-green）。完了条件: 通る。`erasableSyntaxOnly` を一時的に `false` にすると落ち、戻すと通ることを確かめる（tsconfig の変更は残さない）。
-- [ ] 4.2 (P) `engines.node` が正本のメジャーに追随する検査を足し、corepack に触れたコメントを直す
+- [x] 4.2 (P) `engines.node` が正本のメジャーに追随する検査を足し、corepack に触れたコメントを直す
   _Boundary:_ `tests/repo/container-toolchain-pins.spec.ts`
   _Depends:_ 3.2
   _Requirements:_ 2.3, 2.5
   _Traces:_ REQ-203, REQ-205, NFR-4, DES-1.5
   `apps/worker/package.json` の `engines.node` が `>=<major>` の形で、`<major>` が `mise.toml` の `[tools] node` のメジャーと一致することを検査する。両方の値がパースできることを先に検査する。既存の `NODE_VERSION` の検査の意味は変えない。完了条件: 通る。`engines.node` を一時的に不一致にすると落ち、戻すと通ることを確かめる。
-- [ ] 4.3 (P) ワークフローが Node の版を `mise.toml` 以外に書いていないことの検査を足す
+- [x] 4.3 (P) ワークフローが Node の版を `mise.toml` 以外に書いていないことの検査を足す
   _Boundary:_ `tests/repo/ci-workflows.spec.ts`
   _Depends:_ 3.2
   _Requirements:_ 2.4
   _Traces:_ REQ-204, NFR-4, DES-1.5
   plan DES-1.5 の否定条件 4 つと前提 1 つを検査する。(1) `actions/setup-node` を使わない。(2) `with:` の下に `node-version` キーを持たない。(3) `NODE_VERSION` 環境変数を定義しない。(4) `jdx/mise-action` ステップの `with:` に `install_args` / `mise_toml` がなく、ワークフロー・ジョブ・ステップのどの `env:` にも `MISE_` で始まるキーがない（N-5）。前提: 既存の「1 件以上のワークフローを走査した」検査に加え、`jdx/mise-action` を使うステップを 1 件以上走査したこと（0 件なら (4) は何も見ていない）。`codeql.yml` と `dependency-review.yml` は mise を使わず Node も用意しないので、「全ワークフローが mise-action を使う」という肯定条件は置かない。限界（「mise-action が `mise.toml` を読む」こと自体は保証しない）を spec ファイルのコメントに書く。完了条件: 通る。一時的に (1) `setup-node` ステップ、(2) `node-version`、(3) `NODE_VERSION` の `env:`、(4) `MISE_NODE_VERSION` の `env:` と `install_args` を足したワークフローを作ると、それぞれ落ちることを確かめる（作った変更は残さない）。
-- [ ] 4.4 C3 をコミットする
+- [x] 4.4 C3 をコミットする
   _Boundary:_ `tests/repo/worker-erasable-syntax.spec.ts`, `tests/repo/container-toolchain-pins.spec.ts`, `tests/repo/ci-workflows.spec.ts`
   _Depends:_ 4.1, 4.2, 4.3
   _Requirements:_ 2.3, 2.4, 2.5
@@ -162,7 +162,7 @@ _Depends:_ 4
 _Requirements:_ 7.3, 6.4
 _Traces:_ REQ-703, REQ-604, DES-1.10, DES-1.11
 
-- [ ] 5.1 worktree の C3 の状態で `mise run check` と Node 24 のイメージのビルドを実行し、記録する
+- [x] 5.1 worktree の C3 の状態で `mise run check` と Node 24 のイメージのビルドを実行し、記録する
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`
   _Depends:_ 4.4
   _Requirements:_ 7.3, 6.4
@@ -180,13 +180,13 @@ _Depends:_ 5
 _Requirements:_ 2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 3.4, 6.1, 6.8, 7.2
 _Traces:_ REQ-201, REQ-202, REQ-203, REQ-301, REQ-302, REQ-303, REQ-304, REQ-601, REQ-608, REQ-702, NFR-4, DES-1.4, DES-1.6
 
-- [ ] 6.1 主の作業ツリーを戻して worktree を取り込み、C4 の差分を適用する（P5・P6）
+- [x] 6.1 主の作業ツリーを戻して worktree を取り込み、C4 の差分を適用する（P5・P6）
   _Boundary:_ `mise.toml`, `apps/worker/Dockerfile`, `apps/worker/package.json`, `package.json`, `pnpm-lock.yaml`, `.github/dependabot.yml`, `tests/repo/dependabot.spec.ts`
   _Depends:_ 5.1
   _Requirements:_ 7.2
   _Traces:_ REQ-702, DES-1.11
   `git status --short` が `apps/web/AGENTS.md` だけを示すことを確かめる（1.2 で事前検証の差分を `wip/011-preverify` へ退避コミットしてあるので、対象パスは既に clean。**差分を捨てる操作はなく、`git restore` は使わない**。clean でなければ停止して原因を特定する）。続けて `git merge --ff-only prep/011-loader` → **V-1d の Red**（C3 の HEAD で `git apply --include=tests/repo/dependabot.spec.ts <scratchpad>/c4.patch` を当て、`pnpm exec vitest run --project repo tests/repo/dependabot.spec.ts` が落ちることを `node -v` つきで `do.md` に記録する。`package.json` は `^24`、`dependabot.yml` は `>=25` のままなので、`heldMajor: 26` の検査が落ちる）→ 残りを `git apply --exclude=tests/repo/dependabot.spec.ts <scratchpad>/c4.patch`（`c4.patch` が worktree で `git apply --check` を通ったことが前提）→ `apps/worker/Dockerfile` の `ARG NODE_VERSION=24` を 26 に直す。その後 `git worktree remove`（`--force` なし）と `prep/011-loader` の削除。`--force` が要るときは worktree に未追跡の記録が残っているので、消す前に主の作業ツリーへ写す。`wip/011-preverify` は消さない（利用者が PR のマージ後に判断する）。完了条件: 履歴が C0 → C1 → C2 → C3 の一本で、作業ツリーに C4 の差分だけが残る（`dependabot.spec.ts` の差分は Red の確認で当て済み）。`git diff wip/011-preverify -- <C4 の対象パス>` は、`ARG NODE_VERSION` の 1 行以外で空である。V-1d の Red の出力が `do.md` にある。
-- [ ] 6.2 差分の中身を plan のとおりか確かめ、Node 26 で `check` を通して C4 をコミットする
+- [x] 6.2 差分の中身を plan のとおりか確かめ、Node 26 で `check` を通して C4 をコミットする
   _Boundary:_ `mise.toml`, `apps/worker/Dockerfile`, `apps/worker/package.json`, `package.json`, `pnpm-lock.yaml`, `.github/dependabot.yml`, `tests/repo/dependabot.spec.ts`
   _Depends:_ 6.1
   _Requirements:_ 2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 3.4, 6.1, 6.8, 7.2
@@ -205,31 +205,31 @@ _Depends:_ 6
 _Requirements:_ 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.3, 5.4, 5.5
 _Traces:_ REQ-401, REQ-402, REQ-403, REQ-404, REQ-405, REQ-501, REQ-502, REQ-503, REQ-504, REQ-505, DES-1.7, DES-1.8
 
-- [ ] 7.1 (P) 憲章を 2.4.0（MINOR）に改正し、新規コンテキストのレビューと人間承認を記録する
+- [x] 7.1 (P) 憲章を 2.4.0（MINOR）に改正し、新規コンテキストのレビューと人間承認を記録する
   _Boundary:_ `.sdd/memory/constitution.md`, `specs/011-node-26-runtime-upgrade/reviews/node26-constitution-r1.md`
   _Depends:_ 6.2
   _Requirements:_ 4.1, 4.2, 4.3
   _Traces:_ REQ-401, REQ-402, REQ-403, DES-1.7
   plan「憲章改正の内容」の表のとおりに、ツールチェーンの記述（Node 26 LTS）、Sync Impact Report（2.3.1 → 2.4.0。基準を一行で:「宣言済みの版の変更は、意図した版上げ（判断の変更）を MINOR、実態への追随（強制された訂正）を PATCH とする」）、改訂履歴の行（Node 24 LTS → Node 26 LTS を同じ行に）、末尾の `**Version**: 2.4.0` と `**Last amended**` を改める。原則 1〜11 の文面は変えない。`git diff -- .sdd/memory/constitution.md`（パスを指定した差分）と spec の R4 だけを渡して `sdd-reviewer` に新規コンテキストでレビューさせる（7.2・7.3 と並行しても、他のファイルの差分がレビューの入力に混ざらない。N-10）。指摘への対応と人間承認（承認者、日時、範囲）を `reviews/node26-constitution-r1.md` に書く（節の構成は spec 009 の `python314-constitution-r1.md` に合わせる）。完了条件: 承認の記録がある。承認の記録がなければ 7.5 に進まない。
-- [ ] 7.2 (P) steering と依存ポリシーを Node 26 に改める
+- [x] 7.2 (P) steering と依存ポリシーを Node 26 に改める
   _Boundary:_ `.sdd/steering/tech.md`, `docs/dependency-policy.md`
   _Depends:_ 6.2
   _Requirements:_ 4.4, 4.5
   _Traces:_ REQ-404, REQ-405, DES-1.7
   steering の Constraints を Node 26 LTS にする。依存ポリシーは、§7 の `(@types/node 24、…)` → 26、§8 のレーン表の TypeScript ベータの行から Node 26 を外して「（Node 26 LTS はハブへ取り込み済み、2026-11-15）」と添える、§8.1 の `@types/node` の行を `^26`・「ランタイムの Node 26 LTS に合わせている」（3 列目は変えない）、§8.2 手順 2 に「据え置きを解除するときは行を削除する。次のメジャーへ移すときは行を書き換える」を書き分ける。ベータレーンの記録（`next-agentic-stack` の `docs/beta-lane/2026-11-15-node-26.md`）はリンクにせずコードスパンで書く。完了条件: `doc-links.spec.ts` が通る。
-- [ ] 7.3 (P) 利用者・agent 向けの記述とコメントを Node 26 に揃える
+- [x] 7.3 (P) 利用者・agent 向けの記述とコメントを Node 26 に揃える
   _Boundary:_ `README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/cross-repo-adoption-backlog.md`, `docker-compose.yml`, `apps/worker/Dockerfile`, `apps/worker/tsconfig.json`, `apps/worker/src/main.ts`
   _Depends:_ 6.2
   _Requirements:_ 5.1, 5.2, 5.3, 5.4, 5.5
   _Traces:_ REQ-501, REQ-502, REQ-503, REQ-504, REQ-505, DES-1.8
   `README.md` は英語 3 行・日本語 2 行、`AGENTS.md:71` と `CLAUDE.md:60` は `@types/node` の据え置きを `^26`（Node 26 LTS）、`docs/cross-repo-adoption-backlog.md:112` は「2026-11-15 時点: `@types/node` 26」、`docker-compose.yml:86`・`apps/worker/tsconfig.json:2`・`apps/worker/src/main.ts:18` のコメントは Node 26（`main.ts` はコードを変えない）。`apps/worker/Dockerfile` の Node の版に触れるコメント 2 行（冒頭と runtime 段）も Node 26 にし、冒頭の「`docker build` は sandbox で塞がれている（env FLAG）」という NOTE を、「`docker build` は V-5 で実測済み（`pdca/do.md`）。Inngest Connect に接続した実走は未実施」の趣旨に書き換える（N-8。事実と食い違う文を残さない）。`ARG NODE_VERSION` の行は C4 で済んでおり触れない（R7.2）。Node 24 に触れる行は同じ行に「Node 26」を書く。`docs/cross-repo-adoption-backlog.md:59`（X-15 の起票時の行）と `specs/` 配下の過去の記録は書き換えない。完了条件: 上の各行が改まっている。
-- [ ] 7.4 残った「Node 24」の記述を固定の grep で確かめる（V-7）
+- [x] 7.4 残った「Node 24」の記述を固定の grep で確かめる（V-7）
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`
   _Depends:_ 7.1, 7.2, 7.3
   _Requirements:_ 5.5
   _Traces:_ REQ-505, DES-1.10
   plan「記述の検査」の `git grep … | grep -vE 'Node(\.js)? ?26'` を、そのまま、作業ツリーで実行する（`git grep` は追跡中のファイルの作業ツリーの内容を読む。コミット後の再実行は 7.5 で行う）。パターンや除外のパスを広げて合わせない。完了条件: 残りが `docs/cross-repo-adoption-backlog.md` の X-15 の行の 1 行だけ。lockfile の確認も合格。結果を `pdca/do.md` に記録する。
-- [ ] 7.5 憲章の承認記録を確かめて C5 をコミットし、V-7 を再実行する
+- [x] 7.5 憲章の承認記録を確かめて C5 をコミットし、V-7 を再実行する
   _Boundary:_ `.sdd/memory/constitution.md`, `.sdd/steering/tech.md`, `docs/dependency-policy.md`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/cross-repo-adoption-backlog.md`, `docker-compose.yml`, `apps/worker/Dockerfile`, `apps/worker/tsconfig.json`, `apps/worker/src/main.ts`, `specs/011-node-26-runtime-upgrade/reviews/node26-constitution-r1.md`
   _Depends:_ 7.1, 7.4
   _Requirements:_ 4.2, 7.2
@@ -247,25 +247,25 @@ _Depends:_ 7
 _Requirements:_ 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.7, 6.8, 7.4
 _Traces:_ REQ-506, REQ-601, REQ-602, REQ-603, REQ-604, REQ-605, REQ-607, REQ-608, REQ-704, NFR-1, NFR-2, NFR-3, DES-1.10
 
-- [ ] 8.1 `check`、`build`、`size`、`openapi:gen` を最終の HEAD で実行する（V-4）
+- [x] 8.1 `check`、`build`、`size`、`openapi:gen` を最終の HEAD で実行する（V-4）
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`
   _Depends:_ 7.5
   _Requirements:_ 6.1, 6.2, 6.3, 6.7
   _Traces:_ REQ-601, REQ-602, REQ-603, REQ-607, NFR-2, DES-1.10
   `mise run check`、`mise run build`、`mise run size`、`mise run openapi:gen && git diff --exit-code`。完了条件: `check` が緑で件数が 80 ファイル / 949 passed, 1 skipped から減らない（skip の追加やテストの削除で緑にしない）。`size` が JS 420 kB / CSS 4.0 kB 以内。`openapi:gen` の差分が 0。実際に動かした Node の版（`node -v`）と件数を記録する。
-- [ ] 8.2 Node 26 のイメージをビルドし、全モジュールの読み込みを検査する（V-5）
+- [x] 8.2 Node 26 のイメージをビルドし、全モジュールの読み込みを検査する（V-5）
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`
   _Depends:_ 7.5
   _Requirements:_ 6.4, 6.5, 6.7, 1.2
   _Traces:_ REQ-604, REQ-605, REQ-607, REQ-102, DES-1.10
   plan「イメージの検証コマンド」を、そのまま実行する（`start.ts` は import だけなら接続しない。環境変数が要る場合はダミー値を `-e` で渡し、変数名を記録する）。完了条件: ビルドが成功し、`all-loaded <n>`、`exit=0`、`DeprecationWarning` が 0 件。記録に `node -v`、OS の版、`exit`、stdout、`DeprecationWarning` の件数、stderr の全文を残す。あわせて plan V-5 の pnpm の確認（イメージ内の `pnpm --version` が `PNPM_VERSION` と一致すること、`npm view` の `dist.integrity` を hex に直した値が `packageManager` の `+sha512.` と一致すること。D-2）を実行し、`integrity-match <版>` の出力を記録する。`integrity-MISMATCH` なら停止し、原因を特定する。
-- [ ] 8.3 ロールバックの予行をする（V-6）
+- [x] 8.3 ロールバックの予行をする（V-6）
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`
   _Depends:_ 7.5
   _Requirements:_ 7.4, 6.7
   _Traces:_ REQ-704, REQ-607, NFR-1, DES-1.10, DES-1.11
   `git worktree add -b verify/011-rollback ../vaz-agentic-ai-next-011-rollback HEAD` の中で `git revert --no-edit <C5> <C4>` → `mise trust && mise install && pnpm install --frozen-lockfile && mise run check`。完了条件: Node 24 で `check` が全段成功する（`node -v` と件数を記録）。終わったら worktree とブランチを消す。push しない。
-- [ ] 8.4 セキュリティと過去の記録の無変更を確かめる（V-8、5.6）
+- [x] 8.4 セキュリティと過去の記録の無変更を確かめる（V-8、5.6）
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`
   _Depends:_ 7.5
   _Requirements:_ 5.6, 6.7, 6.8
@@ -283,19 +283,19 @@ _Depends:_ 8
 _Requirements:_ 4.6, 6.6, 6.7, 6.8, 7.5, 7.6, 8.1, 8.4
 _Traces:_ REQ-406, REQ-606, REQ-607, REQ-608, REQ-705, REQ-706, REQ-801, REQ-804, DES-1.10, DES-1.11, DES-1.12
 
-- [ ] 9.1 検証の記録と traceability を仕上げる
+- [x] 9.1 検証の記録と traceability を仕上げる
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`, `specs/011-node-26-runtime-upgrade/traceability.md`, `specs/011-node-26-runtime-upgrade/tasks.md`
   _Depends:_ 8.1, 8.2, 8.3, 8.4
   _Requirements:_ 6.7, 8.1
   _Traces:_ REQ-607, REQ-801, DES-1.10, DES-1.12
   `pdca/do.md` に V-1〜V-8 のコマンド、実行した Node の版、件数、Red の証拠がそろっていることを確認する（終了コードだけの記録は不可）。`traceability.md` の Test と Commit 列を埋め、`tasks.md` の完了印を付ける。`pdca/do.md` の V-9 の行には「PR のチェック一覧と PR コメントが正本」と書く。
-- [ ] 9.2 新規コンテキストの敵対的レビューを 1 回行う
+- [x] 9.2 新規コンテキストの敵対的レビューを 1 回行う
   _Boundary:_ `specs/011-node-26-runtime-upgrade/reviews/adversarial-r1.md`
   _Depends:_ 9.1
   _Requirements:_ 8.1
   _Traces:_ REQ-801, DES-1.12
   `sdd-reviewer` に C0〜C5 の差分と spec・plan を渡し、結果を 1 ラウンド 1 ファイルで記録する。完了条件: CRITICAL の指摘が残っていない。
-- [ ] 9.3 C6 をコミットする
+- [x] 9.3 C6 をコミットする
   _Boundary:_ `specs/011-node-26-runtime-upgrade/pdca/do.md`, `specs/011-node-26-runtime-upgrade/traceability.md`, `specs/011-node-26-runtime-upgrade/tasks.md`, `specs/011-node-26-runtime-upgrade/reviews/adversarial-r1.md`, `specs/011-node-26-runtime-upgrade/spec.json`
   _Depends:_ 9.2
   _Requirements:_ 8.4
