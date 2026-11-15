@@ -16,15 +16,19 @@ const SHA_PIN = /^[^@]+@[0-9a-f]{40}$/;
 interface WorkflowStep {
 	uses?: string;
 	run?: string;
+	with?: Record<string, unknown>;
+	env?: Record<string, unknown>;
 }
 
 interface WorkflowJob {
 	steps?: WorkflowStep[];
 	permissions?: unknown;
+	env?: Record<string, unknown>;
 }
 
 interface WorkflowDoc {
 	permissions?: unknown;
+	env?: Record<string, unknown>;
 	jobs?: Record<string, WorkflowJob>;
 }
 
@@ -73,6 +77,85 @@ describe("GitHub Actions workflow hygiene (X-1)", () => {
 			.map(({ file }) => file);
 
 		expect(missing).toEqual([]);
+	});
+});
+
+/**
+ * Node pin guard (spec 011 R2.4).
+ *
+ * `mise.toml` `[tools] node` is the single source of the Node major; CI gets it
+ * through `jdx/mise-action`, which reads `mise.toml`. So a workflow must not name a
+ * Node version of its own. Four negative conditions, plus one precondition:
+ *
+ *  1. no `actions/setup-node` step,
+ *  2. no `node-version` key under `with:`,
+ *  3. no `NODE_VERSION` environment variable,
+ *  4. no input that overrides mise's resolution: `install_args` / `mise_toml` under a
+ *     `jdx/mise-action` step's `with:`, or any `MISE_*` key in a workflow-, job- or
+ *     step-level `env:` (`MISE_NODE_VERSION` would install a Node that `mise.toml`
+ *     does not name, for CI only).
+ *
+ * The check is negative-only on purpose: `codeql.yml` and `dependency-review.yml` use
+ * neither mise nor Node, so "every workflow uses mise-action" would be false.
+ *
+ * Limit: this proves no *other* Node version is declared. It does not prove that
+ * `jdx/mise-action` reads `mise.toml` — that is the action's documented behaviour.
+ */
+const MISE_ACTION = /^jdx\/mise-action@/;
+
+function envKeys(env: Record<string, unknown> | undefined): string[] {
+	return Object.keys(env ?? {});
+}
+
+async function scanNodePins() {
+	const workflows = await loadWorkflows();
+	const findings: string[] = [];
+	let miseActionSteps = 0;
+
+	for (const { file, doc } of workflows) {
+		for (const key of envKeys(doc.env)) {
+			if (key === "NODE_VERSION") findings.push(`${file}: env NODE_VERSION`);
+			if (key.startsWith("MISE_")) findings.push(`${file}: workflow env ${key}`);
+		}
+		for (const [jobId, job] of Object.entries(doc.jobs ?? {})) {
+			for (const key of envKeys(job.env)) {
+				if (key === "NODE_VERSION") findings.push(`${file}#${jobId}: env NODE_VERSION`);
+				if (key.startsWith("MISE_")) findings.push(`${file}#${jobId}: job env ${key}`);
+			}
+			for (const step of job.steps ?? []) {
+				const where = `${file}#${jobId}`;
+				if (step.uses?.startsWith("actions/setup-node@")) findings.push(`${where}: setup-node`);
+				if (step.with && "node-version" in step.with) findings.push(`${where}: with node-version`);
+				for (const key of envKeys(step.env)) {
+					if (key === "NODE_VERSION") findings.push(`${where}: env NODE_VERSION`);
+					if (key.startsWith("MISE_")) findings.push(`${where}: step env ${key}`);
+				}
+				if (step.uses && MISE_ACTION.test(step.uses)) {
+					miseActionSteps += 1;
+					for (const input of ["install_args", "mise_toml"]) {
+						if (step.with && input in step.with) findings.push(`${where}: mise-action ${input}`);
+					}
+				}
+			}
+		}
+	}
+
+	return { scanned: workflows.length, miseActionSteps, findings };
+}
+
+describe("CI takes the Node version from mise.toml only (R2.4)", () => {
+	test("scans workflows and at least one jdx/mise-action step (anti-false-green)", async () => {
+		const { scanned, miseActionSteps } = await scanNodePins();
+
+		expect(scanned).toBeGreaterThan(0);
+		// With zero mise-action steps, the MISE_* / install_args checks below see nothing.
+		expect(miseActionSteps).toBeGreaterThan(0);
+	});
+
+	test("no workflow declares a Node version or overrides mise's resolution", async () => {
+		const { findings } = await scanNodePins();
+
+		expect(findings).toEqual([]);
 	});
 });
 

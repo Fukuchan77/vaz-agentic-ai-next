@@ -1,5 +1,5 @@
 {
-	// TS config for apps/worker (a long-running Node 24 worker). Inherits the
+	// TS config for apps/worker (a long-running Node 26 worker). Inherits the
 	// framework-agnostic strict base. Unlike apps/web it adds no DOM lib / jsx /
 	// next plugin — the worker is a pure Node process (durable workflow runner)
 	// with no React/DOM. `pnpm --filter @vaz/worker run typecheck` uses this local

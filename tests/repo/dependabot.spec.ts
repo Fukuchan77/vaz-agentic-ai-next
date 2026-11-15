@@ -41,7 +41,7 @@ const ROOT = new URL("../../", import.meta.url);
 // Deliberately-held-back majors (AGENTS.md / CLAUDE.md): package.json pins the
 // range below; dependabot.yml must ignore the next major and above.
 const HELD_BACK: ReadonlyArray<{ name: string; heldMajor: number }> = [
-	{ name: "@types/node", heldMajor: 24 },
+	{ name: "@types/node", heldMajor: 26 },
 ];
 
 /**
@@ -166,9 +166,10 @@ describe(".github/dependabot.yml (X-15)", () => {
 	});
 
 	test("npm ecosystem ignores exactly the majors held back in package.json", async () => {
-		const [doc, packageJsonText] = await Promise.all([
+		const [doc, packageJsonText, workerPackageJsonText] = await Promise.all([
 			loadDependabotConfig(),
 			readFile(new URL("package.json", ROOT), "utf8"),
+			readFile(new URL("apps/worker/package.json", ROOT), "utf8"),
 		]);
 		const packageJson = JSON.parse(packageJsonText) as PackageJson;
 
@@ -179,13 +180,20 @@ describe(".github/dependabot.yml (X-15)", () => {
 		);
 
 		for (const { name, heldMajor } of HELD_BACK) {
-			const declaredRange = packageJson.devDependencies?.[name];
-			expect(declaredRange, `${name} must still be a devDependency`).toBeDefined();
-			expect(
-				declaredRange,
-				`package.json's ${name} range must stay on major ${heldMajor} — ` +
-					"update this test's HELD_BACK table (and the AGENTS.md/CLAUDE.md bullet) if it changed on purpose",
-			).toMatch(new RegExp(`^[~^]?${heldMajor}\\.`));
+			// Both workspaces pin @types/node to the runtime major (root and apps/worker).
+			const workerPackageJson = JSON.parse(workerPackageJsonText) as PackageJson;
+			for (const [label, manifest] of [
+				["package.json", packageJson],
+				["apps/worker/package.json", workerPackageJson],
+			] as const) {
+				const declaredRange = manifest.devDependencies?.[name];
+				expect(declaredRange, `${name} must still be a devDependency of ${label}`).toBeDefined();
+				expect(
+					declaredRange,
+					`${label}'s ${name} range must stay on major ${heldMajor} — ` +
+						"update this test's HELD_BACK table (and the AGENTS.md/CLAUDE.md bullet) if it changed on purpose",
+				).toMatch(new RegExp(`^[~^]?${heldMajor}\\.`));
+			}
 
 			const versions = ignoreByName.get(name);
 			expect(versions, `dependabot.yml must ignore ${name} >= ${heldMajor + 1}`).toEqual([

@@ -30,14 +30,14 @@ By eliminating boilerplate optimization via the React Compiler and leveraging a 
 | Durable workflow engine  | [Inngest](https://www.inngest.com) (self-hosted, drives `apps/worker`)                                                                          |
 | Auth                     | [Auth.js](https://authjs.dev) (`next-auth@5`; Entra ID / Google Workspace)                                                                      |
 | Package manager          | [pnpm 12](https://pnpm.io)                                                                                                                     |
-| Task runner / toolchain  | [mise](https://mise.jdx.dev) (Node 24 LTS + pnpm 12 + `uv` + gitleaks pinned)                                                                    |
+| Task runner / toolchain  | [mise](https://mise.jdx.dev) (Node 26 LTS + pnpm 12 + `uv` + gitleaks pinned)                                                                    |
 
 ### Getting Started
 
-Prerequisite: [mise](https://mise.jdx.dev) installed (it provides Node 24 LTS, pnpm 12, `uv`, and gitleaks, all pinned in `mise.toml`; `package.json#packageManager` is the source of truth for the exact pnpm build).
+Prerequisite: [mise](https://mise.jdx.dev) installed (it provides Node 26 LTS, pnpm 12, `uv`, and gitleaks, all pinned in `mise.toml`; `package.json#packageManager` is the source of truth for the exact pnpm build).
 
 ```bash
-mise install                    # Node 24 / pnpm 12 / uv / gitleaks
+mise install                    # Node 26 / pnpm 12 / uv / gitleaks
 pnpm install                    # install dependencies (also activates git hooks)
 cp .env.example .env.local      # set provider/auth values; host URLs use localhost
 docker compose --env-file .env.local up -d  # Postgres, Redis, Inngest, worker
@@ -213,10 +213,10 @@ React Compiler による最適化ボイラープレートの排除と、Rust 製
 
 ### はじめに
 
-前提: [mise](https://mise.jdx.dev) をインストール済みであること(Node 24 LTS・pnpm 12・`uv`・gitleaks は `mise.toml` の固定バージョンで mise が用意します。pnpm の厳密なビルドは `package.json#packageManager` を正本とします)。
+前提: [mise](https://mise.jdx.dev) をインストール済みであること(Node 26 LTS・pnpm 12・`uv`・gitleaks は `mise.toml` の固定バージョンで mise が用意します。pnpm の厳密なビルドは `package.json#packageManager` を正本とします)。
 
 ```bash
-mise install                       # Node 24 / pnpm 12 / uv / gitleaks を用意
+mise install                       # Node 26 / pnpm 12 / uv / gitleaks を用意
 pnpm install                       # 依存をインストール(git フックも自動で有効化)
 cp .env.example .env.local         # provider/auth を設定。ホスト向け URL は localhost
 docker compose --env-file .env.local up -d  # Postgres・Redis・Inngest・worker

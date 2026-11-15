@@ -65,10 +65,10 @@ updates:
       # for openapi-typescript codegen. Using Fallback hold (ignore without versions/update-types)
       # to prevent bot mis-upgrades; root minor/patch tracked manually per docs/dependency-policy.md §8.
       - dependency-name: "typescript"
-      # @types/node tracks the Node major mise.toml pins (24 LTS); bump it in
+      # @types/node tracks the Node major mise.toml pins (26 LTS); bump it in
       # the same change that moves the runtime, never before.
       - dependency-name: "@types/node"
-        versions: [">=25"]
+        versions: [">=27"]
 
   - package-ecosystem: "uv"
     directory: "/services/agent"

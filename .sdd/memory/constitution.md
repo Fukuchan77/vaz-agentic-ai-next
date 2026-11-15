@@ -1,21 +1,22 @@
 <!--
 SYNC IMPACT REPORT
-Version Change: 2.2.0 → 2.3.0
+Version Change: 2.3.1 → 2.4.0
+Bump criterion: 宣言済みの版の変更は、意図した版上げ（判断の変更）を MINOR、実態への追随（強制された訂正）を PATCH とする。
 Modified Principles:
-  - 11. 依存とバージョンは宣言に従う → 「新しすぎる版を選ばせない」ピンの例を、撤去済みの `fastapi<0.137` / `starlette<1.0` / Python 3.13 から `chromadb<1.0` と `services/api` の Python 3.14 固定へ更新
+  - none（原則 1〜11 の文面は変えない）
 Modified Sections:
-  - Additional Constraints / ツールチェーン → 版の正本をツールごとに明記し、他の箇所は正本に追随させてガードテストで検証する（Python はレーンごとの `.python-version`）。`services/api` を 3.14、`services/agent` を 3.13 と書き分け、slowapi を理由とする文を削除。Python 3.15 の非採用条件を追加（spec 009 R7）
-  - 改訂履歴 → 2.3.0 の MINOR 改正を追加
+  - Additional Constraints / ツールチェーン → Node の正本の版を Node 24 LTS → Node 26 LTS へ上げた（`mise.toml` の `[tools] node`）。他の箇所（worker の Dockerfile の `ARG NODE_VERSION`、`engines.node`、`@types/node`）は正本に追随させた（spec 011 R2 / R3 / R4.1）
+  - 改訂履歴 → 2.4.0 の MINOR 改正を追加
 Added Sections:
   - none
 Removed Sections:
   - none
 Templates Status:
-  ✅ specs/009-agent-ui-and-beta-intake/reviews/python314-constitution-r1.md - 新規コンテキストのレビューと人間承認を記録
-  ✅ AGENTS.md / CLAUDE.md - root の services/api の Python 記述を 3.14 へ更新
-  ✅ services/api/AGENTS.md / services/api/CLAUDE.md - 唯一の pin を `.python-version` と明記し 3.14 へ更新
-  ✅ .sdd/steering/tech.md - Python の版をレーン別に更新
-  ✅ docs/dependency-policy.md - §8.1 の据え置き行を 3.15 の非採用条件へ更新
+  ✅ specs/011-node-26-runtime-upgrade/reviews/node26-constitution-r1.md - 新規コンテキストのレビューと人間承認を記録
+  ✅ .sdd/steering/tech.md - Constraints の宣言済みの版を Node 26 LTS へ更新
+  ✅ docs/dependency-policy.md - §7、§8 のレーン表、§8.1 の `@types/node` の行、§8.2 手順 2 を更新
+  ✅ README.md - 前提の Node を 26 LTS へ更新
+  ✅ AGENTS.md / CLAUDE.md - `@types/node` の据え置きを `^26`（Node 26 LTS）へ更新
 Deferred Items:
   - TODO(BRANCH_COVERAGE_THRESHOLD): 実測ベースライン取得後に確定（継続）
 -->
@@ -268,7 +269,7 @@ allowlist を 1 か所に集約する。
 
 **ツールチェーン**: 版の正本はツールごとに 1 か所とする。他の箇所（`mise.toml` の pnpm major、Dockerfile の
 `ARG` / `FROM`、`requires-python`、Ruff / pyright の target 等）は正本に追随させ、ガードテストがある箇所はそれで一致を検証する。
-Node 24 LTS と uv 0.13 系は `mise.toml`、pnpm 12 系は root `package.json` の `packageManager`（完全固定）が正本である。
+Node 26 LTS と uv 0.13 系は `mise.toml`、pnpm 12 系は root `package.json` の `packageManager`（完全固定）が正本である。
 Python はレーンごとの `.python-version`（uv が interpreter を選ぶときに読むファイル）が正本であり、root の `mise.toml` は
 Python の版を持たない。
 `services/api` は Python 3.14、`services/agent` は Python 3.13 とし、片方の版上げはもう片方を動かさない。
@@ -362,6 +363,7 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 | 2.2.0 | 2026-10-05 | MINOR | ルートワークスペースで TypeScript 7.x を採用し、OpenAPI codegen 向けに @vaz/schemas に TypeScript 6.0.3 を隔離（ADR-0009、TODO(TYPESCRIPT_MAJOR) を解消） |
 | 2.3.0 | 2026-10-06 | MINOR | `services/api` を Python 3.14 へ上げ、`services/agent` は 3.13 に据え置くとレーン別に明記。slowapi を理由とする文を削除し、版の正本をツールごとに明記（Python はレーンの `.python-version`）。Python 3.15 の非採用条件を追加（spec 009 R7） |
 | 2.3.1 | 2026-11-14 | PATCH | Additional Constraints のツールチェーン記述を実態に合わせて訂正（uv 0.12 系 → 0.13 系。uv 0.13.4 未満が同梱する CA ストアの脆弱性 GHSA-hq85-5cpj-mr62 の修正が 0.12 系に無く、正本の `mise.toml` を 0.13 へ上げたため）。規範自体は変更なし。 |
+| 2.4.0 | 2026-11-15 | MINOR | Node の正本の版を Node 24 LTS → Node 26 LTS へ上げた（意図した版上げのため MINOR。ベータレーンの検証記録は `next-agentic-stack` PR #77）。worker ローダー（ADR-0010）と Dockerfile の pnpm の入れ方を両対応に直したうえで、`mise.toml`、worker の `ARG NODE_VERSION`、`engines.node`、`@types/node` の据え置きを 26 に揃えた（spec 011）。規範（原則 1〜11）は変更なし。 |
 
 ### 未決事項（Deferred）
 
@@ -371,6 +373,6 @@ SHA ピンの目的は未審査コードの実行を防ぐことだが、実行�
 
 ---
 
-**Version**: 2.3.1 |
+**Version**: 2.4.0 |
 **Ratified**: 2026-08-29 |
-**Last amended**: 2026-11-14
+**Last amended**: 2026-11-15
