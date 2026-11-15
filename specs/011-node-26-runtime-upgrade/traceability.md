@@ -30,7 +30,7 @@ ID conventions (see `~/.claude/sdd/rules/analysis.md`):
 | REQ-403 | DES-1.7 | T-7.1 | `reviews/node26-constitution-r1.md` | 8512aa6 |
 | REQ-404 | DES-1.7 | T-7.2 | V-7 grep, `doc-links.spec.ts` | 8512aa6 |
 | REQ-405 | DES-1.7 | T-7.2 | V-7 grep, `doc-links.spec.ts` | 8512aa6 |
-| REQ-406 | DES-1.10 | T-9.4 | PR 本文（9.4 で作成） | pending |
+| REQ-406 | DES-1.10 | T-9.4 | PR #215 本文（`next-agentic-stack` PR #77 へのリンク） | 5d3e922 |
 | REQ-501 | DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
 | REQ-502 | DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
 | REQ-503 | DES-1.3, DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
@@ -42,15 +42,15 @@ ID conventions (see `~/.claude/sdd/rules/analysis.md`):
 | REQ-603 | DES-1.10 | T-8.1 | V-4 `mise run size` (242.79 kB / 2.96 kB) | 8512aa6 |
 | REQ-604 | DES-1.3, DES-1.10 | T-3.1, T-5.1, T-8.2 | V-5 image build (node26) + V-3 (node24) | f9265c4 |
 | REQ-605 | DES-1.3, DES-1.10 | T-8.2 | V-5 all-module load: `all-loaded 7`, exit 0, DeprecationWarning 0 | f9265c4 |
-| REQ-606 | DES-1.10 | T-9.4 | V-9 CI（9.4 で記録） | pending |
+| REQ-606 | DES-1.10 | T-9.4 | PR #215 の CI 全ジョブ成功（コメント 6893490112） | 5d3e922 |
 | REQ-607 | DES-1.10 | T-8.1, T-8.2, T-8.3, T-8.4, T-9.1 | `pdca/do.md`（V-1〜V-8 の記録） | — |
 | REQ-608 | DES-1.6, DES-1.10 | T-6.2, T-8.4, T-9.4 | V-8 `mise run audit` 出力、lockfile ダウングレード 0 件 | — |
 | REQ-701 | DES-1.11 | T-1.2, T-2.6, T-3.2 | C1〜C5 の一本の履歴 | 66eb43c, f9265c4, af0c868, bb2199d, 8512aa6 |
 | REQ-702 | DES-1.11 | T-6.1, T-6.2, T-7.5 | C4・C5 の分離、`git revert` 予行 (V-6) | bb2199d, 8512aa6 |
 | REQ-703 | DES-1.11, DES-1.10 | T-1.2, T-5.1 | V-3 Node 24 check (958 passed at the pre-rewrite C3; 960 at the rewritten C3 hook) | af0c868 |
 | REQ-704 | DES-1.11, DES-1.10 | T-8.3 | V-6 rollback rehearsal (Node 24 check, 959 passed) | — |
-| REQ-705 | DES-1.11 | T-9.4 | PR 本文（9.4） | pending |
-| REQ-706 | DES-1.11 | T-9.4 | PR 本文（merge commit、9.4） | pending |
+| REQ-705 | DES-1.11 | T-9.4 | PR #215 本文（ロールバック手順、merge commit） | 5d3e922 |
+| REQ-706 | DES-1.11 | T-9.4 | PR #215 本文（merge commit 指定） | 5d3e922 |
 | REQ-801 | DES-1.12 | T-1.1, T-9.1, T-9.2 | `reviews/adversarial-r1.md` | C6 |
 | REQ-802 | DES-1.9 | T-2.5 | `docs/adr/0010-worker-typescript-loader.md`, doc-links | 66eb43c |
 | REQ-803 | DES-1.12 | T-1.1 | C0 (`ef0f282`) spec/plan/research/tasks/traceability | ef0f282 |
