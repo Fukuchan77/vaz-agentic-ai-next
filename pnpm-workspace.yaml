@@ -15,7 +15,8 @@ minimumReleaseAge: 1440
 # Keep pnpm 12 from prepending a package-manager env document to pnpm-lock.yaml.
 # Single-document consumers (including dependency graph/security scanners) can
 # otherwise read only the pnpm bootstrap metadata and miss project dependencies.
-# Corepack and mise already enforce the exact packageManager/tool version.
+# mise enforces the exact tool version; the worker image installs the packageManager pnpm with npm
+# and checks it with tests/repo/container-toolchain-pins.spec.ts (ADR-0010).
 pmOnFail: ignore
 
 # Pin transitive-dependency vulnerabilities with the minimal patch (per pnpm audit).

@@ -195,7 +195,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
   失敗する。このゲートを迂回する設定(`--ignore-scripts` の既定化等)は行わない —
   ボット PR も人間の PR と同じ audited-decision フローに従う。
 - **保留中メジャーとの整合**: AGENTS.md / CLAUDE.md の据え置き記述
-  (@types/node 24、および root TS 7 / @vaz/schemas TS 6.0.3 隔離構成 ADR-0009)は `.github/dependabot.yml` の `ignore` と
+  (@types/node 26、および root TS 7 / @vaz/schemas TS 6.0.3 隔離構成 ADR-0009)は `.github/dependabot.yml` の `ignore` と
   `tests/repo/dependabot.spec.ts` に写してある。
   据え置き判断を追加・撤回するときは 3 つを同じ PR で更新する。
 - **TypeScript 7 手動更新の定期確認 (Fallback hold)**: `typescript` は Fallback hold として Dependabot の ignore に置かれているため、root `package.json` の TypeScript 7.x minor/patch は Dependabot PR が自動作成されない。定期メンテナンスタスク（週次・月次）で root `typescript` の安定版 minor/patch を手動確認して更新する。上流 `openapi-typescript` が TS 7 対応して TS 6 隔離が撤去された段階で semver-major hold に戻す。
@@ -219,7 +219,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 
 | レーン | リポジトリ | 検証対象（2026-10-03 時点） |
 |---|---|---|
-| TypeScript ベータ | `Fukuchan77/next-agentic-stack` | TypeScript 7.1 nightly、Next.js canary、Node 26、Playwright alpha |
+| TypeScript ベータ | `Fukuchan77/next-agentic-stack` | TypeScript 7.1 nightly、Next.js canary、Playwright alpha（Node 26 LTS はハブへ取り込み済み、2026-11-15。記録は `next-agentic-stack` の `docs/beta-lane/2026-11-15-node-26.md`） |
 | Python ベータ | `Fukuchan77/pydantic-ai-sandbox` | Python 3.15、pydantic-ai のベータ機能（slowapi を外した starlette 1.x / 最新 FastAPI はハブへ取り込み済み、2026-10-03） |
 
 ### 8.1 据え置き中のメジャーと、取り込みに必要な証拠
@@ -230,7 +230,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 | 据え置き | 障害（正本） | ベータレーンで示すべきこと |
 |---|---|---|
 | `typescript` 6.x（@vaz/schemas 隔離） | `openapi-typescript` 7.13.0 が TS 6 compiler API に依存（[ADR-0009](../docs/adr/0009-typescript-7-adoption.md)） | `openapi-typescript` が TS 7 に対応した新版をリリースし、`mise run openapi:gen` が root TS 7 で byte-identical に完走すること |
-| `@types/node` `^24` | ランタイムの Node 24 LTS に合わせている | Node のランタイム側を上げる判断が先。型だけを先行させない |
+| `@types/node` `^26` | ランタイムの Node 26 LTS に合わせている | Node のランタイム側を上げる判断が先。型だけを先行させない |
 | `services/api` の Python 3.14 固定（3.15 は不採用） | 3.14 は 2026-10-06 に取り込み済み（spec 009 Task 7、憲章 2.3.0）。3.15 は `chromadb<1.0` → `onnxruntime` と `sentence-transformers` → `torch` に cp315 の wheel が無く解決しない（`services/api/CLAUDE.md`「Dependency pins that are load-bearing」） | 3.15 で `uv sync` と `api:check` が green であること（`pydantic-ai-sandbox` spec 014 Requirement 3） |
 
 ### 8.2 取り込みの手順
@@ -240,9 +240,9 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
 2. **ハブ側は 1 メジャーにつき 1 PR。** PR 本文にベータレーンの記録をリンクする。
    同じ PR で次をまとめて更新する。
    - `.github/dependabot.yml` の `ignore`（§7「保留中メジャーとの整合」）
-   - `tests/repo/dependabot.spec.ts` の `HELD_BACK` 表（該当行を削除しないと repo ガードが落ちる）
+   - `tests/repo/dependabot.spec.ts` の `HELD_BACK` 表（据え置きを解除するときは該当行を削除する。削除しないと repo ガードが落ちる。次のメジャーへ移すときは `heldMajor` を書き換える）
    - `CLAUDE.md` / `AGENTS.md` の据え置き記述（ペアで）
-   - 8.1 の表の該当行（削除）
+   - 8.1 の表の該当行（据え置きを解除するときは削除する。次のメジャーへ移すときは行を書き換える）
 3. **プレリリース版はハブのロックファイルに入れない。** 正式版の公開を待つ。
    `minimumReleaseAge`（24h）と Dependabot の `cooldown` は、ベータレーンで検証済みの版にも適用する。
 4. **設定ファイルを丸ごとコピーしない。** ベータレーンの `tsconfig` / `vitest.config` /

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# apps/worker (@vaz/worker) — long-running Node 24 durable worker container (R3.1).
+# apps/worker (@vaz/worker) — long-running Node 26 durable worker container (R3.1).
 #
 # Multi-stage: the `build` stage installs the whole pnpm workspace and uses
 # `pnpm deploy` to emit a self-contained, pruned deployment of just @vaz/worker
@@ -10,11 +10,11 @@
 # loader refuses to strip types, so typescript-loader.mjs explicitly applies
 # Node's own transformer before evaluation. There is still no compile step.
 #
-# NOTE (env FLAG, spike §1): base-image pull + `docker build` are blocked in the
-# current sandbox (Task 8.1). This Dockerfile is authored against the pnpm-deploy
+# NOTE: `docker build` of this image was measured on Node 24 and Node 26 (spec 011,
+# specs/011-node-26-runtime-upgrade/pdca/do.md). It is authored against the pnpm-deploy
 # and Inngest Connect self-hosting references (docs/adr/0005-durable-workflow-engine.md
-# §7/§9) and validated structurally via `docker compose config`; a live build +
-# restart-crossing run is exercised once the FLAG is lifted (durable E2E, Task 15).
+# §7/§9) and validated structurally via `docker compose config`. A live run that connects
+# to Inngest Connect and crosses a restart is not yet exercised (durable E2E, Task 15).
 
 ARG NODE_VERSION=26
 # Must equal the `packageManager` version in the root package.json: this stage runs
@@ -48,7 +48,7 @@ RUN pnpm install --frozen-lockfile
 # `pnpm deploy` requires.
 RUN pnpm --filter=@vaz/worker deploy --prod /out
 
-# --- runtime: minimal Node 24, non-root, long-running ---
+# --- runtime: minimal Node 26, non-root, long-running ---
 FROM node:${NODE_VERSION}-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app

@@ -83,7 +83,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # @vaz/worker — long-running Node 24 durable worker (R3.1). Executes workflow
+  # @vaz/worker — long-running Node 26 durable worker (R3.1). Executes workflow
   # steps dispatched by the engine; persists JobEvents (Postgres + Redis, 13.3)
   # and audit rows (Postgres, 13.4). Connects OUT to the engine — no inbound port.
   worker:

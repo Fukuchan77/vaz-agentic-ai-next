@@ -15,7 +15,7 @@ import {
 import type { JobStepStore, JobStore } from "./stores";
 
 /**
- * `apps/worker` — the long-running Node 24 worker entry (R3.1/3.2/4.2).
+ * `apps/worker` — the long-running Node 26 worker entry (R3.1/3.2/4.2).
  *
  * WHAT THIS OWNS: the engine's worker entry (job function registration + step
  * execution), the web↔worker submission split, and OTel span attribution
