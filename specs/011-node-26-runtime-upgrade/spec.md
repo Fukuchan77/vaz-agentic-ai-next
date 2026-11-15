@@ -51,7 +51,7 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 ### Session 2026-11-15 (マージ後のレビューの反映)
 
 - Q: PR #217 で `CLAUDE.md` が `AGENTS.md` の import だけになった。R5.2 はどうしますか? → A: 要件の文面は変えない。`@types/node` の据え置き記述は `AGENTS.md` の 1 か所を指すものとして読む（`traceability.md` Gaps に注記）。
-- Q: ADR-0010 の承認記録は? → A: 2026-11-15 に Kaz がプロジェクトスレッドで承認した。ADR の見出しに記録した。
+- Q: ADR-0010 の承認記録は? → A: 2026-11-15 に Fukuchan77 がプロジェクトスレッドで承認した。ADR の見出しに記録した。
 
 ## Success Criteria
 

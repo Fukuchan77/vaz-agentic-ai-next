@@ -1,7 +1,7 @@
 # ADR-0010: worker の TypeScript ローダーを `registerHooks()` と strip モードに移し、イメージの pnpm を npm で入れる
 
 - **Status**: 承認済み（2026-11-15）
-- **承認**: 2026-11-15、Kaz（Fukuchan77）がプロジェクトスレッドで ADR-0010 そのものを承認した。
+- **承認**: 2026-11-15、Fukuchan77 がプロジェクトスレッドで ADR-0010 そのものを承認した。
 - **Date**: 2026-11-15
 - **仕様根拠**: [`specs/011-node-26-runtime-upgrade/spec.md`](../../specs/011-node-26-runtime-upgrade/spec.md) R1.1, R1.2, R1.3, R1.4, R1.5, R1.6, R2.6, R8.2
 - **関連レビュー**: [`specs/011-node-26-runtime-upgrade/research.md`](../../specs/011-node-26-runtime-upgrade/research.md) D-1, D-2, I-2, I-4, I-6
