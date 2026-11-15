@@ -3,11 +3,11 @@
 	"language": "ja",
 	"phase": "implementation-complete",
 	"created_at": "2026-11-15T14:32:03+0900",
-	"updated_at": "2026-11-15T19:00:00+0900",
+	"updated_at": "2026-11-15T22:00:00+0900",
 	"project_description": "update node 26 — TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lithium）へ上げる。",
 	"source_documents": {
 		"verification": {
-			"worktree": "primary working tree, branch chore/011-node-26-runtime-upgrade (base origin/main 04215a2, 11 files uncommitted; the former worktree /Users/Shared/codes/vaz-agentic-ai-next-node26 no longer exists)",
+			"worktree": "merged to main via PR #215 (merge commit, branch chore/011-node-26-runtime-upgrade, base 04215a2). The former worktree /Users/Shared/codes/vaz-agentic-ai-next-node26 no longer exists.",
 			"note": "2026-11-15 の /dependency-security-refresh で Node 26.13.1 の互換性を検証した結果。worker ローダーの mode: \"transform\" 廃止と DEP0205 を検出し修正済み。"
 		},
 		"governance": [
