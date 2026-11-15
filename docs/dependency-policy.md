@@ -194,7 +194,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
   場合、`allowBuilds` に対応エントリ(既定 `false`)が追加されていないと `pnpm install` が
   失敗する。このゲートを迂回する設定(`--ignore-scripts` の既定化等)は行わない —
   ボット PR も人間の PR と同じ audited-decision フローに従う。
-- **保留中メジャーとの整合**: AGENTS.md / CLAUDE.md の据え置き記述
+- **保留中メジャーとの整合**: AGENTS.md の据え置き記述（CLAUDE.md は AGENTS.md を import するだけ）
   (@types/node 26、および root TS 7 / @vaz/schemas TS 6.0.3 隔離構成 ADR-0009)は `.github/dependabot.yml` の `ignore` と
   `tests/repo/dependabot.spec.ts` に写してある。
   据え置き判断を追加・撤回するときは 3 つを同じ PR で更新する。
@@ -241,7 +241,7 @@ pnpm 11→12 更新が Dockerfile を 11.10.0 に置き去りにしたまま全�
    同じ PR で次をまとめて更新する。
    - `.github/dependabot.yml` の `ignore`（§7「保留中メジャーとの整合」）
    - `tests/repo/dependabot.spec.ts` の `HELD_BACK` 表（据え置きを解除するときは該当行を削除する。削除しないと repo ガードが落ちる。次のメジャーへ移すときは `heldMajor` を書き換える）
-   - `CLAUDE.md` / `AGENTS.md` の据え置き記述（ペアで）
+   - `AGENTS.md` の据え置き記述（`CLAUDE.md` は `AGENTS.md` を import するだけなので、書くのは `AGENTS.md` の 1 か所）
    - 8.1 の表の該当行（据え置きを解除するときは削除する。次のメジャーへ移すときは行を書き換える）
 3. **プレリリース版はハブのロックファイルに入れない。** 正式版の公開を待つ。
    `minimumReleaseAge`（24h）と Dependabot の `cooldown` は、ベータレーンで検証済みの版にも適用する。

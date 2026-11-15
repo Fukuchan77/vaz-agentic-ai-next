@@ -36,32 +36,34 @@ ID conventions (see `~/.claude/sdd/rules/analysis.md`):
 | REQ-503 | DES-1.3, DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
 | REQ-504 | DES-1.8 | T-7.3 | V-7 grep | 8512aa6 |
 | REQ-505 | DES-1.8, DES-1.10 | T-7.3, T-7.4 | V-7 grep | 8512aa6 |
-| REQ-506 | DES-1.8 | T-8.4 | `git diff --stat main -- specs/` (8.4) | — |
+| REQ-506 | DES-1.8 | T-8.4 | `git diff --stat main -- specs/` (8.4) | 5d3e922 |
 | REQ-601 | DES-1.10 | T-6.2, T-8.1 | V-4 `mise run check` (958→960 passed, 81 files) | bb2199d, 8512aa6 |
 | REQ-602 | DES-1.10 | T-8.1 | V-4 `mise run build` | 8512aa6 |
 | REQ-603 | DES-1.10 | T-8.1 | V-4 `mise run size` (242.79 kB / 2.96 kB) | 8512aa6 |
 | REQ-604 | DES-1.3, DES-1.10 | T-3.1, T-5.1, T-8.2 | V-5 image build (node26) + V-3 (node24) | f9265c4 |
 | REQ-605 | DES-1.3, DES-1.10 | T-8.2 | V-5 all-module load: `all-loaded 7`, exit 0, DeprecationWarning 0 | f9265c4 |
 | REQ-606 | DES-1.10 | T-9.4 | PR #215 の CI 全ジョブ成功（コメント 6893490112） | 5d3e922 |
-| REQ-607 | DES-1.10 | T-8.1, T-8.2, T-8.3, T-8.4, T-9.1 | `pdca/do.md`（V-1〜V-8 の記録） | — |
-| REQ-608 | DES-1.6, DES-1.10 | T-6.2, T-8.4, T-9.4 | V-8 `mise run audit` 出力、lockfile ダウングレード 0 件 | — |
+| REQ-607 | DES-1.10 | T-8.1, T-8.2, T-8.3, T-8.4, T-9.1 | `pdca/do.md`（V-1〜V-8 の記録） | 5d3e922 |
+| REQ-608 | DES-1.6, DES-1.10 | T-6.2, T-8.4, T-9.4 | V-8 `mise run audit` 出力、lockfile ダウングレード 0 件 | 5d3e922 |
 | REQ-701 | DES-1.11 | T-1.2, T-2.6, T-3.2 | C1〜C5 の一本の履歴 | 66eb43c, f9265c4, af0c868, bb2199d, 8512aa6 |
 | REQ-702 | DES-1.11 | T-6.1, T-6.2, T-7.5 | C4・C5 の分離、`git revert` 予行 (V-6) | bb2199d, 8512aa6 |
 | REQ-703 | DES-1.11, DES-1.10 | T-1.2, T-5.1 | V-3 Node 24 check (958 passed at the pre-rewrite C3; 960 at the rewritten C3 hook) | af0c868 |
-| REQ-704 | DES-1.11, DES-1.10 | T-8.3 | V-6 rollback rehearsal (Node 24 check, 959 passed) | — |
+| REQ-704 | DES-1.11, DES-1.10 | T-8.3 | V-6 rollback rehearsal (Node 24 check, 959 passed) | 5d3e922 |
 | REQ-705 | DES-1.11 | T-9.4 | PR #215 本文（ロールバック手順、merge commit） | 5d3e922 |
 | REQ-706 | DES-1.11 | T-9.4 | PR #215 本文（merge commit 指定） | 5d3e922 |
-| REQ-801 | DES-1.12 | T-1.1, T-9.1, T-9.2 | `reviews/adversarial-r1.md` | C6 |
+| REQ-801 | DES-1.12 | T-1.1, T-9.1, T-9.2 | `reviews/adversarial-r1.md` | 5d3e922 |
 | REQ-802 | DES-1.9 | T-2.5 | `docs/adr/0010-worker-typescript-loader.md`, doc-links | 66eb43c |
 | REQ-803 | DES-1.12 | T-1.1 | C0 (`ef0f282`) spec/plan/research/tasks/traceability | ef0f282 |
 | REQ-804 | DES-1.11 | T-1.1, T-1.2, T-9.3 | `wip/011-preverify` 退避（ローカル）、commit 9.3 で記録 | ef0f282 |
 | NFR-1 | DES-1.1, DES-1.10 | T-2.4, T-8.3 | V-2 (node24 and node26 loader runs) | 66eb43c |
 | NFR-2 | DES-1.10 | T-8.1 | V-4 `size` | 8512aa6 |
-| NFR-3 | DES-1.10 | T-8.4 | V-8 audit / secret-scan | — |
+| NFR-3 | DES-1.10 | T-8.4 | V-8 audit / secret-scan | 5d3e922 |
 | NFR-4 | DES-1.4, DES-1.5 | T-4.2, T-4.3, T-6.2 | `ci-workflows.spec.ts`, `container-toolchain-pins.spec.ts`, V-4 | af0c868, bb2199d |
 
 ## Gaps
 
 - N-5 の注記: REQ-204 のガードは否定条件のみ（`setup-node`・`node-version`・`NODE_VERSION`・`MISE_*`・`install_args` / `mise_toml` の不在）で、「mise-action が `mise.toml` を読む」ことは保証しない（spec R2.4 に明記）。
 - N-3 の注記: REQ-206 / REQ-604 は、ビルド時の `+sha512` 照合が失われた分を V-5 の host 側の一致確認で補う（`research.md` D-2）。
-- None（50/50 の要件（REQ 46 + NFR 4）がタスクに対応し、すべてのタスクが要件に対応する。Test と Commit の列は plan の C6 または `/sdd-ship` で埋める。この表は C0 でコミットする）
+- 2026-11-15 の事後同期: C6 は `5d3e922` で、検証の記録だけを持つ行（REQ-506・607・608・704・801、NFR-3）の Commit 列をそれに揃えた。以後 Commit 列に空欄と `C6` はない。
+- REQ-502 の注記: PR #217（`docs/agents-md-consolidation`）で `CLAUDE.md` は `AGENTS.md` を import するだけになった。`@types/node` の据え置き記述は `AGENTS.md` の 1 か所にあり、「`AGENTS.md` と `CLAUDE.md` の両方に書く」という R5.2 の文面は、この統合で `AGENTS.md` だけを指すものになった（要件の文面は変えない）。
+- None（50/50 の要件（REQ 46 + NFR 4）がタスクに対応し、すべてのタスクが要件に対応する。Test と Commit の列はすべて埋まっている）

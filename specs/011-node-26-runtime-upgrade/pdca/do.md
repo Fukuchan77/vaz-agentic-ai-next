@@ -162,3 +162,7 @@ Pre-rewrite head `9b59074` kept as `backup/011-pre-fixup` (local only, not pushe
 
 - Pushed `5d3e922` (`--force-with-lease`, `--no-verify` as the owner decided). PR #215, base `main`, body records the beta-lane link (code span), V-2/V-5 results, the verbatim `mise run audit` output, the lockfile downgrade check, rollback (`git revert --no-edit 8512aa6 bb2199d`) and the merge-commit requirement.
 - CI on `5d3e922`: api-check, audit, bundle-size, CodeQL (javascript-typescript, python), dependency-review, e2e, gate, lint, py-check, unit, `.github/dependabot.yml`: all SUCCESS. `eval-pr-gate`: SKIPPED by design (runs only with the `run-eval` label). Per-job record posted as PR comment (https://github.com/Fukuchan77/vaz-agentic-ai-next/pull/215#issuecomment-6893490112).
+
+## Post-merge record sync (2026-11-15)
+
+- Review after PR #215/#216/#217 found: placeholder Commit cells in `traceability.md` (now `5d3e922`), `CLAUDE.md`/`AGENTS.md` wording drift after the #217 consolidation, stale `spec.json` / `spec.md` worktree note, and no ADR-specific approval for ADR-0010 (approved by the owner in the project thread, recorded in the ADR header). Docs-only change; no loader, Dockerfile or pin changes.

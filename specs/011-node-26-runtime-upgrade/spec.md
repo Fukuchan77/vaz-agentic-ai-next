@@ -14,7 +14,7 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 - `module.register()` が Node 26 で非推奨（DEP0205）。
 - 修正（`mode: "strip"`、`registerHooks()` への移行、各ピンの更新）後は Node 26 で `mise run check` が緑（80 ファイル / 949 passed, 1 skipped）、`build` / `size` / `openapi:gen` も差分なし。
 - 未検証: worker の Docker イメージビルドと起動、firefox の E2E（Node 24 でも起動しない環境要因）、`test:e2e:ollama`、Inngest/DB/Redis に接続した worker の実走。
-- 変更は、当初 worktree `/Users/Shared/codes/vaz-agentic-ai-next-node26` に未コミットで残っていた。この worktree はもう存在しない。同じ 11 ファイルの差分は、主の作業ツリーのブランチ `chore/011-node-26-runtime-upgrade` に未コミットで残っている（`research.md`「着手時点の状態」、`spec.json` の `source_documents.verification.worktree`）。
+- 変更は、当初 worktree `/Users/Shared/codes/vaz-agentic-ai-next-node26` に未コミットで残っていた。その後、ブランチ `chore/011-node-26-runtime-upgrade` の C1〜C6 に分けてコミットされ、PR #215 で main にマージされた（merge commit）。worktree はもう存在しない（`research.md`「着手時点の状態」）。
 
 ## Clarifications
 
@@ -47,6 +47,11 @@ TS ランタイムの Node を 24 LTS（24.22.3）から 26 LTS（26.13.1、Lith
 
 - Q: 事前検証の変更の所在の記述（上の「事前検証の結果」）は、worktree のままでよいですか? → A: 直す。worktree は存在せず、差分は主の作業ツリーにある。事実に合わせて 1 行を訂正した（要件の文面は変えていない）。
 - Q: C4・C5 の対象ファイルを後から直すとき、R7.4 のロールバックはどう守りますか? → A: 修正を C6 以降の別コミットにしない。push 前なら C4 または C5 へ畳み、畳めないときは修正コミットも revert 対象に加える（`plan.md` Error Handling）。要件 R7.4 の文面は変えない。
+
+### Session 2026-11-15 (マージ後のレビューの反映)
+
+- Q: PR #217 で `CLAUDE.md` が `AGENTS.md` の import だけになった。R5.2 はどうしますか? → A: 要件の文面は変えない。`@types/node` の据え置き記述は `AGENTS.md` の 1 か所を指すものとして読む（`traceability.md` Gaps に注記）。
+- Q: ADR-0010 の承認記録は? → A: 2026-11-15 に Kaz がプロジェクトスレッドで承認した。ADR の見出しに記録した。
 
 ## Success Criteria
 
