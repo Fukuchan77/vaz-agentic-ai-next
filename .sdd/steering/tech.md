@@ -28,6 +28,9 @@
   採用条件が成立した場合だけ再評価する（ADR-0001）。
 - **耐久ワークフローは Inngest** — ジョブ orchestration の独自実装を増やさない（ADR-0005）。
 - **IdP は環境選択、role はコード管理** — 認証プロバイダと権限決定を分離する（ADR-0006）。
+- **worker は型を剥がして source-only package を読む** — `apps/worker` が読み込むコードに
+  `enum`・`namespace`・parameter property などの non-erasable syntax を書かない。
+  `erasableSyntaxOnly` が typecheck で止める（ADR-0010）。
 
 ## Conventions
 

@@ -71,6 +71,8 @@ apps/web, apps/worker, evals
 - 外部 request → schema parse → domain call → response serialization の順序を守る。
 - route handler は薄く保ち、認証・parse・adapter 呼び出しを担当する。agent logic は package へ置く。
 - DB、clock、logger、audit、runtime context は port として注入し、module global へ埋め込まない。
+- `apps/worker` は durable engine の SDK を 1 ファイル（`inngest.ts`）へ閉じ込め、
+  他は `DurableEngine` / `JobStepStore` などの port だけに依存する。新しい永続処理も port 越しに書く。
 - TS ⇔ Python の変更は schema、snapshot、generated type、drift test を同じ変更で更新する。
 - UI component は server / client 境界を明示する。browser API または UI library を使う component だけ
   `"use client"` を宣言する。
