@@ -16,7 +16,7 @@
 # §7/§9) and validated structurally via `docker compose config`; a live build +
 # restart-crossing run is exercised once the FLAG is lifted (durable E2E, Task 15).
 
-ARG NODE_VERSION=24
+ARG NODE_VERSION=26
 # Must equal the `packageManager` version in the root package.json: this stage runs
 # `pnpm install --frozen-lockfile` against the committed pnpm-lock.yaml, and a pnpm
 # whose major does not match the lockfile format either refuses the frozen install or

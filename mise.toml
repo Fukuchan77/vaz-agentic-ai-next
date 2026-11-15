@@ -1,5 +1,5 @@
 [tools]
-node = "24"
+node = "26"
 pnpm = "12"
 # Python package manager for services/agent (py:check / openapi:gen); pinned so
 # the local toolchain and CI (.github/workflows/python.yml via mise-action)
