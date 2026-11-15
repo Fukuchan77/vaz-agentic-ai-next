@@ -27,9 +27,15 @@ ARG PNPM_VERSION=12.8.2
 
 # --- build: install the workspace, then prune to a standalone worker deploy ---
 FROM node:${NODE_VERSION}-slim AS build
+# An ARG declared before the first FROM is not visible inside a stage; re-declare it so
+# the npm install below is pinned to the same version as `packageManager`.
+ARG PNPM_VERSION
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+# The Node 26 image ships no corepack (verified on node:26-slim, ADR-0010), so install pnpm
+# with npm. This image build no longer checks the packageManager +sha512; npm checks the
+# registry's dist.integrity instead (ADR-0010, Consequences).
+RUN npm install --global pnpm@${PNPM_VERSION}
 WORKDIR /repo
 
 # Copy the full workspace (node_modules excluded via .dockerignore): pnpm needs
