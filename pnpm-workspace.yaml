@@ -65,10 +65,21 @@ pmOnFail: ignore
 # - GHSA-g3hv-75wg-m249 (minimatch globparts DoS): same chain above, plus dev-only
 #   openapi-typescript > @redocly/openapi-core (codegen over our own committed specs).
 #   Retire when @redocly/openapi-core moves off minimatch 5.x, or the glob chain above is gone.
+#
+# Added 2026-11-18 (same no-fix class):
+# - GHSA-fc5q-39xc-vjpf (picomatch <=4.0.7, ReDoS via single-branch repeated extglobs, high):
+#   there is NO patched release (4.0.7 is the latest on npm), so no override can fix it.
+#   Reachable only through build/test tooling that matches our own committed globs:
+#   vite > picomatch / tinyglobby > (fdir >) picomatch (vitest, dev-only) and
+#   next > sass > @parcel/watcher > picomatch (sass file watching; not on the request path).
+#   No untrusted input is ever used as a glob pattern. Retire when picomatch publishes a
+#   release above 4.0.7 (clear the entry, re-resolve, `pnpm audit --audit-level=moderate`
+#   stays clean).
 auditConfig:
   ignoreGhsas:
     - GHSA-3g3m-2fjr-6pw4
     - GHSA-g3hv-75wg-m249
+    - GHSA-fc5q-39xc-vjpf
 
 # pnpm blocks dependency install/postinstall scripts by default.
 # allowBuilds (pnpm 12) records the audited decision explicitly (false = deny):
