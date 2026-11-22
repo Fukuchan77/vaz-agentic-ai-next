@@ -18,7 +18,7 @@
 		"@vaz/db": "workspace:*",
 		"@vaz/rag": "workspace:*",
 		"@vaz/schemas": "workspace:*",
-		"ai": "^7.0.173",
+		"ai": "^7.0.179",
 		"zod": "^4.6.7"
 	}
 }
