@@ -16,9 +16,9 @@
 		"@vaz/db": "workspace:*",
 		"@vaz/schemas": "workspace:*",
 		"drizzle-orm": "^0.45.4",
-		"inngest": "^4.26.2",
+		"inngest": "^4.27.0",
 		"pg": "^8.23.1",
-		"redis": "^6.3.1"
+		"redis": "^6.4.0"
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.6",
